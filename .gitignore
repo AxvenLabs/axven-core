@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+canonical-node1/
+canonical-node2/
+axven-data/
+.env
+.DS_Store
+
+build/
+*.egg-info/
+*.ORIGINAL.py

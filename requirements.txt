@@ -1,0 +1,2 @@
+cryptography>=46
+dilithium-py==1.4.0

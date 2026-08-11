@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Axven Explorer</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;background:#090b0f;color:#eef2f6}
+.wrap{max-width:1180px;margin:auto;padding:28px 18px 60px}
+.top{display:flex;justify-content:space-between;gap:20px;align-items:center;flex-wrap:wrap}
+.brand h1{margin:0;font-size:30px}.brand p{margin:6px 0 0;color:#8f9baa}
+.badge{border:1px solid #29313d;background:#12161d;border-radius:999px;padding:8px 12px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:24px 0}
+.card{background:#12161d;border:1px solid #242b35;border-radius:14px;padding:16px;box-shadow:0 8px 30px #0003}
+.card b{display:block;color:#95a2b2;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px}
+.value{font-size:20px;font-weight:700}.hash{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;word-break:break-all}
+.panel{background:#12161d;border:1px solid #242b35;border-radius:14px;overflow:hidden;margin-top:18px}
+.panel h2{font-size:16px;margin:0;padding:16px 18px;border-bottom:1px solid #242b35}
+.search{padding:16px 18px}.search input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid #303946;background:#0c1016;color:#fff;outline:none}
+.search input:focus{border-color:#5b88ff}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid #202630;font-size:13px}
+th{color:#8f9baa;font-weight:600;background:#0f1319}tr:last-child td{border-bottom:0}
+a{color:#87aaff;text-decoration:none}a:hover{text-decoration:underline}
+pre{margin:0;padding:16px 18px;background:#0c1016;overflow:auto;max-height:420px;font-size:12px}
+.footer{color:#687382;font-size:12px;margin-top:22px}
+.ok{color:#78dba9}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <div class="top">
+   <div class="brand">
+     <h1>Axven Explorer</h1>
+     <p>Canonical <b>axven-devnet-2</b> · read-only local explorer</p>
+   </div>
+   <div class="badge"><span class="ok">●</span> <span id="network">connecting…</span></div>
+ </div>
+
+ <div class="grid">
+   <div class="card"><b>Height</b><div class="value" id="height">-</div></div>
+   <div class="card"><b>Chainwork</b><div class="value" id="work">-</div></div>
+   <div class="card"><b>Mempool</b><div class="value" id="mempool">-</div></div>
+   <div class="card"><b>Tip hash</b><div class="hash" id="tip">-</div></div>
+   <div class="card"><b>State root</b><div class="hash" id="root">-</div></div>
+   <div class="card"><b>Fingerprint</b><div class="hash" id="fp">-</div></div>
+ </div>
+
+ <div class="panel">
+   <h2>Search block / transaction</h2>
+   <div class="search"><input id="search" placeholder="Height, block hash veya transaction ID"></div>
+   <pre id="result" hidden></pre>
+ </div>
+
+ <div class="panel">
+   <h2>Latest Blocks</h2>
+   <table>
+    <thead><tr><th>Height</th><th>Hash</th><th>TX</th><th>Miner</th><th>Time</th></tr></thead>
+    <tbody id="blocks"></tbody>
+   </table>
+ </div>
+
+ <div class="footer">Axven Core v0.9 · local operator interface · no wallet-secret endpoints</div>
+</div>
+<script>
+async function j(u){let r=await fetch(u);return r.json()}
+function short(v,n=18){return v?`${v.slice(0,n)}…`:'-'}
+async function load(){
+ try{
+  let x=await j('/api/summary'),s=x.result;
+  network.textContent=s.chain_id;
+  height.textContent=s.height;
+  work.textContent=s.chainwork;
+  mempool.textContent=s.mempool.size;
+  tip.textContent=s.tip_hash;
+  root.textContent=s.state_root;
+  fp.textContent=s.config_fingerprint;
+  blocks.innerHTML=s.latest_blocks.map(b=>`<tr>
+    <td>${b.height}</td>
+    <td><a href="#" data-block="${b.hash}"><code>${short(b.hash,22)}</code></a></td>
+    <td>${b.tx_count}</td>
+    <td><code>${short(b.miner||'',16)}</code></td>
+    <td>${new Date(b.timestamp*1000).toLocaleString()}</td></tr>`).join('');
+ }catch(e){network.textContent='offline'}
+}
+async function show(u){let x=await j(u);result.hidden=false;result.textContent=JSON.stringify(x,null,2)}
+document.addEventListener('click',e=>{let a=e.target.closest('[data-block]');if(a){e.preventDefault();show('/api/block/'+a.dataset.block)}})
+search.addEventListener('keydown',async e=>{
+ if(e.key!=='Enter')return;
+ let v=search.value.trim();if(!v)return;
+ let x=await j('/api/block/'+encodeURIComponent(v));
+ if(!x.ok)x=await j('/api/tx/'+encodeURIComponent(v));
+ result.hidden=false;result.textContent=JSON.stringify(x,null,2);
+})
+load();setInterval(load,3000);
+</script>
+</body></html>

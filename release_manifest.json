@@ -1,0 +1,361 @@
+{
+  "activation": "EXECUTED",
+  "activation_date": "2026-08-11",
+  "activation_decision": "CD-003",
+  "canonical": true,
+  "canonical_first_block_chainwork": 512,
+  "canonical_first_block_hash": "00654a3a90e5d24735d2baa39143e6f0144826caf4daf83b4fdc47beb6b92580",
+  "canonical_first_block_height": 1,
+  "canonical_rc_ready": true,
+  "canonical_restart_persistence": "VERIFIED",
+  "canonical_two_node_sync": "VERIFIED",
+  "chain_id": "axven-devnet-2",
+  "clean_package_build_smoke": "READY",
+  "config_fingerprint": "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae",
+  "consensus_code_sha256": "7eb9e474b7b8bc93847710455039e41b44e6dd4470b702c227e2d5847011cdb6",
+  "devnet_rehearsal": "RETRY_REQUIRED_AFTER_TEST_API_FIX",
+  "devnet_rehearsal_windows": "21_OF_21_GREEN",
+  "explorer_api": "READY",
+  "explorer_bind": "LOOPBACK_ONLY",
+  "explorer_node1_port": 18445,
+  "explorer_node2_port": 18455,
+  "files": {
+    ".github/workflows/validation.yml": {
+      "bytes": 470,
+      "sha256": "d0a658f9a6799959188b4434fe84d56a4efc2125a21717d1b5d00b17372a8a57"
+    },
+    ".gitignore": {
+      "bytes": 87,
+      "sha256": "e183c425b05a0887d2be986cba6d9717f80b4407ee7160aa1f227e8214646287"
+    },
+    "CANONICAL_OPERATIONS.md": {
+      "bytes": 1434,
+      "sha256": "42b702ea99a53bcfed309d2a271104a6115242447dffa54c0b6813e54ed8004d"
+    },
+    "CANONICAL_OPERATION_RECORD.md": {
+      "bytes": 1661,
+      "sha256": "f1c5c424b6b8d523d88c5efe37156e01b844385d0f11287d27b7a8bc3fa90224"
+    },
+    "CD-003_ACTIVATION.md": {
+      "bytes": 1008,
+      "sha256": "5f1e4315da209300e82bb61070ba2cee2a9948fd2048c599436770e97fcd78ae"
+    },
+    "CHANGELOG.md": {
+      "bytes": 942,
+      "sha256": "8e18de623324ea77095aee92af9d8a1cfc18d001ff906b80a7bcb577bee1c19a"
+    },
+    "CONTRIBUTING.md": {
+      "bytes": 557,
+      "sha256": "916e13f4729fc8dbe0fe7ca9b263c248a2c9c9682e3cf90815dd89896dba03c5"
+    },
+    "DEVNET_REHEARSAL.md": {
+      "bytes": 1375,
+      "sha256": "54daad64ad654b68dcc8c157e5194858cbe90db6af3ba9a3f6d3b558cab33a8f"
+    },
+    "EXPLORER.md": {
+      "bytes": 756,
+      "sha256": "ea7ef14ce4c1c226ba7b04c736423c714d831a14cefcbadb51d8d4c45be0a56b"
+    },
+    "FINAL_PRE_ACTIVATION_AUDIT.md": {
+      "bytes": 1342,
+      "sha256": "b32a3db30c2d0dcaed514a8c68c26c090bfcb7a3fb0c9e5c403cfe582dc0fcd7"
+    },
+    "GITHUB_RELEASE.md": {
+      "bytes": 851,
+      "sha256": "6db9e1b423f4a3b41a2415af834413766e6173cc076ae44e2555e09de1efdb56"
+    },
+    "LICENSE": {
+      "bytes": 1075,
+      "sha256": "4f55f35e35795d49b59933d24e93b3bb8cbca306b6a7689c4f2678ba7798a435"
+    },
+    "README.md": {
+      "bytes": 1705,
+      "sha256": "8e985e37ed7e6a9873f03f8afea4604d8da5b2505c2a18fddbe51ada2d6bcf25"
+    },
+    "REAL_PQ_VALIDATION.md": {
+      "bytes": 821,
+      "sha256": "5a243fabe5209a348dca3f3ca860e5d0f6f6d677fd79e689426b3a83ce4b9f42"
+    },
+    "REBUILD_STATUS.md": {
+      "bytes": 17881,
+      "sha256": "c909baa1793696ddee54ecfcc2e907acf463b366fe90138050609d5ace726c2d"
+    },
+    "RELEASE_CANDIDATE.md": {
+      "bytes": 3072,
+      "sha256": "086c5bbd0944633d68b58f5ed3ad61bfc3e79d4931a312c7cc7e3d1691eff733"
+    },
+    "RELEASE_CHECKLIST.md": {
+      "bytes": 646,
+      "sha256": "0a26f7ab2816e1275b0724d3796cae4ac2aead0b84de924f712b5bbb82ab866d"
+    },
+    "RELEASE_METADATA.json": {
+      "bytes": 640,
+      "sha256": "0ede0905161c4105a5c077578ca2a47aa74d652a674026cf0cf254c9564d9fd2"
+    },
+    "RELEASE_NOTES_v0.9-devnet.md": {
+      "bytes": 870,
+      "sha256": "71d92bfbe287d941347c5431a5fd84a776b72ee99777b348026b536ae534c58a"
+    },
+    "REPOSITORY_LAYOUT.md": {
+      "bytes": 822,
+      "sha256": "39f19f20810841164f6156dd06f78a0bf65c0f81b5c407a8ac1ab9cb90d5ebf0"
+    },
+    "RUNBOOK.md": {
+      "bytes": 1320,
+      "sha256": "fc2c93afb90dc71e8f01e908a879da4a6a18e77bb2c7d21cf06436f3524eb648"
+    },
+    "SECURITY.md": {
+      "bytes": 748,
+      "sha256": "f98c384c2e93b2c368fdd13bff980603ec92b230bc97e0b821bb1b78e78cc2e3"
+    },
+    "USER_GUIDE.md": {
+      "bytes": 1556,
+      "sha256": "5471b9c47e89ffc64d7d5e76ab220c3c1fded378d4a18fccdf12566fdef8003c"
+    },
+    "VERSION": {
+      "bytes": 14,
+      "sha256": "fa81fe419c3e2e5f443a4bdc13a2e00c36181ad5e38fda0725714f23d8a3c9a6"
+    },
+    "activation_record_encoding_test.py": {
+      "bytes": 305,
+      "sha256": "399e218e658d530f42570286115b12148f171d26d21ad0a99bf105050934c7d3"
+    },
+    "axven-console-node2.cmd": {
+      "bytes": 83,
+      "sha256": "b8218d6db4a408b8d1af03240f8bcc04733cf51db83585a6fc42b2727f59525f"
+    },
+    "axven-console.cmd": {
+      "bytes": 83,
+      "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
+    },
+    "axven.py": {
+      "bytes": 37104,
+      "sha256": "7eb9e474b7b8bc93847710455039e41b44e6dd4470b702c227e2d5847011cdb6"
+    },
+    "axven_cli.py": {
+      "bytes": 2654,
+      "sha256": "97119d6950714747a900352cbdcd3237f17913b547f5c921e576b0f8e11b4b9e"
+    },
+    "axven_console.py": {
+      "bytes": 3417,
+      "sha256": "2d93f7c9c1a06b895586c61182996d0951817db3091df3ca213390c6078210a0"
+    },
+    "axven_core.py": {
+      "bytes": 2613,
+      "sha256": "2971b3c47e34c8870cceda5497871a6058282fc55124d137b5d2d1e53852f612"
+    },
+    "canonical_node1_mine1.ps1": {
+      "bytes": 114,
+      "sha256": "8878f8faee53e8cb2a0843180c27b1a61ba3db349a29c939e50a4260bbeee078"
+    },
+    "canonical_node1_start.ps1": {
+      "bytes": 718,
+      "sha256": "6a7cdaebfb3a792dc30469be16366c16cec844ec6472e45026f1c0adf7bd06c1"
+    },
+    "canonical_node1_status.ps1": {
+      "bytes": 97,
+      "sha256": "b89ab31444018fe95f8a441ec6b2dc00a66a88c499355b0a4e80805322d7f258"
+    },
+    "canonical_node2_start.ps1": {
+      "bytes": 718,
+      "sha256": "d8fb23c0a2154d462944883741663271ace8a7bd2249232d2c34f9a89ed6e978"
+    },
+    "canonical_node2_sync_node1.ps1": {
+      "bytes": 111,
+      "sha256": "aa46199e46c6f6976974083b5033b72802a6fd3bd15d721a0280856e8dadf436"
+    },
+    "canonical_operation_audit.py": {
+      "bytes": 921,
+      "sha256": "68bcd822d6fbcaa5a5f90a1c46e4bc1887ebedb275734763ba0d75174eefb2a5"
+    },
+    "canonical_ops.py": {
+      "bytes": 1928,
+      "sha256": "fe2428803532b2cfac1aacb877947c855d494a7da43eeaddd7424280ba4aebef"
+    },
+    "canonical_ops_audit.py": {
+      "bytes": 960,
+      "sha256": "6a051cb124ba17b0042c1c02969325206a8be4120835433753a76054dab16758"
+    },
+    "canonical_stop_all.ps1": {
+      "bytes": 227,
+      "sha256": "d5d2e99dd84a5bebab5d905ec412d818a9b699d46f6ec49401d514efcb5ce73d"
+    },
+    "clean_install_smoke.py": {
+      "bytes": 1172,
+      "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
+    },
+    "core.py": {
+      "bytes": 7653,
+      "sha256": "ba2f9d4641bbe3360321586eac5d2a418102f1bcd546e23f28378c32f69d17a3"
+    },
+    "daemon_lifecycle_test.py": {
+      "bytes": 5583,
+      "sha256": "73f4aa368d9341cc708f2396bedd139ccf14138e4fe8e37aa81de463bc589344"
+    },
+    "datadir.py": {
+      "bytes": 1561,
+      "sha256": "b7525fb6f0f9636b4e9ff66559de5f95919156e4721dd84c760833f9eab8cd72"
+    },
+    "devnet_rehearsal.py": {
+      "bytes": 5195,
+      "sha256": "8fae69a3d5059742af03d44c4ff431a62918663d85e0a9968a14c4df3d59bba8"
+    },
+    "doctor.py": {
+      "bytes": 2110,
+      "sha256": "b3260c5421d12f7f68b60726c27bdde713794fa2aa3ac9b200ad833524252568"
+    },
+    "explorer.py": {
+      "bytes": 3260,
+      "sha256": "ee3845c50c5ba1a06b322f5c1f9af74237687acf67fdad32716340b52322ce1c"
+    },
+    "explorer_index.html": {
+      "bytes": 4693,
+      "sha256": "cb7b6876ca45588e9d1ce67a65610402adc80a18ac37b0413641b0fe5f169583"
+    },
+    "explorer_spec_test.py": {
+      "bytes": 2554,
+      "sha256": "e88910c3828b267562cf083456c005c3088f72058574f9c4bd3c3387db7401a0"
+    },
+    "final_pre_activation_audit.py": {
+      "bytes": 1874,
+      "sha256": "8154d8860fc3f2589ab07a9cc44e4902b2c98fb261ea1c1661f6610adc484f2e"
+    },
+    "graceful_shutdown_test.py": {
+      "bytes": 2059,
+      "sha256": "c09c75d160a8288af691b13a1fdcdd6a0b17dd5e07a27ff08e70aa9ff5ecc49f"
+    },
+    "open-explorer-node1.cmd": {
+      "bytes": 42,
+      "sha256": "552cd53ebc38b66a8b7e13da3225940543b0ff91b0f9f26b94aa247ad11cb37c"
+    },
+    "open-explorer-node2.cmd": {
+      "bytes": 42,
+      "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
+    },
+    "p2p.py": {
+      "bytes": 8241,
+      "sha256": "f584eb93dc338d00a34fac1bd2171316b3508ffbef90e7d14c881435dd7c1680"
+    },
+    "post_activation_audit.py": {
+      "bytes": 1283,
+      "sha256": "669108cb1ac328d42ee0c003fa7be36547946615ab6bde60998cebf1a345a69e"
+    },
+    "pq_dependency_check.py": {
+      "bytes": 787,
+      "sha256": "3ebae61fa4b433fa2f007b97d0fcca66a31a638eadbc988cb65a6bbf0276a5c3"
+    },
+    "pq_real_validation.py": {
+      "bytes": 5822,
+      "sha256": "de58959fc2c21aba9680a85609a70685be4dadca4c942509dc9371b503693ff3"
+    },
+    "public_release_spec_test.py": {
+      "bytes": 1222,
+      "sha256": "4a4d485eedec4d982bb8abdf7505de483c07088c9e5a96bb254b39e6f0c084e6"
+    },
+    "pyproject.toml": {
+      "bytes": 604,
+      "sha256": "fb4cb9709bbac05f52e61b2e88265435dfd0e4040705e6de291c2af2327a1a53"
+    },
+    "rc_audit.py": {
+      "bytes": 1256,
+      "sha256": "41d0121c2da05cab318d71a5ecfb40e47407f418a7ae798e5e7c9ca5c4d68444"
+    },
+    "release_packaging_test.py": {
+      "bytes": 2551,
+      "sha256": "15e4743122ae79bfbe27c6645d8e86d3d7f107873662f1eff4f964634c1097ab"
+    },
+    "requirements.txt": {
+      "bytes": 37,
+      "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
+    },
+    "rpc.py": {
+      "bytes": 4018,
+      "sha256": "cc49d7b30f578a3c3637da011a37ca4756ec65cdf502592866a27c5850cb90d1"
+    },
+    "run_full_validation.py": {
+      "bytes": 1625,
+      "sha256": "60e6d4f4060aea503bf0160616d4fce696ab90ec41bca3fb5cfa477b37c13c67"
+    },
+    "setup.cmd": {
+      "bytes": 172,
+      "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
+    },
+    "start-node1.cmd": {
+      "bytes": 361,
+      "sha256": "eae86db6f37807ddaa4a21ebb7bd09d20de5024a44be647c34e27fa4827d48a1"
+    },
+    "start-node2.cmd": {
+      "bytes": 361,
+      "sha256": "445ec185116c63122405197fd673b57f68ddc5dded38a1b61b24907d027a98d3"
+    },
+    "status-node1.cmd": {
+      "bytes": 94,
+      "sha256": "f0bdc9b21fbd4abf1e3637eed8f64f50fc553734fe0ad4bf52b05dd8f4553416"
+    },
+    "status-node2.cmd": {
+      "bytes": 94,
+      "sha256": "a917902e7ee261e32a3536dbc34d8d033d21a2b9a08de6fcc2ebe38a7f5cdae9"
+    },
+    "stop-node1.cmd": {
+      "bytes": 90,
+      "sha256": "40a7987468a0de2a3084877d78adf61621c9fcc4455a44222cff2c09875bb304"
+    },
+    "stop-node2.cmd": {
+      "bytes": 90,
+      "sha256": "a1be5afd23d64e5fd7731b18b2f0db1fa524f915d1730c3807d8e53c0e747207"
+    },
+    "sync-node2-from-node1.cmd": {
+      "bytes": 111,
+      "sha256": "94738b2fde2a9a61cddae4022f1c1e32255b08fdc1b31dfda7e35c09cb4efb99"
+    },
+    "ux_spec_test.py": {
+      "bytes": 2263,
+      "sha256": "ae6c641c215cb8eacc94595a0fdb7d34b73ea836e0ce9842781520d68dcffd28"
+    },
+    "validate_linux_macos.sh": {
+      "bytes": 242,
+      "sha256": "17660fcebcbb586cb7c824b9236b0cecaf8c331da26a715883c83914c19636b4"
+    },
+    "validate_windows.ps1": {
+      "bytes": 617,
+      "sha256": "8f0574154f6425cf4f5e4f08dacb79b6af41a307e108b69ec66027615d4ffd53"
+    },
+    "verify_release.py": {
+      "bytes": 574,
+      "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
+    },
+    "wallet.py": {
+      "bytes": 9005,
+      "sha256": "76a43c1485c6e63c99075fd52a2a142e8a09f2ce1c27facb32610449c276c3b4"
+    }
+  },
+  "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
+  "fix": "Windows UTF-8 activation-record audit",
+  "genesis_hash": "a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3",
+  "github_ready": true,
+  "github_release_notes": "READY",
+  "github_release_skeleton": "READY",
+  "independent_security_audit": false,
+  "mainnet": false,
+  "operations_kit": "READY",
+  "pq_dependency_gate": "REAL_ML_DSA_REQUIRED",
+  "pre_activation_windows_validation": "ALL_AXVEN_CHECKS_GREEN",
+  "public_mainnet": false,
+  "real_windows_devnet_rehearsal": "21_OF_21_GREEN",
+  "real_windows_validation": "ALL_AXVEN_CHECKS_GREEN",
+  "release": "axven-core-v0.9.0-devnet-github-ready-checkpoint26",
+  "release_integrity_verifier": "READY",
+  "release_stage": "GITHUB_READY_RELEASE_BUNDLE",
+  "tag": "v0.9.0-devnet",
+  "ux_console": "READY",
+  "validation_entrypoints": {
+    "all": "run_full_validation.py",
+    "linux_macos": "validate_linux_macos.sh",
+    "pq": "pq_real_validation.py",
+    "windows": "validate_windows.ps1"
+  },
+  "version": "v0.9.0-devnet",
+  "windows_cmd_launchers": "READY",
+  "windows_full_validation": "ALL_AXVEN_CHECKS_GREEN",
+  "windows_graceful_shutdown": "RPC_STOP"
+}

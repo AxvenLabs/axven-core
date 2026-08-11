@@ -1,0 +1,16 @@
+{
+  "activation": "EXECUTED",
+  "canonical": true,
+  "fingerprint": "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae",
+  "first_canonical_block": "00654a3a90e5d24735d2baa39143e6f0144826caf4daf83b4fdc47beb6b92580",
+  "genesis_hash": "a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3",
+  "independent_security_audit": false,
+  "mainnet": false,
+  "network": "axven-devnet-2",
+  "project": "Axven Core",
+  "release_name": "Axven Core v0.9.0 Canonical Devnet",
+  "stage": "canonical-devnet-preview",
+  "tag": "v0.9.0-devnet",
+  "version": "v0.9.0-devnet",
+  "windows_full_validation": "ALL_AXVEN_CHECKS_GREEN"
+}
