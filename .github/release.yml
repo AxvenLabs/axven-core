@@ -1,0 +1,14 @@
+changelog:
+  categories:
+    - title: Security / hardening
+      labels: ["security", "hardening"]
+    - title: Consensus
+      labels: ["consensus"]
+    - title: Wallet / node
+      labels: ["wallet", "node"]
+    - title: P2P / networking
+      labels: ["p2p", "networking"]
+    - title: Explorer / UX
+      labels: ["explorer", "ux"]
+    - title: Other changes
+      labels: ["*"]

@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a non-security feature or improvement
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: consensus
+    attributes:
+      label: Could this alter consensus behavior?
+      options:
+        - "No"
+        - "Possibly"
+        - "Yes"
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Suggested acceptance tests

@@ -1,0 +1,54 @@
+name: Bug report
+description: Report reproducible Axven Core behavior
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not post private keys, wallet backups, seed material, passphrases, or exploitable security vulnerabilities here.
+        Security issues should follow SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      placeholder: v0.9.0-devnet or commit hash
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Consensus
+        - Wallet
+        - P2P
+        - RPC / CLI
+        - Explorer
+        - Build / CI
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Remove passwords, keys, wallet backups and other secrets.
