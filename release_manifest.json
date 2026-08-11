@@ -20,6 +20,10 @@
   "explorer_node1_port": 18445,
   "explorer_node2_port": 18455,
   "files": {
+    ".gitattributes": {
+      "bytes": 20,
+      "sha256": "d711b6ba64c7208f3059111e2a74a2453348584bef1fec237198ad08befe28b9"
+    },
     ".github/workflows/validation.yml": {
       "bytes": 621,
       "sha256": "f02aa63793c6392c14aacb6a7436c19adbb4342e2ebf0ad189124530b1c65e1c"
