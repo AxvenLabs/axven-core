@@ -25,7 +25,9 @@ def main():
     run.add_argument("--rpc-port",type=int,default=18443)
     run.add_argument("--p2p-port",type=int,default=18444)
     run.add_argument("--explorer-port",type=int,default=18445)
-    run.add_argument("--host",default="127.0.0.1")
+    run.add_argument("--rpc-host",default="127.0.0.1")
+    run.add_argument("--p2p-host",default="127.0.0.1")
+    run.add_argument("--explorer-host",default="127.0.0.1")
     args=ap.parse_args()
     dd=DataDir(args.datadir)
 
@@ -43,9 +45,9 @@ def main():
     if args.cmd=="run":
         pw=_passphrase() if dd.has_wallet() else None
         core=dd.load_core(pw)
-        p2p_addr=core.start_p2p(args.host,args.p2p_port)
-        rpc=RPCServer(core,args.host,args.rpc_port).start()
-        explorer=ExplorerServer(core,args.host,args.explorer_port).start()
+        p2p_addr=core.start_p2p(args.p2p_host,args.p2p_port)
+        rpc=RPCServer(core,args.rpc_host,args.rpc_port).start()
+        explorer=ExplorerServer(core,args.explorer_host,args.explorer_port).start()
         print(json.dumps({"rpc":{"host":rpc.address[0],"port":rpc.address[1]},
                           "p2p":{"host":p2p_addr[0],"port":p2p_addr[1]},
                           "explorer":{"host":explorer.address[0],"port":explorer.address[1]},
