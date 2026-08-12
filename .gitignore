@@ -10,3 +10,5 @@ axven-data/
 build/
 *.egg-info/
 *.ORIGINAL.py
+
+home-node/
