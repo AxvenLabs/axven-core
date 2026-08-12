@@ -177,8 +177,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 10091,
-      "sha256": "2bf3dda3ff49e6e3555310d9eed99b7f2fe728be9b787e2d1e8a1fa272cd52dc"
+      "bytes": 11282,
+      "sha256": "eac4a1932a70d904ee18f97827b2e0f291d3dacf99016cddb8fcd358712a2ce8"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -261,8 +261,8 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 4018,
-      "sha256": "cc49d7b30f578a3c3637da011a37ca4756ec65cdf502592866a27c5850cb90d1"
+      "bytes": 4108,
+      "sha256": "bd1c7848ae5d23568411260f746f7c09b7c4eec0584146ba2a0291e90aad0852"
     },
     "run_full_validation.py": {
       "bytes": 1625,

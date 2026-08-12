@@ -150,6 +150,45 @@ class AxvenCore:
             }
         return self.chain.balance(w.address_of(scheme))
 
+    def wallet_status(self, scheme=None):
+        w = self.require_wallet()
+
+        def status_for(selected_scheme):
+            address = w.address_of(selected_scheme)
+            total = int(self.chain.balance(address))
+            mature = list(self.chain.spendable(address))
+
+            reserved = sum(
+                int(amount)
+                for txid, idx, amount in mature
+                if self.pending.is_reserved((txid, idx))
+            )
+            spendable = sum(
+                int(amount)
+                for txid, idx, amount in mature
+                if not self.pending.is_reserved((txid, idx))
+            )
+            immature = total - spendable - reserved
+
+            return {
+                "total": total,
+                "spendable": spendable,
+                "reserved": reserved,
+                "immature": immature,
+            }
+
+        if scheme is not None:
+            return status_for(scheme)
+
+        return {
+            selected_scheme: status_for(selected_scheme)
+            for selected_scheme in (
+                axven.SCHEME_ED25519,
+                axven.SCHEME_ML_DSA,
+                axven.SCHEME_HYBRID,
+            )
+        }
+
     def list_unspent(self, scheme):
         w = self.require_wallet()
         return [

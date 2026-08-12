@@ -29,6 +29,7 @@ class RPCDispatcher:
         if method == "get_chain_config": return self.core.chain_config()
         if method == "get_addresses": return self.core.addresses()
         if method == "get_balance": return self.core.balance(p.get("scheme"))
+        if method == "get_wallet_status": return self.core.wallet_status(p.get("scheme"))
         if method == "list_unspent": return self.core.list_unspent(p["scheme"])
         if method == "mine": return self.core.mine(int(p.get("count", 1)), p.get("scheme"))
         if method == "send":
