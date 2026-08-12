@@ -21,6 +21,8 @@ class AxvenCore:
         self.identity = identity
         self.pending = wallet.PendingTracker()
         self.p2p_server = None
+        self.outbound_peers = []
+        self.peer_last_error = {}
         self.shutdown_requested = False
 
     def require_wallet(self):
@@ -174,6 +176,7 @@ class AxvenCore:
             block = self.chain.mine(address, self.mempool)
             hashes.append(block.hash())
             self.pending.reconcile(self.mempool)
+            self._propagate_block_outbound(block)
         return hashes
 
     def send(self, input_scheme, recipient, amount, fee):
@@ -186,6 +189,7 @@ class AxvenCore:
         txid = self.mempool.add(signed)
         ops = [axven.outpoint(i.prev_txid, i.index) for i in signed._in()]
         self.pending.reserve(txid, ops)
+        self._propagate_tx_outbound(signed)
         return {"txid": txid, "transaction": signed.to_dict()}
 
     def start_p2p(self, host="127.0.0.1", port=0):
@@ -195,6 +199,69 @@ class AxvenCore:
             self.chain, self.mempool, host=host, port=int(port)
         ).start()
         return self.p2p_server.address
+
+    @staticmethod
+    def _parse_peer(peer):
+        if isinstance(peer,(tuple,list)) and len(peer)==2:
+            return (str(peer[0]),int(peer[1]))
+        raw=str(peer).strip()
+        if ":" not in raw:
+            raise ValueError("peer must be host:port")
+        host,port=raw.rsplit(":",1)
+        if not host:
+            raise ValueError("peer host required")
+        port=int(port)
+        if not 1 <= port <= 65535:
+            raise ValueError("invalid peer port")
+        return (host,port)
+
+    def add_outbound_peer(self, peer):
+        addr=self._parse_peer(peer)
+        if addr not in self.outbound_peers:
+            self.outbound_peers.append(addr)
+        return addr
+
+    def outbound_peer_status(self):
+        return [
+            {
+                "host":host,
+                "port":port,
+                "last_error":self.peer_last_error.get((host,port)),
+            }
+            for host,port in self.outbound_peers
+        ]
+
+    def sync_outbound_peers(self):
+        results=[]
+        for addr in list(self.outbound_peers):
+            try:
+                accepted=p2p.sync_to_peer(
+                    addr,p2p.PeerSession(self.chain,self.mempool),limit=128
+                )
+                self.peer_last_error[addr]=None
+                results.append({"peer":f"{addr[0]}:{addr[1]}","ok":True,
+                                "accepted":accepted})
+            except Exception as e:
+                self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
+                results.append({"peer":f"{addr[0]}:{addr[1]}","ok":False,
+                                "error":self.peer_last_error[addr]})
+        return results
+
+    def _propagate_block_outbound(self, block):
+        for addr in list(self.outbound_peers):
+            try:
+                p2p.propagate_block(addr,block)
+                self.peer_last_error[addr]=None
+            except Exception as e:
+                self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
+
+    def _propagate_tx_outbound(self, tx):
+        for addr in list(self.outbound_peers):
+            try:
+                p2p.propagate_tx(addr,tx)
+                self.peer_last_error[addr]=None
+            except Exception as e:
+                self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
 
     def request_shutdown(self):
         self.shutdown_requested = True
