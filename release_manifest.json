@@ -133,8 +133,8 @@
       "sha256": "2d93f7c9c1a06b895586c61182996d0951817db3091df3ca213390c6078210a0"
     },
     "axven_core.py": {
-      "bytes": 2749,
-      "sha256": "7105ef753a26ae395b3b1bd335f6675659f6c4f82f2682e28b4ce4f8e1da9bdf"
+      "bytes": 3549,
+      "sha256": "ab93c4309f9d4fb8982a08ebb624435b77dadc625a5e765ff7c8146bf173a2d3"
     },
     "canonical_node1_mine1.ps1": {
       "bytes": 114,
@@ -177,8 +177,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 7653,
-      "sha256": "ba2f9d4641bbe3360321586eac5d2a418102f1bcd546e23f28378c32f69d17a3"
+      "bytes": 10091,
+      "sha256": "2bf3dda3ff49e6e3555310d9eed99b7f2fe728be9b787e2d1e8a1fa272cd52dc"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,

@@ -28,6 +28,10 @@ def main():
     run.add_argument("--rpc-host",default="127.0.0.1")
     run.add_argument("--p2p-host",default="127.0.0.1")
     run.add_argument("--explorer-host",default="127.0.0.1")
+    run.add_argument("--peer",action="append",default=[],
+                     help="Outbound peer as host:port; may be repeated")
+    run.add_argument("--sync-interval",type=float,default=5.0,
+                     help="Seconds between outbound peer sync attempts")
     args=ap.parse_args()
     dd=DataDir(args.datadir)
 
@@ -48,17 +52,28 @@ def main():
         p2p_addr=core.start_p2p(args.p2p_host,args.p2p_port)
         rpc=RPCServer(core,args.rpc_host,args.rpc_port).start()
         explorer=ExplorerServer(core,args.explorer_host,args.explorer_port).start()
+        for raw_peer in args.peer:
+            core.add_outbound_peer(raw_peer)
+        initial_sync=core.sync_outbound_peers()
+
         print(json.dumps({"rpc":{"host":rpc.address[0],"port":rpc.address[1]},
                           "p2p":{"host":p2p_addr[0],"port":p2p_addr[1]},
                           "explorer":{"host":explorer.address[0],"port":explorer.address[1]},
-                          "height":core.chain.tip.height},indent=2),flush=True)
+                          "height":core.chain.tip.height,
+                          "outbound_peers":core.outbound_peer_status(),
+                          "initial_sync":initial_sync},indent=2),flush=True)
         stop=False
         def halt(*_):
             nonlocal stop; stop=True
         signal.signal(signal.SIGINT,halt)
         signal.signal(signal.SIGTERM,halt)
         try:
-            while not stop and not core.shutdown_requested: time.sleep(.2)
+            next_sync=time.monotonic()+max(.5,args.sync_interval)
+            while not stop and not core.shutdown_requested:
+                time.sleep(.2)
+                if core.outbound_peers and time.monotonic() >= next_sync:
+                    core.sync_outbound_peers()
+                    next_sync=time.monotonic()+max(.5,args.sync_interval)
         finally:
             dd.save_chain(core.chain)
             explorer.stop(); rpc.stop(); core.stop_p2p()
