@@ -12,3 +12,5 @@ build/
 *.ORIGINAL.py
 
 home-node/
+
+home-node-cp34/

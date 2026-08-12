@@ -40,6 +40,18 @@ def main():
     st=sp.add_parser("stop")
     st.add_argument("--rpc-port",type=int,default=18443)
 
+    w=sp.add_parser("wallet")
+    w.add_argument("--rpc-port",type=int,default=18443)
+    w.add_argument("--scheme",default=None)
+
+    b=sp.add_parser("balance")
+    b.add_argument("--rpc-port",type=int,default=18443)
+    b.add_argument("--scheme",default=None)
+
+    u=sp.add_parser("unspent")
+    u.add_argument("--rpc-port",type=int,default=18443)
+    u.add_argument("--scheme",default="ed25519")
+
     a=ap.parse_args()
     if a.cmd=="status":
         out=rpc(a.rpc_port,"get_status")
@@ -49,6 +61,14 @@ def main():
         out=rpc(a.rpc_port,"sync_peer",{"host":a.host,"port":a.port,"batch":128})
     elif a.cmd=="stop":
         out=rpc(a.rpc_port,"stop")
+    elif a.cmd=="wallet":
+        params = {} if a.scheme is None else {"scheme": a.scheme}
+        out=rpc(a.rpc_port,"get_wallet_status",params)
+    elif a.cmd=="balance":
+        params = {} if a.scheme is None else {"scheme": a.scheme}
+        out=rpc(a.rpc_port,"get_balance",params)
+    elif a.cmd=="unspent":
+        out=rpc(a.rpc_port,"list_unspent",{"scheme":a.scheme})
     print(json.dumps(out,indent=2,sort_keys=True))
     if not out.get("ok",False):
         raise SystemExit(2)
