@@ -161,8 +161,8 @@
       "sha256": "68bcd822d6fbcaa5a5f90a1c46e4bc1887ebedb275734763ba0d75174eefb2a5"
     },
     "canonical_ops.py": {
-      "bytes": 3832,
-      "sha256": "483135d52d6c7c8d744ca09454085855212ffa6d09d81f40b1f063d119e48e3f"
+      "bytes": 3985,
+      "sha256": "7fe7dee25f6005a87458225ef0ddc168f15533c6ac6a26f53b957718cef49667"
     },
     "canonical_ops_audit.py": {
       "bytes": 960,
@@ -261,8 +261,8 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 4108,
-      "sha256": "bd1c7848ae5d23568411260f746f7c09b7c4eec0584146ba2a0291e90aad0852"
+      "bytes": 4182,
+      "sha256": "7358c3dc5d15cec6b2270946bb9631530d57e22f49002841a04c5b198c65c5ac"
     },
     "run_full_validation.py": {
       "bytes": 1625,
