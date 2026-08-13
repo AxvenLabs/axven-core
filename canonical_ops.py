@@ -73,6 +73,23 @@ def main():
     pe=sp.add_parser("peers")
     pe.add_argument("--rpc-port",type=int,default=18443)
 
+    ov=sp.add_parser("overview")
+    ov.add_argument("--rpc-port",type=int,default=18443)
+
+    ex=sp.add_parser("explorer")
+    ex.add_argument("--rpc-port",type=int,default=18443)
+
+    bl=sp.add_parser("blocks")
+    bl.add_argument("--limit",type=int,default=20)
+    bl.add_argument("--rpc-port",type=int,default=18443)
+
+    bk=sp.add_parser("block")
+    bk.add_argument("id",help="block height or hash")
+    bk.add_argument("--rpc-port",type=int,default=18443)
+
+    cc=sp.add_parser("chain-config")
+    cc.add_argument("--rpc-port",type=int,default=18443)
+
     a=ap.parse_args()
     if a.cmd=="status":
         out=rpc(a.rpc_port,"get_status")
@@ -105,6 +122,16 @@ def main():
         })
     elif a.cmd=="peers":
         out=rpc(a.rpc_port,"get_peers")
+    elif a.cmd=="overview":
+        out=rpc(a.rpc_port,"get_overview")
+    elif a.cmd=="explorer":
+        out=rpc(a.rpc_port,"get_explorer_summary")
+    elif a.cmd=="blocks":
+        out=rpc(a.rpc_port,"get_recent_blocks",{"limit":a.limit})
+    elif a.cmd=="block":
+        out=rpc(a.rpc_port,"get_block",{"id":a.id})
+    elif a.cmd=="chain-config":
+        out=rpc(a.rpc_port,"get_chain_config")
     print(json.dumps(out,indent=2,sort_keys=True))
     if not out.get("ok",False):
         raise SystemExit(2)
