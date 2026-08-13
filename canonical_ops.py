@@ -70,6 +70,9 @@ def main():
     se.add_argument("--scheme",default="ed25519")
     se.add_argument("--rpc-port",type=int,default=18443)
 
+    pe=sp.add_parser("peers")
+    pe.add_argument("--rpc-port",type=int,default=18443)
+
     a=ap.parse_args()
     if a.cmd=="status":
         out=rpc(a.rpc_port,"get_status")
@@ -100,6 +103,8 @@ def main():
             "amount":a.amount,
             "fee":a.fee,
         })
+    elif a.cmd=="peers":
+        out=rpc(a.rpc_port,"get_peers")
     print(json.dumps(out,indent=2,sort_keys=True))
     if not out.get("ok",False):
         raise SystemExit(2)
