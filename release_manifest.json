@@ -161,8 +161,8 @@
       "sha256": "68bcd822d6fbcaa5a5f90a1c46e4bc1887ebedb275734763ba0d75174eefb2a5"
     },
     "canonical_ops.py": {
-      "bytes": 2707,
-      "sha256": "129441bed345b25ac7b14b3d6bfc3b72ad8d28d9340d49d217201fe4028608cf"
+      "bytes": 3832,
+      "sha256": "483135d52d6c7c8d744ca09454085855212ffa6d09d81f40b1f063d119e48e3f"
     },
     "canonical_ops_audit.py": {
       "bytes": 960,

@@ -52,6 +52,24 @@ def main():
     u.add_argument("--rpc-port",type=int,default=18443)
     u.add_argument("--scheme",default="ed25519")
 
+    ad=sp.add_parser("addresses")
+    ad.add_argument("--rpc-port",type=int,default=18443)
+
+    mp=sp.add_parser("mempool")
+    mp.add_argument("--rpc-port",type=int,default=18443)
+    mp.add_argument("--limit",type=int,default=100)
+
+    tx=sp.add_parser("tx")
+    tx.add_argument("txid")
+    tx.add_argument("--rpc-port",type=int,default=18443)
+
+    se=sp.add_parser("send")
+    se.add_argument("recipient")
+    se.add_argument("amount",type=int,help="amount in base units (1 AXV = 100000000)")
+    se.add_argument("--fee",type=int,default=1000,help="fee in base units")
+    se.add_argument("--scheme",default="ed25519")
+    se.add_argument("--rpc-port",type=int,default=18443)
+
     a=ap.parse_args()
     if a.cmd=="status":
         out=rpc(a.rpc_port,"get_status")
@@ -69,6 +87,19 @@ def main():
         out=rpc(a.rpc_port,"get_balance",params)
     elif a.cmd=="unspent":
         out=rpc(a.rpc_port,"list_unspent",{"scheme":a.scheme})
+    elif a.cmd=="addresses":
+        out=rpc(a.rpc_port,"get_addresses")
+    elif a.cmd=="mempool":
+        out=rpc(a.rpc_port,"get_mempool",{"limit":a.limit})
+    elif a.cmd=="tx":
+        out=rpc(a.rpc_port,"get_transaction",{"txid":a.txid})
+    elif a.cmd=="send":
+        out=rpc(a.rpc_port,"send",{
+            "input_scheme":a.scheme,
+            "recipient":a.recipient,
+            "amount":a.amount,
+            "fee":a.fee,
+        })
     print(json.dumps(out,indent=2,sort_keys=True))
     if not out.get("ok",False):
         raise SystemExit(2)
