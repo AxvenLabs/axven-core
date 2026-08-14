@@ -32,6 +32,7 @@ class RPCDispatcher:
         if method == "get_wallet_status": return self.core.wallet_status(p.get("scheme"))
         if method == "list_unspent": return self.core.list_unspent(p["scheme"])
         if method == "get_peers": return self.core.outbound_peer_status()
+        if method == "get_peer_health": return self.core.peer_health_summary()
         if method == "add_peer":
             host, port = self.core.add_outbound_peer((p["host"], int(p["port"])))
             return {"host": host, "port": port}

@@ -73,6 +73,9 @@ def main():
     pe=sp.add_parser("peers")
     pe.add_argument("--rpc-port",type=int,default=18443)
 
+    ph=sp.add_parser("peer-health")
+    ph.add_argument("--rpc-port",type=int,default=18443)
+
     ape=sp.add_parser("add-peer")
     ape.add_argument("host")
     ape.add_argument("port",type=int)
@@ -135,6 +138,8 @@ def main():
         })
     elif a.cmd=="peers":
         out=rpc(a.rpc_port,"get_peers")
+    elif a.cmd=="peer-health":
+        out=rpc(a.rpc_port,"get_peer_health")
     elif a.cmd=="add-peer":
         out=rpc(a.rpc_port,"add_peer",{"host":a.host,"port":a.port})
     elif a.cmd=="sync-peers":
