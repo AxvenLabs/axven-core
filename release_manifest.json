@@ -177,16 +177,16 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 11664,
-      "sha256": "97b1d59d54f8a95f7b2c162d7d1098c8f78ddab26f7274b3c44745bdf39ef3c8"
+      "bytes": 11944,
+      "sha256": "af2fc9424c30c6c46ea32c2cbd0f5bad8a9296079a119c8dd9c173bd0a8db459"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
       "sha256": "73f4aa368d9341cc708f2396bedd139ccf14138e4fe8e37aa81de463bc589344"
     },
     "datadir.py": {
-      "bytes": 1561,
-      "sha256": "b7525fb6f0f9636b4e9ff66559de5f95919156e4721dd84c760833f9eab8cd72"
+      "bytes": 2795,
+      "sha256": "368a5ee29ba757f3be93179714d3328ee02f79d9d06203d23844a83a5fb505b2"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
