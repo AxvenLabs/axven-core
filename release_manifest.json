@@ -176,13 +176,17 @@
       "bytes": 6318,
       "sha256": "22a54591e4b68ab7c0cc076cb1c0aede7ca46fc57fa54951cabc4a596d15f43d"
     },
+    "checkpoint43_peer_health_spec.py": {
+      "bytes": 1988,
+      "sha256": "fb95bfdda88dc83e9b85c2d543afdb397ce087df55588b511bc3a9be51f81955"
+    },
     "clean_install_smoke.py": {
       "bytes": 1172,
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 11944,
-      "sha256": "af2fc9424c30c6c46ea32c2cbd0f5bad8a9296079a119c8dd9c173bd0a8db459"
+      "bytes": 12535,
+      "sha256": "cebe8e7110845a05f89e61899c1137efd8fa16812bd031e8c1ab69474fcb999f"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -269,8 +273,8 @@
       "sha256": "06b9410e0d53ed9db378625e3173ecbbc73dde80905ceac39fe1d72ae9519b1e"
     },
     "run_full_validation.py": {
-      "bytes": 1704,
-      "sha256": "259c18cc539104a05ddcb315150812978da1072b24989ef269208b24e8b95d5b"
+      "bytes": 1766,
+      "sha256": "0f142ae74242e73ea7b38747a8503473e3676dab1eefc3b005a0563067ca6cf3"
     },
     "setup.cmd": {
       "bytes": 172,
