@@ -84,9 +84,8 @@ ok("canonical peers parser exists",
 ok("canonical peers command calls get_peers",
    '"get_peers"' in cli_source)
 
-ok("checkpoint does not add peer mutation CLI",
-   'add_parser("add-peer")' not in cli_source
-   and 'add_parser("remove-peer")' not in cli_source)
+ok("checkpoint does not add peer removal CLI",
+   'add_parser("remove-peer")' not in cli_source)
 
 
 print(

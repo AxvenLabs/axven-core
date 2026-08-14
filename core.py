@@ -242,14 +242,17 @@ class AxvenCore:
     @staticmethod
     def _parse_peer(peer):
         if isinstance(peer,(tuple,list)) and len(peer)==2:
-            return (str(peer[0]),int(peer[1]))
-        raw=str(peer).strip()
-        if ":" not in raw:
-            raise ValueError("peer must be host:port")
-        host,port=raw.rsplit(":",1)
+            host=str(peer[0]).strip()
+            port=int(peer[1])
+        else:
+            raw=str(peer).strip()
+            if ":" not in raw:
+                raise ValueError("peer must be host:port")
+            host,port=raw.rsplit(":",1)
+            host=host.strip()
+            port=int(port)
         if not host:
             raise ValueError("peer host required")
-        port=int(port)
         if not 1 <= port <= 65535:
             raise ValueError("invalid peer port")
         return (host,port)
