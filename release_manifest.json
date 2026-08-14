@@ -161,8 +161,8 @@
       "sha256": "68bcd822d6fbcaa5a5f90a1c46e4bc1887ebedb275734763ba0d75174eefb2a5"
     },
     "canonical_ops.py": {
-      "bytes": 5631,
-      "sha256": "052d86ed4f8903aa2926359cbd6cdf34c7d79f2ac6b366a1b63479bfe5be7bbc"
+      "bytes": 5802,
+      "sha256": "72b27ed1fdcc2b4a3007d5e2cab0e27d4ff0deea9c04298d3a49b5adf91c84d3"
     },
     "canonical_ops_audit.py": {
       "bytes": 960,
@@ -180,13 +180,17 @@
       "bytes": 1988,
       "sha256": "fb95bfdda88dc83e9b85c2d543afdb397ce087df55588b511bc3a9be51f81955"
     },
+    "checkpoint44_peer_health_summary_spec.py": {
+      "bytes": 1709,
+      "sha256": "85c0d8269bec98cd86bf8bbf8da5acb374abf4e2e2bc915b926aa8fa6da834da"
+    },
     "clean_install_smoke.py": {
       "bytes": 1172,
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 12535,
-      "sha256": "cebe8e7110845a05f89e61899c1137efd8fa16812bd031e8c1ab69474fcb999f"
+      "bytes": 13121,
+      "sha256": "d4b9e079fed67d0b57206881ebe5222611514671cd6aa506c69e51a60e083641"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -269,12 +273,12 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 4546,
-      "sha256": "06b9410e0d53ed9db378625e3173ecbbc73dde80905ceac39fe1d72ae9519b1e"
+      "bytes": 4625,
+      "sha256": "04f48d1fac9233992fad2fa7be2739be9128219619cd558441fe6efa2d2acbcf"
     },
     "run_full_validation.py": {
-      "bytes": 1766,
-      "sha256": "0f142ae74242e73ea7b38747a8503473e3676dab1eefc3b005a0563067ca6cf3"
+      "bytes": 1835,
+      "sha256": "a672910ff8bded04f5ac5bf4f03557bc993a7bb03b73c681524c01d6ccbc15e9"
     },
     "setup.cmd": {
       "bytes": 172,

@@ -292,6 +292,21 @@ class AxvenCore:
             for host,port in self.outbound_peers
         ]
 
+    def peer_health_summary(self):
+        peers=self.outbound_peer_status()
+        total=len(peers)
+        unhealthy=sum(1 for peer in peers if peer["last_error"] is not None)
+        healthy=total-unhealthy
+        total_successes=sum(peer["sync_successes"] for peer in peers)
+        total_failures=sum(peer["consecutive_failures"] for peer in peers)
+        return {
+            "total":total,
+            "healthy":healthy,
+            "unhealthy":unhealthy,
+            "total_sync_successes":total_successes,
+            "total_consecutive_failures":total_failures,
+        }
+
     def sync_outbound_peers(self):
         results=[]
         for addr in list(self.outbound_peers):
