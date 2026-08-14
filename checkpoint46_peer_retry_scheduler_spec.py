@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Checkpoint 46 daemon acceptance: per-peer retry backoff."""
 
 import json

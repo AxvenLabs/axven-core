@@ -188,6 +188,14 @@
       "bytes": 2186,
       "sha256": "1a8e76df06b4c42690a32a4fc66f97c67835ab1c76f9e1262585611bd274ee46"
     },
+    "checkpoint46_peer_retry_backoff_spec.py": {
+      "bytes": 1922,
+      "sha256": "c7dd0c17673c2988c9e96242c6423a17839cf0ddabac585ad21e60eee2ea33f6"
+    },
+    "checkpoint46_peer_retry_scheduler_spec.py": {
+      "bytes": 4089,
+      "sha256": "8a8cd3c8363dff55e182ee8fdc660b4dc4daf7168b4073ed98997b284a9fc026"
+    },
     "clean_install_smoke.py": {
       "bytes": 1172,
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
@@ -335,14 +343,6 @@
     "wallet.py": {
       "bytes": 9005,
       "sha256": "76a43c1485c6e63c99075fd52a2a142e8a09f2ce1c27facb32610449c276c3b4"
-    },
-    "checkpoint46_peer_retry_backoff_spec.py": {
-      "bytes": 1926,
-      "sha256": "1bb974218268f3a1f31fe5c1ae8370b678e4601ebacd245fc98520cd21d816dd"
-    },
-    "checkpoint46_peer_retry_scheduler_spec.py": {
-      "bytes": 4093,
-      "sha256": "ff4508596d2f8051ab86547d0acbfca019648c26ac885a0fb0961fde01337e65"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

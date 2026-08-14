@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """Checkpoint 46: bounded per-peer retry/backoff contract."""
 
 from core import AxvenCore
