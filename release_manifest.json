@@ -133,8 +133,8 @@
       "sha256": "2d93f7c9c1a06b895586c61182996d0951817db3091df3ca213390c6078210a0"
     },
     "axven_core.py": {
-      "bytes": 3549,
-      "sha256": "ab93c4309f9d4fb8982a08ebb624435b77dadc625a5e765ff7c8146bf173a2d3"
+      "bytes": 4608,
+      "sha256": "a6d9c58eb58dfa3cfac25e6161131e8769b06671859c7860c4167d96c17cfd09"
     },
     "canonical_node1_mine1.ps1": {
       "bytes": 114,
@@ -193,8 +193,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 13778,
-      "sha256": "cc3cd62b2333fde50e0d95d3c43a0f37400c900a57919ffab44021a4f0d28e2a"
+      "bytes": 14425,
+      "sha256": "001afc51e8167ebca7f1d6781161354f77967b4839e236ad38b766fde00a3676"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -281,8 +281,8 @@
       "sha256": "04f48d1fac9233992fad2fa7be2739be9128219619cd558441fe6efa2d2acbcf"
     },
     "run_full_validation.py": {
-      "bytes": 1910,
-      "sha256": "655ff642caffdd3dfc95f6adb4ebabf2d7883054d8f150cf5aee8e46091a9914"
+      "bytes": 2048,
+      "sha256": "0a4f1ec5a24042f05baaffaefb7a9e7988d9937d6b14cc4d9e5b3b6f21ec7866"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -335,6 +335,14 @@
     "wallet.py": {
       "bytes": 9005,
       "sha256": "76a43c1485c6e63c99075fd52a2a142e8a09f2ce1c27facb32610449c276c3b4"
+    },
+    "checkpoint46_peer_retry_backoff_spec.py": {
+      "bytes": 1926,
+      "sha256": "1bb974218268f3a1f31fe5c1ae8370b678e4601ebacd245fc98520cd21d816dd"
+    },
+    "checkpoint46_peer_retry_scheduler_spec.py": {
+      "bytes": 4093,
+      "sha256": "ff4508596d2f8051ab86547d0acbfca019648c26ac885a0fb0961fde01337e65"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

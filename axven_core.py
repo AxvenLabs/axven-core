@@ -68,12 +68,42 @@ def main():
         signal.signal(signal.SIGINT,halt)
         signal.signal(signal.SIGTERM,halt)
         try:
-            next_sync=time.monotonic()+max(.5,args.sync_interval)
+            base_sync_interval=max(.5,args.sync_interval)
+            peer_next_sync={
+                addr:time.monotonic()+base_sync_interval
+                for addr in core.outbound_peers
+            }
+
             while not stop and not core.shutdown_requested:
                 time.sleep(.2)
-                if core.outbound_peers and time.monotonic() >= next_sync:
-                    core.sync_outbound_peers()
-                    next_sync=time.monotonic()+max(.5,args.sync_interval)
+                now=time.monotonic()
+                configured=set(core.outbound_peers)
+
+                # Drop scheduler state for peers removed at runtime.
+                for addr in list(peer_next_sync):
+                    if addr not in configured:
+                        peer_next_sync.pop(addr,None)
+
+                # Runtime-added peers start on the normal base interval.
+                for addr in configured:
+                    peer_next_sync.setdefault(
+                        addr,now+base_sync_interval
+                    )
+
+                # Each peer is scheduled independently. A failing peer's
+                # backoff must never slow healthy peers.
+                for addr in list(core.outbound_peers):
+                    if now < peer_next_sync.get(addr,now):
+                        continue
+
+                    core.sync_outbound_peer(addr)
+
+                    peer_next_sync[addr]=(
+                        time.monotonic()
+                        + core.peer_retry_delay(
+                            addr,base_sync_interval,60.0
+                        )
+                    )
         finally:
             dd.save_chain(core.chain)
             explorer.stop(); rpc.stop(); core.stop_p2p()

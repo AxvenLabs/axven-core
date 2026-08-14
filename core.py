@@ -318,26 +318,43 @@ class AxvenCore:
             "total_consecutive_failures":total_failures,
         }
 
+    def peer_retry_delay(self, peer, base_interval=5.0, cap=60.0):
+        """Return bounded exponential retry delay for one outbound peer."""
+        addr=self._parse_peer(peer)
+        base=max(0.5,float(base_interval))
+        ceiling=max(base,float(cap))
+        failures=max(0,int(self.peer_consecutive_failures.get(addr,0)))
+
+        # Failure #1 still uses the normal interval. Each subsequent
+        # consecutive failure doubles the delay until the cap is reached.
+        exponent=max(0,failures-1)
+        return min(ceiling,base*(2 ** exponent))
+
+    def sync_outbound_peer(self, peer):
+        """Synchronize one configured outbound peer and update its health."""
+        addr=self._parse_peer(peer)
+        try:
+            accepted=p2p.sync_to_peer(
+                addr,p2p.PeerSession(self.chain,self.mempool),limit=128
+            )
+            self.peer_last_error[addr]=None
+            self.peer_sync_successes[addr]=self.peer_sync_successes.get(addr,0)+1
+            self.peer_consecutive_failures[addr]=0
+            self.peer_last_success_at[addr]=self._peer_health_timestamp()
+            return {"peer":f"{addr[0]}:{addr[1]}","ok":True,
+                    "accepted":accepted}
+        except Exception as e:
+            self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
+            self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1
+            self.peer_last_failure_at[addr]=self._peer_health_timestamp()
+            return {"peer":f"{addr[0]}:{addr[1]}","ok":False,
+                    "error":self.peer_last_error[addr]}
+
     def sync_outbound_peers(self):
-        results=[]
-        for addr in list(self.outbound_peers):
-            try:
-                accepted=p2p.sync_to_peer(
-                    addr,p2p.PeerSession(self.chain,self.mempool),limit=128
-                )
-                self.peer_last_error[addr]=None
-                self.peer_sync_successes[addr]=self.peer_sync_successes.get(addr,0)+1
-                self.peer_consecutive_failures[addr]=0
-                self.peer_last_success_at[addr]=self._peer_health_timestamp()
-                results.append({"peer":f"{addr[0]}:{addr[1]}","ok":True,
-                                "accepted":accepted})
-            except Exception as e:
-                self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
-                self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1
-                self.peer_last_failure_at[addr]=self._peer_health_timestamp()
-                results.append({"peer":f"{addr[0]}:{addr[1]}","ok":False,
-                                "error":self.peer_last_error[addr]})
-        return results
+        return [
+            self.sync_outbound_peer(addr)
+            for addr in list(self.outbound_peers)
+        ]
 
     def _propagate_block_outbound(self, block):
         for addr in list(self.outbound_peers):
