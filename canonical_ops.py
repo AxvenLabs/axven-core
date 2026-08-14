@@ -81,6 +81,11 @@ def main():
     spe=sp.add_parser("sync-peers")
     spe.add_argument("--rpc-port",type=int,default=18443)
 
+    rpe=sp.add_parser("remove-peer")
+    rpe.add_argument("host")
+    rpe.add_argument("port",type=int)
+    rpe.add_argument("--rpc-port",type=int,default=18443)
+
     ov=sp.add_parser("overview")
     ov.add_argument("--rpc-port",type=int,default=18443)
 
@@ -134,6 +139,8 @@ def main():
         out=rpc(a.rpc_port,"add_peer",{"host":a.host,"port":a.port})
     elif a.cmd=="sync-peers":
         out=rpc(a.rpc_port,"sync_peers")
+    elif a.cmd=="remove-peer":
+        out=rpc(a.rpc_port,"remove_peer",{"host":a.host,"port":a.port})
     elif a.cmd=="overview":
         out=rpc(a.rpc_port,"get_overview")
     elif a.cmd=="explorer":
