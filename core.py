@@ -263,6 +263,14 @@ class AxvenCore:
             self.outbound_peers.append(addr)
         return addr
 
+    def remove_outbound_peer(self, peer):
+        addr=self._parse_peer(peer)
+        removed=addr in self.outbound_peers
+        if removed:
+            self.outbound_peers.remove(addr)
+        self.peer_last_error.pop(addr,None)
+        return {"host":addr[0],"port":addr[1],"removed":removed}
+
     def outbound_peer_status(self):
         return [
             {

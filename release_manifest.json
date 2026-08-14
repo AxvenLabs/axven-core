@@ -161,8 +161,8 @@
       "sha256": "68bcd822d6fbcaa5a5f90a1c46e4bc1887ebedb275734763ba0d75174eefb2a5"
     },
     "canonical_ops.py": {
-      "bytes": 5365,
-      "sha256": "2b3cdc80a8947211d8709ab634e34a71fa241338a257b8c78f1754228b9e5a0b"
+      "bytes": 5631,
+      "sha256": "052d86ed4f8903aa2926359cbd6cdf34c7d79f2ac6b366a1b63479bfe5be7bbc"
     },
     "canonical_ops_audit.py": {
       "bytes": 960,
@@ -177,8 +177,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 11367,
-      "sha256": "26a8fcbfd15fc1aab9fb9492d07fc13034a25f44d9112259f60d1cabae91162d"
+      "bytes": 11664,
+      "sha256": "97b1d59d54f8a95f7b2c162d7d1098c8f78ddab26f7274b3c44745bdf39ef3c8"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -261,8 +261,8 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 4431,
-      "sha256": "6245b84a27f4519f38482bc98cfb54f2cc9dcb05902abff5bcc3e366502a350a"
+      "bytes": 4546,
+      "sha256": "06b9410e0d53ed9db378625e3173ecbbc73dde80905ceac39fe1d72ae9519b1e"
     },
     "run_full_validation.py": {
       "bytes": 1625,

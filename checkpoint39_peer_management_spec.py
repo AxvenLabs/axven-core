@@ -151,8 +151,9 @@ ok("existing core peer registration reused",
 ok("existing outbound sync reused",
    "sync_outbound_peers" in core_source)
 
-ok("peer removal remains out of scope",
-   'add_parser("remove-peer")' not in cli_source)
+ok("runtime peer management remains exposed",
+   'add_parser("add-peer")' in cli_source
+   and 'add_parser("sync-peers")' in cli_source)
 
 print(
     f"Checkpoint 39 peer management: "

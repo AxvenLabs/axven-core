@@ -37,6 +37,8 @@ class RPCDispatcher:
             return {"host": host, "port": port}
         if method == "sync_peers":
             return self.core.sync_outbound_peers()
+        if method == "remove_peer":
+            return self.core.remove_outbound_peer((p["host"], int(p["port"])))
         if method == "mine": return self.core.mine(int(p.get("count", 1)), p.get("scheme"))
         if method == "send":
             return self.core.send(p["input_scheme"], p["recipient"],
