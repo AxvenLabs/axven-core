@@ -15,6 +15,7 @@ SUITES=[
  ("core_rpc_test.py","Core/RPC"),
  ("p2p_tcp_lifecycle_test.py","P2P TCP lifecycle"),
  ("devnet_rehearsal.py","Two-node devnet rehearsal"),
+ ("checkpoint42_peer_reconnect_spec.py","Persistent peer reconnect/recovery"),
  ("activation_record_encoding_test.py","Activation record UTF-8"),
  ("post_activation_audit.py","Post-activation audit"),
  ("p2p_spec_test.py","P2P spec"),

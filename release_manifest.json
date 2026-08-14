@@ -172,6 +172,10 @@
       "bytes": 227,
       "sha256": "d5d2e99dd84a5bebab5d905ec412d818a9b699d46f6ec49401d514efcb5ce73d"
     },
+    "checkpoint42_peer_reconnect_spec.py": {
+      "bytes": 6318,
+      "sha256": "22a54591e4b68ab7c0cc076cb1c0aede7ca46fc57fa54951cabc4a596d15f43d"
+    },
     "clean_install_smoke.py": {
       "bytes": 1172,
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
@@ -265,8 +269,8 @@
       "sha256": "06b9410e0d53ed9db378625e3173ecbbc73dde80905ceac39fe1d72ae9519b1e"
     },
     "run_full_validation.py": {
-      "bytes": 1625,
-      "sha256": "60e6d4f4060aea503bf0160616d4fce696ab90ec41bca3fb5cfa477b37c13c67"
+      "bytes": 1704,
+      "sha256": "259c18cc539104a05ddcb315150812978da1072b24989ef269208b24e8b95d5b"
     },
     "setup.cmd": {
       "bytes": 172,
