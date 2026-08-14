@@ -6,6 +6,7 @@ changing consensus.  RPC is layered on top in rpc.py.
 """
 from __future__ import annotations
 from typing import Optional, Tuple
+from datetime import datetime, timezone
 
 import axven
 import p2p
@@ -25,6 +26,8 @@ class AxvenCore:
         self.peer_last_error = {}
         self.peer_sync_successes = {}
         self.peer_consecutive_failures = {}
+        self.peer_last_success_at = {}
+        self.peer_last_failure_at = {}
         self.peer_persist_callback = None
         self.shutdown_requested = False
 
@@ -260,6 +263,10 @@ class AxvenCore:
             raise ValueError("invalid peer port")
         return (host,port)
 
+    @staticmethod
+    def _peer_health_timestamp():
+        return datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
+
     def add_outbound_peer(self, peer):
         addr=self._parse_peer(peer)
         if addr not in self.outbound_peers:
@@ -278,6 +285,8 @@ class AxvenCore:
         self.peer_last_error.pop(addr,None)
         self.peer_sync_successes.pop(addr,None)
         self.peer_consecutive_failures.pop(addr,None)
+        self.peer_last_success_at.pop(addr,None)
+        self.peer_last_failure_at.pop(addr,None)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
     def outbound_peer_status(self):
@@ -288,6 +297,8 @@ class AxvenCore:
                 "last_error":self.peer_last_error.get((host,port)),
                 "sync_successes":self.peer_sync_successes.get((host,port),0),
                 "consecutive_failures":self.peer_consecutive_failures.get((host,port),0),
+                "last_success_at":self.peer_last_success_at.get((host,port)),
+                "last_failure_at":self.peer_last_failure_at.get((host,port)),
             }
             for host,port in self.outbound_peers
         ]
@@ -317,11 +328,13 @@ class AxvenCore:
                 self.peer_last_error[addr]=None
                 self.peer_sync_successes[addr]=self.peer_sync_successes.get(addr,0)+1
                 self.peer_consecutive_failures[addr]=0
+                self.peer_last_success_at[addr]=self._peer_health_timestamp()
                 results.append({"peer":f"{addr[0]}:{addr[1]}","ok":True,
                                 "accepted":accepted})
             except Exception as e:
                 self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
                 self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1
+                self.peer_last_failure_at[addr]=self._peer_health_timestamp()
                 results.append({"peer":f"{addr[0]}:{addr[1]}","ok":False,
                                 "error":self.peer_last_error[addr]})
         return results
