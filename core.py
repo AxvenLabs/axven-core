@@ -23,6 +23,8 @@ class AxvenCore:
         self.p2p_server = None
         self.outbound_peers = []
         self.peer_last_error = {}
+        self.peer_sync_successes = {}
+        self.peer_consecutive_failures = {}
         self.peer_persist_callback = None
         self.shutdown_requested = False
 
@@ -274,6 +276,8 @@ class AxvenCore:
             if self.peer_persist_callback is not None:
                 self.peer_persist_callback(self.outbound_peers)
         self.peer_last_error.pop(addr,None)
+        self.peer_sync_successes.pop(addr,None)
+        self.peer_consecutive_failures.pop(addr,None)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
     def outbound_peer_status(self):
@@ -282,6 +286,8 @@ class AxvenCore:
                 "host":host,
                 "port":port,
                 "last_error":self.peer_last_error.get((host,port)),
+                "sync_successes":self.peer_sync_successes.get((host,port),0),
+                "consecutive_failures":self.peer_consecutive_failures.get((host,port),0),
             }
             for host,port in self.outbound_peers
         ]
@@ -294,10 +300,13 @@ class AxvenCore:
                     addr,p2p.PeerSession(self.chain,self.mempool),limit=128
                 )
                 self.peer_last_error[addr]=None
+                self.peer_sync_successes[addr]=self.peer_sync_successes.get(addr,0)+1
+                self.peer_consecutive_failures[addr]=0
                 results.append({"peer":f"{addr[0]}:{addr[1]}","ok":True,
                                 "accepted":accepted})
             except Exception as e:
                 self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
+                self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1
                 results.append({"peer":f"{addr[0]}:{addr[1]}","ok":False,
                                 "error":self.peer_last_error[addr]})
         return results
