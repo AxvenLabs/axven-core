@@ -21,6 +21,8 @@ SUITES=[
  ("checkpoint45_peer_health_timestamps_spec.py","Peer health timestamps"),
  ("checkpoint46_peer_retry_backoff_spec.py","Peer retry backoff"),
  ("checkpoint46_peer_retry_scheduler_spec.py","Peer retry scheduler"),
+ ("checkpoint47_peer_retry_observability_spec.py","Peer retry observability"),
+ ("checkpoint47_peer_retry_daemon_spec.py","Peer retry observability daemon"),
  ("activation_record_encoding_test.py","Activation record UTF-8"),
  ("post_activation_audit.py","Post-activation audit"),
  ("p2p_spec_test.py","P2P spec"),

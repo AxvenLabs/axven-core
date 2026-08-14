@@ -28,6 +28,9 @@ class AxvenCore:
         self.peer_consecutive_failures = {}
         self.peer_last_success_at = {}
         self.peer_last_failure_at = {}
+        self.peer_retry_delay_seconds = {}
+        self.peer_next_retry_at = {}
+        self.peer_retry_base_interval = {}
         self.peer_persist_callback = None
         self.shutdown_requested = False
 
@@ -287,6 +290,7 @@ class AxvenCore:
         self.peer_consecutive_failures.pop(addr,None)
         self.peer_last_success_at.pop(addr,None)
         self.peer_last_failure_at.pop(addr,None)
+        self.clear_peer_retry_schedule(addr)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
     def outbound_peer_status(self):
@@ -299,6 +303,13 @@ class AxvenCore:
                 "consecutive_failures":self.peer_consecutive_failures.get((host,port),0),
                 "last_success_at":self.peer_last_success_at.get((host,port)),
                 "last_failure_at":self.peer_last_failure_at.get((host,port)),
+                "retry_delay_seconds":self.peer_retry_delay_seconds.get((host,port)),
+                "next_retry_at":self.peer_next_retry_at.get((host,port)),
+                "retry_backoff_active":(
+                    self.peer_retry_delay_seconds.get((host,port)) is not None
+                    and self.peer_retry_delay_seconds.get((host,port),0)
+                        > self.peer_retry_base_interval.get((host,port),0)
+                ),
             }
             for host,port in self.outbound_peers
         ]
@@ -317,6 +328,30 @@ class AxvenCore:
             "total_sync_successes":total_successes,
             "total_consecutive_failures":total_failures,
         }
+
+    def set_peer_retry_schedule(self, peer, delay_seconds, base_interval=5.0):
+        """Record operator-visible retry scheduling state for one peer."""
+        addr=self._parse_peer(peer)
+        delay=max(0.0,float(delay_seconds))
+        base=max(0.5,float(base_interval))
+        self.peer_retry_delay_seconds[addr]=delay
+        self.peer_retry_base_interval[addr]=base
+        self.peer_next_retry_at[addr]=(
+            datetime.now(timezone.utc)
+            .timestamp() + delay
+        )
+        self.peer_next_retry_at[addr]=(
+            datetime.fromtimestamp(
+                self.peer_next_retry_at[addr],timezone.utc
+            ).isoformat().replace("+00:00","Z")
+        )
+
+    def clear_peer_retry_schedule(self, peer):
+        """Clear operator-visible retry scheduling state for one peer."""
+        addr=self._parse_peer(peer)
+        self.peer_retry_delay_seconds.pop(addr,None)
+        self.peer_next_retry_at.pop(addr,None)
+        self.peer_retry_base_interval.pop(addr,None)
 
     def peer_retry_delay(self, peer, base_interval=5.0, cap=60.0):
         """Return bounded exponential retry delay for one outbound peer."""

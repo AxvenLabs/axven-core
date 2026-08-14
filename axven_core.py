@@ -73,6 +73,12 @@ def main():
                 addr:time.monotonic()+base_sync_interval
                 for addr in core.outbound_peers
             }
+            for addr in core.outbound_peers:
+                core.set_peer_retry_schedule(
+                    addr,
+                    base_sync_interval,
+                    base_sync_interval,
+                )
 
             while not stop and not core.shutdown_requested:
                 time.sleep(.2)
@@ -86,9 +92,13 @@ def main():
 
                 # Runtime-added peers start on the normal base interval.
                 for addr in configured:
-                    peer_next_sync.setdefault(
-                        addr,now+base_sync_interval
-                    )
+                    if addr not in peer_next_sync:
+                        peer_next_sync[addr]=now+base_sync_interval
+                        core.set_peer_retry_schedule(
+                            addr,
+                            base_sync_interval,
+                            base_sync_interval,
+                        )
 
                 # Each peer is scheduled independently. A failing peer's
                 # backoff must never slow healthy peers.
@@ -98,11 +108,16 @@ def main():
 
                     core.sync_outbound_peer(addr)
 
+                    retry_delay=core.peer_retry_delay(
+                        addr,base_sync_interval,60.0
+                    )
                     peer_next_sync[addr]=(
-                        time.monotonic()
-                        + core.peer_retry_delay(
-                            addr,base_sync_interval,60.0
-                        )
+                        time.monotonic()+retry_delay
+                    )
+                    core.set_peer_retry_schedule(
+                        addr,
+                        retry_delay,
+                        base_sync_interval,
                     )
         finally:
             dd.save_chain(core.chain)
