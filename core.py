@@ -23,6 +23,7 @@ class AxvenCore:
         self.p2p_server = None
         self.outbound_peers = []
         self.peer_last_error = {}
+        self.peer_persist_callback = None
         self.shutdown_requested = False
 
     def require_wallet(self):
@@ -261,6 +262,8 @@ class AxvenCore:
         addr=self._parse_peer(peer)
         if addr not in self.outbound_peers:
             self.outbound_peers.append(addr)
+            if self.peer_persist_callback is not None:
+                self.peer_persist_callback(self.outbound_peers)
         return addr
 
     def remove_outbound_peer(self, peer):
@@ -268,6 +271,8 @@ class AxvenCore:
         removed=addr in self.outbound_peers
         if removed:
             self.outbound_peers.remove(addr)
+            if self.peer_persist_callback is not None:
+                self.peer_persist_callback(self.outbound_peers)
         self.peer_last_error.pop(addr,None)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
