@@ -18,6 +18,7 @@ SUITES=[
  ("checkpoint42_peer_reconnect_spec.py","Persistent peer reconnect/recovery"),
  ("checkpoint43_peer_health_spec.py","Peer health tracking"),
  ("checkpoint44_peer_health_summary_spec.py","Peer health summary"),
+ ("checkpoint45_peer_health_timestamps_spec.py","Peer health timestamps"),
  ("activation_record_encoding_test.py","Activation record UTF-8"),
  ("post_activation_audit.py","Post-activation audit"),
  ("p2p_spec_test.py","P2P spec"),
