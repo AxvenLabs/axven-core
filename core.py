@@ -31,6 +31,10 @@ class AxvenCore:
         self.peer_retry_delay_seconds = {}
         self.peer_next_retry_at = {}
         self.peer_retry_base_interval = {}
+        self.peer_health_current_state = {}
+        self.peer_previous_health_state = {}
+        self.peer_health_transition_count = {}
+        self.peer_last_health_transition_at = {}
         self.peer_persist_callback = None
         self.shutdown_requested = False
 
@@ -274,6 +278,7 @@ class AxvenCore:
         addr=self._parse_peer(peer)
         if addr not in self.outbound_peers:
             self.outbound_peers.append(addr)
+            self.peer_health_current_state[addr]=self.peer_health_state(addr)
             if self.peer_persist_callback is not None:
                 self.peer_persist_callback(self.outbound_peers)
         return addr
@@ -290,6 +295,10 @@ class AxvenCore:
         self.peer_consecutive_failures.pop(addr,None)
         self.peer_last_success_at.pop(addr,None)
         self.peer_last_failure_at.pop(addr,None)
+        self.peer_health_current_state.pop(addr,None)
+        self.peer_previous_health_state.pop(addr,None)
+        self.peer_health_transition_count.pop(addr,None)
+        self.peer_last_health_transition_at.pop(addr,None)
         self.clear_peer_retry_schedule(addr)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
@@ -320,12 +329,53 @@ class AxvenCore:
 
         return "healthy"
 
+    def record_peer_health_transition(self, peer):
+        """Record a health-state change for one configured outbound peer."""
+        addr=self._parse_peer(peer)
+        new_state=self.peer_health_state(addr)
+        current_state=self.peer_health_current_state.get(addr)
+
+        # First observation establishes the baseline without counting
+        # a transition.
+        if current_state is None:
+            self.peer_health_current_state[addr]=new_state
+            return {
+                "changed":False,
+                "previous":None,
+                "current":new_state,
+            }
+
+        if new_state == current_state:
+            return {
+                "changed":False,
+                "previous":self.peer_previous_health_state.get(addr),
+                "current":new_state,
+            }
+
+        self.peer_previous_health_state[addr]=current_state
+        self.peer_health_current_state[addr]=new_state
+        self.peer_health_transition_count[addr]=(
+            self.peer_health_transition_count.get(addr,0)+1
+        )
+        self.peer_last_health_transition_at[addr]=(
+            self._peer_health_timestamp()
+        )
+
+        return {
+            "changed":True,
+            "previous":current_state,
+            "current":new_state,
+        }
+
     def outbound_peer_status(self):
         return [
             {
                 "host":host,
                 "port":port,
                 "health_state":self.peer_health_state((host,port)),
+                "previous_health_state":self.peer_previous_health_state.get((host,port)),
+                "health_transition_count":self.peer_health_transition_count.get((host,port),0),
+                "last_health_transition_at":self.peer_last_health_transition_at.get((host,port)),
                 "last_error":self.peer_last_error.get((host,port)),
                 "sync_successes":self.peer_sync_successes.get((host,port),0),
                 "consecutive_failures":self.peer_consecutive_failures.get((host,port),0),
@@ -425,12 +475,14 @@ class AxvenCore:
             self.peer_sync_successes[addr]=self.peer_sync_successes.get(addr,0)+1
             self.peer_consecutive_failures[addr]=0
             self.peer_last_success_at[addr]=self._peer_health_timestamp()
+            self.record_peer_health_transition(addr)
             return {"peer":f"{addr[0]}:{addr[1]}","ok":True,
                     "accepted":accepted}
         except Exception as e:
             self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
             self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1
             self.peer_last_failure_at[addr]=self._peer_health_timestamp()
+            self.record_peer_health_transition(addr)
             return {"peer":f"{addr[0]}:{addr[1]}","ok":False,
                     "error":self.peer_last_error[addr]}
 
