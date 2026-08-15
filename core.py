@@ -38,6 +38,13 @@ class AxvenCore:
         self.peer_health_transition_count = {}
         self.peer_last_health_transition_at = {}
         self.peer_health_transition_history = {}
+        self.peer_health_incident_active = {}
+        self.peer_health_incident_started_at = {}
+        self.peer_health_incident_count = {}
+        self.peer_last_health_incident = {}
+        self.peer_health_incident_opening_state = {}
+        self.peer_health_incident_unhealthy_transitions = {}
+        self.peer_health_incident_last_unhealthy_state = {}
         self.peer_persist_callback = None
         self.shutdown_requested = False
 
@@ -303,6 +310,13 @@ class AxvenCore:
         self.peer_health_transition_count.pop(addr,None)
         self.peer_last_health_transition_at.pop(addr,None)
         self.peer_health_transition_history.pop(addr,None)
+        self.peer_health_incident_active.pop(addr,None)
+        self.peer_health_incident_started_at.pop(addr,None)
+        self.peer_health_incident_count.pop(addr,None)
+        self.peer_last_health_incident.pop(addr,None)
+        self.peer_health_incident_opening_state.pop(addr,None)
+        self.peer_health_incident_unhealthy_transitions.pop(addr,None)
+        self.peer_health_incident_last_unhealthy_state.pop(addr,None)
         self.clear_peer_retry_schedule(addr)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
@@ -384,6 +398,45 @@ class AxvenCore:
         if overflow > 0:
             del history[:overflow]
 
+        unhealthy_states={"offline","backoff"}
+
+        if new_state in unhealthy_states:
+            if not self.peer_health_incident_active.get(addr,False):
+                self.peer_health_incident_active[addr]=True
+                self.peer_health_incident_started_at[addr]=(
+                    self.peer_last_health_transition_at[addr]
+                )
+                self.peer_health_incident_count[addr]=(
+                    self.peer_health_incident_count.get(addr,0)+1
+                )
+                self.peer_health_incident_opening_state[addr]=current_state
+                self.peer_health_incident_unhealthy_transitions[addr]=1
+            else:
+                self.peer_health_incident_unhealthy_transitions[addr]=(
+                    self.peer_health_incident_unhealthy_transitions.get(addr,0)+1
+                )
+
+            self.peer_health_incident_last_unhealthy_state[addr]=new_state
+
+        elif (
+            new_state == "recovered"
+            and self.peer_health_incident_active.get(addr,False)
+        ):
+            self.peer_last_health_incident[addr]={
+                "from_state":self.peer_health_incident_opening_state.get(addr),
+                "last_unhealthy_state":self.peer_health_incident_last_unhealthy_state.get(addr),
+                "recovered_to":new_state,
+                "started_at":self.peer_health_incident_started_at.get(addr),
+                "ended_at":self.peer_last_health_transition_at[addr],
+                "unhealthy_transitions":self.peer_health_incident_unhealthy_transitions.get(addr,0),
+            }
+
+            self.peer_health_incident_active[addr]=False
+            self.peer_health_incident_started_at.pop(addr,None)
+            self.peer_health_incident_opening_state.pop(addr,None)
+            self.peer_health_incident_unhealthy_transitions.pop(addr,None)
+            self.peer_health_incident_last_unhealthy_state.pop(addr,None)
+
         return {
             "changed":True,
             "previous":current_state,
@@ -400,6 +453,14 @@ class AxvenCore:
                 "health_transition_count":self.peer_health_transition_count.get((host,port),0),
                 "last_health_transition_at":self.peer_last_health_transition_at.get((host,port)),
                 "health_history":self.peer_health_history((host,port)),
+                "health_incident_active":self.peer_health_incident_active.get((host,port),False),
+                "health_incident_started_at":self.peer_health_incident_started_at.get((host,port)),
+                "health_incident_count":self.peer_health_incident_count.get((host,port),0),
+                "last_health_incident":(
+                    dict(self.peer_last_health_incident[(host,port)])
+                    if (host,port) in self.peer_last_health_incident
+                    else None
+                ),
                 "last_error":self.peer_last_error.get((host,port)),
                 "sync_successes":self.peer_sync_successes.get((host,port),0),
                 "consecutive_failures":self.peer_consecutive_failures.get((host,port),0),
