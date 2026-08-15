@@ -204,6 +204,10 @@
       "bytes": 2896,
       "sha256": "26592a94a95a5ab15799fc2b8fda25d780d5798bd88fa5e3dc4e64fe12929d7b"
     },
+    "checkpoint48_peer_retry_recovery_spec.py": {
+      "bytes": 5664,
+      "sha256": "468d227848f3f80cf5f66514278aba5286fe29c858a77775e8fce65a6fd44589"
+    },
     "clean_install_smoke.py": {
       "bytes": 1172,
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
@@ -297,8 +301,8 @@
       "sha256": "04f48d1fac9233992fad2fa7be2739be9128219619cd558441fe6efa2d2acbcf"
     },
     "run_full_validation.py": {
-      "bytes": 2206,
-      "sha256": "904351bedc46581c605c9c3bba5e643dc7a053d25ed469e3a7cacd0e7350354e"
+      "bytes": 2275,
+      "sha256": "04e038ac17d9559ee588872b5a26045ff6bcdd454249fdaeaab71d01645b6ae5"
     },
     "setup.cmd": {
       "bytes": 172,
