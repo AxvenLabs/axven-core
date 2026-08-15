@@ -293,11 +293,39 @@ class AxvenCore:
         self.clear_peer_retry_schedule(addr)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
+    def peer_health_state(self, peer):
+        """Return the operator-facing health classification for one peer."""
+        addr=self._parse_peer(peer)
+        last_error=self.peer_last_error.get(addr)
+        successes=self.peer_sync_successes.get(addr,0)
+        last_failure=self.peer_last_failure_at.get(addr)
+
+        retry_delay=self.peer_retry_delay_seconds.get(addr)
+        retry_base=self.peer_retry_base_interval.get(addr,0)
+        backoff_active=(
+            retry_delay is not None
+            and retry_delay > retry_base
+        )
+
+        if last_error is not None:
+            if backoff_active:
+                return "backoff"
+            return "offline"
+
+        if successes == 0:
+            return "never_connected"
+
+        if last_failure is not None:
+            return "recovered"
+
+        return "healthy"
+
     def outbound_peer_status(self):
         return [
             {
                 "host":host,
                 "port":port,
+                "health_state":self.peer_health_state((host,port)),
                 "last_error":self.peer_last_error.get((host,port)),
                 "sync_successes":self.peer_sync_successes.get((host,port),0),
                 "consecutive_failures":self.peer_consecutive_failures.get((host,port),0),
