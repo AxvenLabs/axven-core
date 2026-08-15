@@ -321,12 +321,33 @@ class AxvenCore:
         healthy=total-unhealthy
         total_successes=sum(peer["sync_successes"] for peer in peers)
         total_failures=sum(peer["consecutive_failures"] for peer in peers)
+
+        recovered=sum(
+            1 for peer in peers
+            if peer["last_error"] is None
+            and peer["sync_successes"] > 0
+            and peer["last_failure_at"] is not None
+        )
+
+        backoff_active=sum(
+            1 for peer in peers
+            if peer["retry_backoff_active"]
+        )
+
+        never_connected=sum(
+            1 for peer in peers
+            if peer["sync_successes"] == 0
+        )
+
         return {
             "total":total,
             "healthy":healthy,
             "unhealthy":unhealthy,
             "total_sync_successes":total_successes,
             "total_consecutive_failures":total_failures,
+            "recovered":recovered,
+            "backoff_active":backoff_active,
+            "never_connected":never_connected,
         }
 
     def set_peer_retry_schedule(self, peer, delay_seconds, base_interval=5.0):

@@ -24,6 +24,7 @@ SUITES=[
  ("checkpoint47_peer_retry_observability_spec.py","Peer retry observability"),
  ("checkpoint47_peer_retry_daemon_spec.py","Peer retry observability daemon"),
  ("checkpoint48_peer_retry_recovery_spec.py","Peer retry recovery"),
+ ("checkpoint49_peer_recovery_summary_spec.py","Peer recovery summary"),
  ("activation_record_encoding_test.py","Activation record UTF-8"),
  ("post_activation_audit.py","Post-activation audit"),
  ("p2p_spec_test.py","P2P spec"),
