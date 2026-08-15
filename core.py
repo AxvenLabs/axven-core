@@ -14,6 +14,8 @@ import wallet
 
 
 class AxvenCore:
+    PEER_HEALTH_HISTORY_LIMIT = 64
+
     def __init__(self, chain: Optional[axven.Blockchain] = None,
                  mempool: Optional[axven.Mempool] = None,
                  identity: Optional[wallet.WalletIdentity] = None):
@@ -35,6 +37,7 @@ class AxvenCore:
         self.peer_previous_health_state = {}
         self.peer_health_transition_count = {}
         self.peer_last_health_transition_at = {}
+        self.peer_health_transition_history = {}
         self.peer_persist_callback = None
         self.shutdown_requested = False
 
@@ -299,6 +302,7 @@ class AxvenCore:
         self.peer_previous_health_state.pop(addr,None)
         self.peer_health_transition_count.pop(addr,None)
         self.peer_last_health_transition_at.pop(addr,None)
+        self.peer_health_transition_history.pop(addr,None)
         self.clear_peer_retry_schedule(addr)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
@@ -328,6 +332,14 @@ class AxvenCore:
             return "recovered"
 
         return "healthy"
+
+    def peer_health_history(self, peer):
+        """Return a defensive copy of bounded health transition history."""
+        addr=self._parse_peer(peer)
+        return [
+            dict(entry)
+            for entry in self.peer_health_transition_history.get(addr,[])
+        ]
 
     def record_peer_health_transition(self, peer):
         """Record a health-state change for one configured outbound peer."""
@@ -361,6 +373,17 @@ class AxvenCore:
             self._peer_health_timestamp()
         )
 
+        history=self.peer_health_transition_history.setdefault(addr,[])
+        history.append({
+            "from_state":current_state,
+            "to_state":new_state,
+            "at":self.peer_last_health_transition_at[addr],
+        })
+
+        overflow=len(history)-self.PEER_HEALTH_HISTORY_LIMIT
+        if overflow > 0:
+            del history[:overflow]
+
         return {
             "changed":True,
             "previous":current_state,
@@ -376,6 +399,7 @@ class AxvenCore:
                 "previous_health_state":self.peer_previous_health_state.get((host,port)),
                 "health_transition_count":self.peer_health_transition_count.get((host,port),0),
                 "last_health_transition_at":self.peer_last_health_transition_at.get((host,port)),
+                "health_history":self.peer_health_history((host,port)),
                 "last_error":self.peer_last_error.get((host,port)),
                 "sync_successes":self.peer_sync_successes.get((host,port),0),
                 "consecutive_failures":self.peer_consecutive_failures.get((host,port),0),
