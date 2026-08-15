@@ -119,6 +119,7 @@ def main():
                         retry_delay,
                         base_sync_interval,
                     )
+                    core.record_peer_health_transition(addr)
         finally:
             dd.save_chain(core.chain)
             explorer.stop(); rpc.stop(); core.stop_p2p()

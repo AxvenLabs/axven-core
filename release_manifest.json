@@ -133,8 +133,8 @@
       "sha256": "2d93f7c9c1a06b895586c61182996d0951817db3091df3ca213390c6078210a0"
     },
     "axven_core.py": {
-      "bytes": 5224,
-      "sha256": "e9a7d9b9aee6d4c59eb4ed57aded02e72450d96d29849a3839341c8d976c15de"
+      "bytes": 5285,
+      "sha256": "7a75d8b426b77b9b355cd37221f7f155301bcbee622f76dfa15dbeac2daefcda"
     },
     "canonical_node1_mine1.ps1": {
       "bytes": 114,
@@ -216,13 +216,21 @@
       "bytes": 3251,
       "sha256": "2a78ac3d6e47cce76e9a60cc0709a24dc553c42c98addde0abe7e40c661469ff"
     },
+    "checkpoint51_peer_health_transitions_daemon_spec.py": {
+      "bytes": 5963,
+      "sha256": "429442442f0217ee2d91bbeba5ca74a1e1eb09705ac6f7aafa93ff01d6bbbbf2"
+    },
+    "checkpoint51_peer_health_transitions_spec.py": {
+      "bytes": 3857,
+      "sha256": "60024c0a3a444479cfd1791231d146755d4a81c70cc0809676e444205023692a"
+    },
     "clean_install_smoke.py": {
       "bytes": 1172,
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 17510,
-      "sha256": "0f9288f723906d1f98ff91328a1778d093e32af7a90206ac18cf8473f0733f05"
+      "bytes": 19671,
+      "sha256": "1d3f47ea5f61bfc538275a9017ad7f8692f91edade3741d6cad9c4fde2e004d6"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -309,8 +317,8 @@
       "sha256": "04f48d1fac9233992fad2fa7be2739be9128219619cd558441fe6efa2d2acbcf"
     },
     "run_full_validation.py": {
-      "bytes": 2431,
-      "sha256": "68c835b469f54b5a358e771d419a4b90fdbd906ec3ca7445b6b1af5b522fdb15"
+      "bytes": 2599,
+      "sha256": "efc47a1674716b85f15fca5bf548a6e99e7ef1cfbe988a7046b2dbbda1ea662d"
     },
     "setup.cmd": {
       "bytes": 172,
