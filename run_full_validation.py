@@ -32,6 +32,8 @@ SUITES=[
  ("checkpoint52_peer_health_history_daemon_spec.py","Peer health history daemon"),
  ("checkpoint53_peer_health_incidents_spec.py","Peer health incidents"),
  ("checkpoint53_peer_health_incidents_daemon_spec.py","Peer health incidents daemon"),
+ ("checkpoint54_peer_health_incident_history_spec.py","Peer health incident history"),
+ ("checkpoint54_peer_health_incident_history_daemon_spec.py","Peer health incident history daemon"),
  ("activation_record_encoding_test.py","Activation record UTF-8"),
  ("post_activation_audit.py","Post-activation audit"),
  ("p2p_spec_test.py","P2P spec"),
