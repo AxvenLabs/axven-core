@@ -14,6 +14,7 @@ import wallet
 
 
 class AxvenCore:
+    PEER_HEALTH_INCIDENT_HISTORY_LIMIT = 64
     PEER_HEALTH_HISTORY_LIMIT = 64
 
     def __init__(self, chain: Optional[axven.Blockchain] = None,
@@ -45,6 +46,7 @@ class AxvenCore:
         self.peer_health_incident_opening_state = {}
         self.peer_health_incident_unhealthy_transitions = {}
         self.peer_health_incident_last_unhealthy_state = {}
+        self.peer_health_incident_history_entries = {}
         self.peer_persist_callback = None
         self.shutdown_requested = False
 
@@ -317,6 +319,7 @@ class AxvenCore:
         self.peer_health_incident_opening_state.pop(addr,None)
         self.peer_health_incident_unhealthy_transitions.pop(addr,None)
         self.peer_health_incident_last_unhealthy_state.pop(addr,None)
+        self.peer_health_incident_history_entries.pop(addr,None)
         self.clear_peer_retry_schedule(addr)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
@@ -346,6 +349,14 @@ class AxvenCore:
             return "recovered"
 
         return "healthy"
+
+    def peer_health_incident_history(self, peer):
+        """Return a defensive copy of bounded completed incident history."""
+        addr=self._parse_peer(peer)
+        return [
+            dict(entry)
+            for entry in self.peer_health_incident_history_entries.get(addr,[])
+        ]
 
     def peer_health_history(self, peer):
         """Return a defensive copy of bounded health transition history."""
@@ -431,6 +442,18 @@ class AxvenCore:
                 "unhealthy_transitions":self.peer_health_incident_unhealthy_transitions.get(addr,0),
             }
 
+            incident_history=self.peer_health_incident_history_entries.setdefault(addr,[])
+            incident_history.append(
+                dict(self.peer_last_health_incident[addr])
+            )
+
+            overflow=(
+                len(incident_history)
+                - self.PEER_HEALTH_INCIDENT_HISTORY_LIMIT
+            )
+            if overflow > 0:
+                del incident_history[:overflow]
+
             self.peer_health_incident_active[addr]=False
             self.peer_health_incident_started_at.pop(addr,None)
             self.peer_health_incident_opening_state.pop(addr,None)
@@ -461,6 +484,7 @@ class AxvenCore:
                     if (host,port) in self.peer_last_health_incident
                     else None
                 ),
+                "health_incident_history":self.peer_health_incident_history((host,port)),
                 "last_error":self.peer_last_error.get((host,port)),
                 "sync_successes":self.peer_sync_successes.get((host,port),0),
                 "consecutive_failures":self.peer_consecutive_failures.get((host,port),0),
