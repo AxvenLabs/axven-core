@@ -11,6 +11,7 @@ import axven
 
 PROTOCOL_VERSION = 1
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
+INBOUND_PEER_TIMEOUT = 5.0
 
 class ProtocolError(ValueError): pass
 
@@ -176,6 +177,7 @@ class NodeServer:
                 try: c,_=sock.accept()
                 except socket.timeout: continue
                 except OSError: break
+                c.settimeout(INBOUND_PEER_TIMEOUT)
                 with self._lock:self._clients.add(c)
                 def worker(client=c):
                     try: serve_connection(client,self.session)

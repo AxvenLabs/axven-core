@@ -41,6 +41,7 @@ SUITES=[
  ("smt_incremental_test.py","Incremental SMT"),
  ("security_sec014_atomic_read_spec.py","SEC-014 atomic chain read"),
  ("security_sec014_production_readers_spec.py","SEC-014 production reader boundaries"),
+ ("security_sec015_p2p_inbound_timeout_spec.py","SEC-015 P2P inbound timeout"),
 ]
 
 def main():
