@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """SEC-015 inbound P2P stalled-peer timeout regression contract."""
 
 import socket

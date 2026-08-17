@@ -405,8 +405,8 @@
       "sha256": "0edc44615857d7e60a9144c2adebbf17ed5540b4674e7f7654d02944748df979"
     },
     "security_sec015_p2p_inbound_timeout_spec.py": {
-      "bytes": 2802,
-      "sha256": "73d6288212aa06e4fbb4ff39ed425492dcdc6e7e004833a5ec28ad292c47731c"
+      "bytes": 2798,
+      "sha256": "c829d70c330c413ee351fe2cba6757d37df7ada5e0e0cca3c2012bc55fba69a5"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
