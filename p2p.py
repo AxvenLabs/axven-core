@@ -65,18 +65,26 @@ class PeerSession:
         self.mempool=mempool
 
     def status(self):
-        return {"type":"status","height":self.chain.tip.height,
-                "tip_hash":self.chain.tip.hash(),"chainwork":self.chain.chainwork}
+        with self.chain._state_lock:
+            tip=self.chain.tip
+            return {
+                "type":"status",
+                "height":tip.height,
+                "tip_hash":tip.hash(),
+                "chainwork":self.chain.chainwork,
+            }
 
     def locator(self):
-        # Simple checkpoint locator; sufficient for rebuilt devnet.
-        hs=[]; step=1; i=len(self.chain.blocks)-1
-        while i>=0:
-            hs.append(self.chain.blocks[i].hash())
-            if len(hs)>10: step*=2
-            i-=step
-        if self.chain.blocks[0].hash() not in hs: hs.append(self.chain.blocks[0].hash())
-        return hs
+        with self.chain._state_lock:
+            # Simple checkpoint locator; sufficient for rebuilt devnet.
+            hs=[]; step=1; i=len(self.chain.blocks)-1
+            while i>=0:
+                hs.append(self.chain.blocks[i].hash())
+                if len(hs)>10: step*=2
+                i-=step
+            if self.chain.blocks[0].hash() not in hs:
+                hs.append(self.chain.blocks[0].hash())
+            return hs
 
     def handle(self,msg):
         typ=msg.get("type")
@@ -95,13 +103,22 @@ class PeerSession:
             return {"type":"accepted","kind":"block","id":block.hash(),"status":status}
         if typ=="get_blocks":
             locator=list(msg.get("locator") or [])
-            active={b.hash():i for i,b in enumerate(self.chain.blocks)}
-            start=0
-            for h in locator:
-                if h in active:
-                    start=active[h]+1; break
-            blocks=self.chain.blocks[start:start+int(msg.get("limit",128))]
-            return {"type":"blocks","blocks":[b.to_dict() for b in blocks]}
+            with self.chain._state_lock:
+                active={b.hash():i for i,b in enumerate(self.chain.blocks)}
+                start=0
+                for h in locator:
+                    if h in active:
+                        start=active[h]+1
+                        break
+                blocks=list(
+                    self.chain.blocks[
+                        start:start+int(msg.get("limit",128))
+                    ]
+                )
+            return {
+                "type":"blocks",
+                "blocks":[b.to_dict() for b in blocks],
+            }
         if typ=="blocks":
             accepted=0
             for raw in msg.get("blocks",[]):
