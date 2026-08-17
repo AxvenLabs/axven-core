@@ -12,7 +12,7 @@
   "chain_id": "axven-devnet-2",
   "clean_package_build_smoke": "READY",
   "config_fingerprint": "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae",
-  "consensus_code_sha256": "7eb9e474b7b8bc93847710455039e41b44e6dd4470b702c227e2d5847011cdb6",
+  "consensus_code_sha256": "de26c7153a9a655180759496f6c35b2a1b0328bde57de4e34aa4a578cb176163",
   "devnet_rehearsal": "RETRY_REQUIRED_AFTER_TEST_API_FIX",
   "devnet_rehearsal_windows": "21_OF_21_GREEN",
   "explorer_api": "READY",
@@ -121,8 +121,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 37104,
-      "sha256": "7eb9e474b7b8bc93847710455039e41b44e6dd4470b702c227e2d5847011cdb6"
+      "bytes": 37659,
+      "sha256": "de26c7153a9a655180759496f6c35b2a1b0328bde57de4e34aa4a578cb176163"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -253,8 +253,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 24714,
-      "sha256": "49dcb93a78c9a429196d57452566046af5cb823243b9c8a96eabb423ab27926e"
+      "bytes": 25623,
+      "sha256": "ca78486a4a4816755cbdb89e8da9a4b4eb5c030ad37d80152b767c15f61b44c5"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -301,8 +301,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 8241,
-      "sha256": "f584eb93dc338d00a34fac1bd2171316b3508ffbef90e7d14c881435dd7c1680"
+      "bytes": 8667,
+      "sha256": "20baa74ae107b098220d4473daedeafd02a3fea682e41b2ce0644ce1408d23a7"
     },
     "post_activation_audit.py": {
       "bytes": 1283,
@@ -341,8 +341,8 @@
       "sha256": "04f48d1fac9233992fad2fa7be2739be9128219619cd558441fe6efa2d2acbcf"
     },
     "run_full_validation.py": {
-      "bytes": 3099,
-      "sha256": "c0bc2a2a2ff3f519ca2a8e264f2da9746a23d146e8e4b5637b5aab1778f15677"
+      "bytes": 3257,
+      "sha256": "78a316d26f3fbe0e30153d8bc4985136a5161af01c5d592bc149c98158205464"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -395,6 +395,14 @@
     "wallet.py": {
       "bytes": 9005,
       "sha256": "76a43c1485c6e63c99075fd52a2a142e8a09f2ce1c27facb32610449c276c3b4"
+    },
+    "security_sec014_atomic_read_spec.py": {
+      "bytes": 5624,
+      "sha256": "4c9492299bfba11e425054d52217a35d3ca2e7deb783a2ae54c45f1744c36099"
+    },
+    "security_sec014_production_readers_spec.py": {
+      "bytes": 5531,
+      "sha256": "0edc44615857d7e60a9144c2adebbf17ed5540b4674e7f7654d02944748df979"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

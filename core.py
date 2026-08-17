@@ -56,16 +56,20 @@ class AxvenCore:
         return self.identity
 
     def status(self):
-        return {
-            "chain_id": axven.CHAIN_ID,
-            "config_fingerprint": axven.CONFIG_FINGERPRINT,
-            "genesis_hash": axven._genesis().hash(),
-            "height": self.chain.tip.height,
-            "tip_hash": self.chain.tip.hash(),
-            "chainwork": self.chain.chainwork,
-            "mempool_size": len(self.mempool.txs),
-            "wallet_loaded": self.identity is not None,
-        }
+        # Height, tip hash and chainwork form one logical chain snapshot.
+        # Serialize this read with active-chain mutation/reorg publication.
+        with self.chain._state_lock:
+            tip = self.chain.tip
+            return {
+                "chain_id": axven.CHAIN_ID,
+                "config_fingerprint": axven.CONFIG_FINGERPRINT,
+                "genesis_hash": axven._genesis().hash(),
+                "height": tip.height,
+                "tip_hash": tip.hash(),
+                "chainwork": self.chain.chainwork,
+                "mempool_size": len(self.mempool.txs),
+                "wallet_loaded": self.identity is not None,
+            }
 
     def overview(self):
         data = self.status()
@@ -78,22 +82,27 @@ class AxvenCore:
         return data
 
     def recent_blocks(self, limit=20):
-        limit=max(1,min(int(limit),200))
-        out=[]
-        for b in reversed(self.chain.blocks[-limit:]):
-            out.append({
-                "height": b.height,
-                "hash": b.hash(),
-                "previous_hash": b.previous_hash,
-                "timestamp": b.timestamp,
-                "tx_count": len(b.transactions),
-                "miner": b.miner,
-                "target": b.target,
-                "utxo_state_root": b.utxo_state_root,
-            })
-        return out
+        with self.chain._state_lock:
+            limit=max(1,min(int(limit),200))
+            out=[]
+            for b in reversed(self.chain.blocks[-limit:]):
+                out.append({
+                    "height": b.height,
+                    "hash": b.hash(),
+                    "previous_hash": b.previous_hash,
+                    "timestamp": b.timestamp,
+                    "tx_count": len(b.transactions),
+                    "miner": b.miner,
+                    "target": b.target,
+                    "utxo_state_root": b.utxo_state_root,
+                })
+            return out
 
     def get_block(self, block_id):
+        with self.chain._state_lock:
+            return self._get_block_locked(block_id)
+
+    def _get_block_locked(self, block_id):
         block=None
         if isinstance(block_id,int) or (isinstance(block_id,str) and block_id.isdigit()):
             h=int(block_id)
@@ -123,6 +132,10 @@ class AxvenCore:
         }
 
     def get_transaction(self, txid):
+        with self.chain._state_lock:
+            return self._get_transaction_locked(txid)
+
+    def _get_transaction_locked(self, txid):
         txid=str(txid)
         if txid in self.mempool.txs:
             tx=self.mempool.txs[txid]
@@ -152,11 +165,15 @@ class AxvenCore:
         return {"size":len(self.mempool.txs),"transactions":out}
 
     def explorer_summary(self):
-        st=self.status()
-        st["latest_blocks"]=self.recent_blocks(10)
-        st["mempool"]=self.mempool_view(20)
-        st["state_root"]=axven.expected_state_root(self.chain.utxo,self.chain.tip.height)
-        return st
+        with self.chain._state_lock:
+            st=self.status()
+            st["latest_blocks"]=self.recent_blocks(10)
+            st["mempool"]=self.mempool_view(20)
+            st["state_root"]=axven.expected_state_root(
+                self.chain.utxo,
+                self.chain.tip.height,
+            )
+            return st
 
     def chain_config(self):
         return dict(axven.CHAIN_CONFIG)
@@ -176,6 +193,10 @@ class AxvenCore:
         return self.chain.balance(w.address_of(scheme))
 
     def wallet_status(self, scheme=None):
+        with self.chain._state_lock:
+            return self._wallet_status_locked(scheme)
+
+    def _wallet_status_locked(self, scheme=None):
         w = self.require_wallet()
 
         def status_for(selected_scheme):
@@ -215,12 +236,13 @@ class AxvenCore:
         }
 
     def list_unspent(self, scheme):
-        w = self.require_wallet()
-        return [
-            {"txid": txid, "index": idx, "amount": amount}
-            for txid, idx, amount in self.chain.spendable(w.address_of(scheme))
-            if not self.pending.is_reserved((txid, idx))
-        ]
+        with self.chain._state_lock:
+            w = self.require_wallet()
+            return [
+                {"txid": txid, "index": idx, "amount": amount}
+                for txid, idx, amount in self.chain.spendable(w.address_of(scheme))
+                if not self.pending.is_reserved((txid, idx))
+            ]
 
     def mine(self, count=1, scheme=None):
         if count <= 0:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 import base64, hashlib, json
+import threading
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
@@ -598,6 +599,7 @@ class Blockchain:
         self.undo = {}
         self.orphans = {}
         self.mempool = None
+        self._state_lock = threading.RLock()
         self._init_genesis()
 
     def _init_genesis(self):
@@ -623,20 +625,31 @@ class Blockchain:
         return out
 
     def balance(self, address):
-        return sum(u["amount"] for u in self.utxo.values() if u["recipient"] == address)
+        with self._state_lock:
+            return sum(
+                u["amount"]
+                for u in self.utxo.values()
+                if u["recipient"] == address
+            )
 
     def spendable(self, address):
-        out = []
-        for op, u in self.utxo.items():
-            if u["recipient"] != address:
-                continue
-            if u["coinbase"] and self.tip.height - u["height"] < COINBASE_MATURITY:
-                continue
-            txid, idx = op.rsplit(":", 1)
-            out.append((txid, int(idx), int(u["amount"])))
-        return out
+        with self._state_lock:
+            out = []
+            tip_height = self.tip.height
+            for op, u in self.utxo.items():
+                if u["recipient"] != address:
+                    continue
+                if u["coinbase"] and tip_height - u["height"] < COINBASE_MATURITY:
+                    continue
+                txid, idx = op.rsplit(":", 1)
+                out.append((txid, int(idx), int(u["amount"])))
+            return out
 
     def build_candidate(self, miner_address, mempool=None):
+        with self._state_lock:
+            return self._build_candidate_locked(miner_address, mempool)
+
+    def _build_candidate_locked(self, miner_address, mempool=None):
         height = self.tip.height + 1
         if not output_scheme_allowed(miner_address, height):
             raise ValueError(f"Forbidden coinbase output scheme at {height}")
@@ -676,6 +689,10 @@ class Blockchain:
         return block
 
     def add_block(self, block):
+        with self._state_lock:
+            return self._add_block_locked(block)
+
+    def _add_block_locked(self, block):
         h = block.hash()
         if h in self.index:
             return False, "duplicate"

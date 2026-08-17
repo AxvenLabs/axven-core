@@ -39,6 +39,8 @@ SUITES=[
  ("p2p_spec_test.py","P2P spec"),
  ("consensus_rebuild_test.py","Consensus rebuild"),
  ("smt_incremental_test.py","Incremental SMT"),
+ ("security_sec014_atomic_read_spec.py","SEC-014 atomic chain read"),
+ ("security_sec014_production_readers_spec.py","SEC-014 production reader boundaries"),
 ]
 
 def main():
