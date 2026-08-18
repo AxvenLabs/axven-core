@@ -699,10 +699,13 @@ class Blockchain:
             return False, "duplicate"
         parent = block.previous_hash
         if parent not in self.index:
+            bucket = self.orphans.setdefault(parent, [])
+            if any(child.hash() == h for child in bucket):
+                return False, "duplicate orphan"
             orphan_count = sum(len(v) for v in self.orphans.values())
             if orphan_count >= MAX_ORPHAN_BLOCKS:
                 return False, "orphan pool full"
-            self.orphans.setdefault(parent, []).append(block)
+            bucket.append(block)
             return False, "orphan"
         parent_node = self.index[parent]
         height = parent_node.height + 1

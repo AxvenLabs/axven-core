@@ -50,6 +50,7 @@ SUITES=[
  ("security_sec021_p2p_block_batch_elements_spec.py","SEC-021 P2P block-batch elements"),
  ("security_sec022_p2p_tx_elements_spec.py","SEC-022 P2P tx elements"),
  ("security_sec023_orphan_pool_bounds_spec.py","SEC-023 orphan pool bounds"),
+ ("security_sec024_orphan_dedup_spec.py","SEC-024 orphan dedup"),
 ]
 
 def main():
