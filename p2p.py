@@ -14,6 +14,8 @@ MAX_MESSAGE_BYTES = 16 * 1024 * 1024
 INBOUND_PEER_TIMEOUT = 5.0
 MAX_SYNC_BLOCKS = 128
 MAX_LOCATOR_HASHES = 64
+MAX_P2P_TX_INPUTS = 1024
+MAX_P2P_TX_OUTPUTS = 1024
 
 class ProtocolError(ValueError): pass
 
@@ -95,7 +97,20 @@ class PeerSession:
         if typ=="get_status": return self.status()
         if typ=="tx":
             if self.mempool is None: raise ProtocolError("mempool unavailable")
-            tx=axven.Transaction.from_dict(msg["tx"])
+            raw_tx=msg.get("tx")
+            if not isinstance(raw_tx,dict):
+                raise ProtocolError("tx must be object")
+            raw_inputs=raw_tx.get("inputs",[])
+            raw_outputs=raw_tx.get("outputs",[])
+            if not isinstance(raw_inputs,list):
+                raise ProtocolError("tx inputs must be list")
+            if not isinstance(raw_outputs,list):
+                raise ProtocolError("tx outputs must be list")
+            if len(raw_inputs)>MAX_P2P_TX_INPUTS:
+                raise ProtocolError("too many tx inputs")
+            if len(raw_outputs)>MAX_P2P_TX_OUTPUTS:
+                raise ProtocolError("too many tx outputs")
+            tx=axven.Transaction.from_dict(raw_tx)
             tid=self.mempool.add(tx)
             return {"type":"accepted","kind":"tx","id":tid}
         if typ=="block":
