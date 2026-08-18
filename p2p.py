@@ -166,6 +166,11 @@ class PeerSession:
                 raise ProtocolError("too many blocks")
             accepted=0
             for raw in raw_blocks:
+                if not isinstance(raw,dict):
+                    raise ProtocolError("block batch entries must be objects")
+                raw_transactions=raw.get("transactions")
+                if not isinstance(raw_transactions,list):
+                    raise ProtocolError("block transactions must be list")
                 b=axven.Block.from_dict(raw)
                 ok,status=self.chain.add_block(b)
                 if ok or status=="duplicate": accepted+=1
