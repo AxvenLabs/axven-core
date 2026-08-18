@@ -110,6 +110,10 @@ class PeerSession:
                 raise ProtocolError("too many tx inputs")
             if len(raw_outputs)>MAX_P2P_TX_OUTPUTS:
                 raise ProtocolError("too many tx outputs")
+            if any(not isinstance(i,dict) for i in raw_inputs):
+                raise ProtocolError("tx input entries must be objects")
+            if any(not isinstance(o,dict) for o in raw_outputs):
+                raise ProtocolError("tx output entries must be objects")
             tx=axven.Transaction.from_dict(raw_tx)
             tid=self.mempool.add(tx)
             return {"type":"accepted","kind":"tx","id":tid}
