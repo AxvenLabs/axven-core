@@ -131,6 +131,8 @@ class PeerSession:
                 raise ProtocolError("locator must be list")
             if len(raw_locator)>MAX_LOCATOR_HASHES:
                 raise ProtocolError("locator too large")
+            if any(not isinstance(h,str) for h in raw_locator):
+                raise ProtocolError("locator entries must be strings")
             locator=list(raw_locator)
 
             try:
