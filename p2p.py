@@ -12,6 +12,8 @@ import axven
 PROTOCOL_VERSION = 1
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
 INBOUND_PEER_TIMEOUT = 5.0
+MAX_SYNC_BLOCKS = 128
+MAX_LOCATOR_HASHES = 64
 
 class ProtocolError(ValueError): pass
 
@@ -103,7 +105,20 @@ class PeerSession:
                 raise ProtocolError(f"block rejected: {status}")
             return {"type":"accepted","kind":"block","id":block.hash(),"status":status}
         if typ=="get_blocks":
-            locator=list(msg.get("locator") or [])
+            raw_locator=msg.get("locator") or []
+            if not isinstance(raw_locator,list):
+                raise ProtocolError("locator must be list")
+            if len(raw_locator)>MAX_LOCATOR_HASHES:
+                raise ProtocolError("locator too large")
+            locator=list(raw_locator)
+
+            try:
+                limit=int(msg.get("limit",128))
+            except (TypeError,ValueError):
+                raise ProtocolError("invalid block limit")
+            if limit<1 or limit>MAX_SYNC_BLOCKS:
+                raise ProtocolError("invalid block limit")
+
             with self.chain._state_lock:
                 active={b.hash():i for i,b in enumerate(self.chain.blocks)}
                 start=0
@@ -113,7 +128,7 @@ class PeerSession:
                         break
                 blocks=list(
                     self.chain.blocks[
-                        start:start+int(msg.get("limit",128))
+                        start:start+limit
                     ]
                 )
             return {

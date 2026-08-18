@@ -42,6 +42,7 @@ SUITES=[
  ("security_sec014_atomic_read_spec.py","SEC-014 atomic chain read"),
  ("security_sec014_production_readers_spec.py","SEC-014 production reader boundaries"),
  ("security_sec015_p2p_inbound_timeout_spec.py","SEC-015 P2P inbound timeout"),
+ ("security_sec016_p2p_sync_bounds_spec.py","SEC-016 P2P sync bounds"),
 ]
 
 def main():
