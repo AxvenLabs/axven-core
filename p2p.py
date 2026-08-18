@@ -114,7 +114,13 @@ class PeerSession:
             tid=self.mempool.add(tx)
             return {"type":"accepted","kind":"tx","id":tid}
         if typ=="block":
-            block=axven.Block.from_dict(msg["block"])
+            raw_block=msg.get("block")
+            if not isinstance(raw_block,dict):
+                raise ProtocolError("block must be object")
+            raw_transactions=raw_block.get("transactions")
+            if not isinstance(raw_transactions,list):
+                raise ProtocolError("block transactions must be list")
+            block=axven.Block.from_dict(raw_block)
             ok,status=self.chain.add_block(block)
             if not ok and status not in ("duplicate","orphan"):
                 raise ProtocolError(f"block rejected: {status}")
