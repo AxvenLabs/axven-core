@@ -136,8 +136,13 @@ class PeerSession:
                 "blocks":[b.to_dict() for b in blocks],
             }
         if typ=="blocks":
+            raw_blocks=msg.get("blocks",[])
+            if not isinstance(raw_blocks,list):
+                raise ProtocolError("blocks must be list")
+            if len(raw_blocks)>MAX_SYNC_BLOCKS:
+                raise ProtocolError("too many blocks")
             accepted=0
-            for raw in msg.get("blocks",[]):
+            for raw in raw_blocks:
                 b=axven.Block.from_dict(raw)
                 ok,status=self.chain.add_block(b)
                 if ok or status=="duplicate": accepted+=1
