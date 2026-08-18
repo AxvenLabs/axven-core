@@ -49,6 +49,7 @@ SUITES=[
  ("security_sec020_p2p_locator_elements_spec.py","SEC-020 P2P locator elements"),
  ("security_sec021_p2p_block_batch_elements_spec.py","SEC-021 P2P block-batch elements"),
  ("security_sec022_p2p_tx_elements_spec.py","SEC-022 P2P tx elements"),
+ ("security_sec023_orphan_pool_bounds_spec.py","SEC-023 orphan pool bounds"),
 ]
 
 def main():
