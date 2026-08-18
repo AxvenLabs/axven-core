@@ -152,6 +152,7 @@ GENESIS_TIME = 0
 COINBASE_MATURITY = 100
 DUST = 1
 MAX_BLOCK_TXS = 1_000
+MAX_ORPHAN_BLOCKS = 256
 
 EMPTY_ROOT = sha256(b"")
 SMT_DEPTH = 256
@@ -698,6 +699,9 @@ class Blockchain:
             return False, "duplicate"
         parent = block.previous_hash
         if parent not in self.index:
+            orphan_count = sum(len(v) for v in self.orphans.values())
+            if orphan_count >= MAX_ORPHAN_BLOCKS:
+                return False, "orphan pool full"
             self.orphans.setdefault(parent, []).append(block)
             return False, "orphan"
         parent_node = self.index[parent]
