@@ -44,6 +44,7 @@ SUITES=[
  ("security_sec015_p2p_inbound_timeout_spec.py","SEC-015 P2P inbound timeout"),
  ("security_sec016_p2p_sync_bounds_spec.py","SEC-016 P2P sync bounds"),
  ("security_sec017_p2p_block_batch_bounds_spec.py","SEC-017 P2P block batch bounds"),
+ ("security_sec018_p2p_tx_structural_bounds_spec.py","SEC-018 P2P tx structural bounds"),
 ]
 
 def main():
