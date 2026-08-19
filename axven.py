@@ -711,6 +711,8 @@ class Blockchain:
             return False, "duplicate"
         parent = block.previous_hash
         if parent not in self.index:
+            if not block_size_valid(block):
+                return False, "orphan exceeds max bytes"
             bucket = self.orphans.setdefault(parent, [])
             if any(child.hash() == h for child in bucket):
                 return False, "duplicate orphan"
