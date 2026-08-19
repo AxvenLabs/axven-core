@@ -153,6 +153,7 @@ COINBASE_MATURITY = 100
 DUST = 1
 MAX_BLOCK_TXS = 1_000
 MAX_ORPHAN_BLOCKS = 256
+MAX_MEMPOOL_TXS = 4096
 
 EMPTY_ROOT = sha256(b"")
 SMT_DEPTH = 256
@@ -836,6 +837,8 @@ class Mempool:
         tid = tx.txid()
         if tid in self.txs:
             raise ValueError("Already in mempool")
+        if len(self.txs) >= MAX_MEMPOOL_TXS:
+            raise ValueError("Mempool full")
         ops = [outpoint(i.prev_txid, i.index) for i in tx._in()]
         if len(ops) != len(set(ops)) or any(op in self.spent for op in ops):
             raise ValueError("Double spend")
