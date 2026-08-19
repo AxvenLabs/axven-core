@@ -12,6 +12,7 @@ import axven
 PROTOCOL_VERSION = 1
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
 INBOUND_PEER_TIMEOUT = 5.0
+MAX_INBOUND_PEERS = 32
 MAX_SYNC_BLOCKS = 128
 MAX_LOCATOR_HASHES = 64
 MAX_P2P_TX_INPUTS = 1024
@@ -230,7 +231,18 @@ class NodeServer:
                 except socket.timeout: continue
                 except OSError: break
                 c.settimeout(INBOUND_PEER_TIMEOUT)
-                with self._lock:self._clients.add(c)
+                with self._lock:
+                    if len(self._clients) >= MAX_INBOUND_PEERS:
+                        reject = True
+                    else:
+                        self._clients.add(c)
+                        reject = False
+                if reject:
+                    try:
+                        c.close()
+                    except OSError:
+                        pass
+                    continue
                 def worker(client=c):
                     try: serve_connection(client,self.session)
                     finally:
