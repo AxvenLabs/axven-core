@@ -54,6 +54,7 @@ SUITES=[
  ("security_sec025_mempool_bounds_spec.py","SEC-025 mempool bounds"),
  ("security_sec026_mempool_byte_bounds_spec.py","SEC-026 mempool byte bounds"),
  ("security_sec027_orphan_byte_bounds_spec.py","SEC-027 orphan byte bounds"),
+ ("security_sec028_p2p_inbound_peer_bounds_spec.py","SEC-028 inbound peer bounds"),
 ]
 
 def main():
