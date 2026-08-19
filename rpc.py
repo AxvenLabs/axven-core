@@ -10,6 +10,9 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
+RPC_REQUEST_TIMEOUT = 5.0
+
+
 class RPCError(ValueError): pass
 
 
@@ -60,6 +63,7 @@ def _handler(dispatcher):
             pass
 
         def do_POST(self):
+            self.connection.settimeout(RPC_REQUEST_TIMEOUT)
             try:
                 n = int(self.headers.get("Content-Length", "0"))
                 if n <= 0 or n > 2 * 1024 * 1024:
