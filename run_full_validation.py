@@ -52,6 +52,7 @@ SUITES=[
  ("security_sec023_orphan_pool_bounds_spec.py","SEC-023 orphan pool bounds"),
  ("security_sec024_orphan_dedup_spec.py","SEC-024 orphan dedup"),
  ("security_sec025_mempool_bounds_spec.py","SEC-025 mempool bounds"),
+ ("security_sec026_mempool_byte_bounds_spec.py","SEC-026 mempool byte bounds"),
 ]
 
 def main():

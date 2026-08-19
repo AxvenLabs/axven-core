@@ -154,6 +154,7 @@ DUST = 1
 MAX_BLOCK_TXS = 1_000
 MAX_ORPHAN_BLOCKS = 256
 MAX_MEMPOOL_TXS = 4096
+MAX_MEMPOOL_BYTES = 64 * 1024 * 1024
 
 EMPTY_ROOT = sha256(b"")
 SMT_DEPTH = 256
@@ -376,6 +377,16 @@ def state_root_scheme(height: int) -> str:
 
 def expected_state_root(utxo: Dict[str, Dict[str, Any]], height: int) -> str:
     return utxo_root(utxo) if state_root_scheme(height) == "legacy" else smt_root_reference(utxo)
+
+
+def serialized_transaction_size(tx: "Transaction") -> int:
+    return len(
+        json.dumps(
+            tx.to_dict(),
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    )
 
 
 def serialized_block_size(block: "Block") -> int:
@@ -785,7 +796,7 @@ class Blockchain:
         candidates = list(self.mempool.txs.values())
         for blk in disconnected or []:
             candidates.extend(blk.txs()[1:])
-        self.mempool.txs.clear(); self.mempool.fees.clear(); self.mempool.spent.clear()
+        self.mempool.txs.clear(); self.mempool.fees.clear(); self.mempool.spent.clear(); self.mempool.tx_sizes.clear(); self.mempool.total_bytes = 0
         for tx in candidates:
             try:
                 self.mempool.add(tx)
@@ -829,6 +840,8 @@ class Mempool:
     def __init__(self, chain: Blockchain):
         self.chain = chain
         self.txs, self.fees, self.spent = {}, {}, set()
+        self.tx_sizes = {}
+        self.total_bytes = 0
         chain.mempool = self
 
     def add(self, tx: Transaction) -> str:
@@ -839,6 +852,9 @@ class Mempool:
             raise ValueError("Already in mempool")
         if len(self.txs) >= MAX_MEMPOOL_TXS:
             raise ValueError("Mempool full")
+        tx_bytes = serialized_transaction_size(tx)
+        if self.total_bytes + tx_bytes > MAX_MEMPOOL_BYTES:
+            raise ValueError("Mempool byte budget full")
         ops = [outpoint(i.prev_txid, i.index) for i in tx._in()]
         if len(ops) != len(set(ops)) or any(op in self.spent for op in ops):
             raise ValueError("Double spend")
@@ -864,6 +880,8 @@ class Mempool:
             raise ValueError("Outputs exceed inputs")
         self.txs[tid] = tx
         self.fees[tid] = in_sum - out_sum
+        self.tx_sizes[tid] = tx_bytes
+        self.total_bytes += tx_bytes
         self.spent.update(ops)
         return tid
 
@@ -886,7 +904,9 @@ class Mempool:
     def remove(self, txid):
         tx = self.txs.pop(txid, None)
         self.fees.pop(txid, None)
+        tx_bytes = self.tx_sizes.pop(txid, 0)
         if tx is not None:
+            self.total_bytes = max(0, self.total_bytes - tx_bytes)
             for i in tx._in():
                 self.spent.discard(outpoint(i.prev_txid, i.index))
 
