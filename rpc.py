@@ -11,6 +11,33 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
 RPC_REQUEST_TIMEOUT = 5.0
+MAX_RPC_WORKERS = 32
+
+
+class BoundedThreadingHTTPServer(ThreadingHTTPServer):
+    def __init__(self, server_address, RequestHandlerClass):
+        self._worker_slots = threading.BoundedSemaphore(MAX_RPC_WORKERS)
+        super().__init__(server_address, RequestHandlerClass)
+
+    def process_request(self, request, client_address):
+        if not self._worker_slots.acquire(blocking=False):
+            try:
+                self.shutdown_request(request)
+            finally:
+                self.close_request(request)
+            return
+
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            self._worker_slots.release()
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._worker_slots.release()
 
 
 class RPCError(ValueError): pass
@@ -92,7 +119,7 @@ class RPCServer:
         if host not in ("127.0.0.1", "localhost", "::1"):
             raise ValueError("RPC v0 may bind only to loopback")
         self.dispatcher = RPCDispatcher(core)
-        self.httpd = ThreadingHTTPServer((host, int(port)), _handler(self.dispatcher))
+        self.httpd = BoundedThreadingHTTPServer((host, int(port)), _handler(self.dispatcher))
         self.thread = None
 
     @property
