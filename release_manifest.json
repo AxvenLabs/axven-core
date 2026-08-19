@@ -121,8 +121,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 37988,
-      "sha256": "d5cca8d01588dea68be885aabfb8b57068fe8b3d4d347b88a23be0d989c5aec5"
+      "bytes": 38101,
+      "sha256": "86f36cb63fd5848fda37294eeab32daa6578bff8fa01ab14ea5d9cfb594b36a9"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -341,8 +341,8 @@
       "sha256": "04f48d1fac9233992fad2fa7be2739be9128219619cd558441fe6efa2d2acbcf"
     },
     "run_full_validation.py": {
-      "bytes": 4053,
-      "sha256": "8dbe5b1e3b65ecdfd3c7228758fe2a7562e29620f6bba1e226a2d2638faea1ef"
+      "bytes": 4123,
+      "sha256": "1c111636f9bec9b05fca1bfc7d81aac2d60e40fa6837621eb4c121f10d989d3a"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -443,6 +443,10 @@
     "security_sec024_orphan_dedup_spec.py": {
       "bytes": 1340,
       "sha256": "d4b3cb6f17a85e86e842864a81f3efc37f9dd6451529c094aa56af9ad407b2e3"
+    },
+    "security_sec025_mempool_bounds_spec.py": {
+      "bytes": 2002,
+      "sha256": "64a79d98e8f5ef0b55b15d47203a291ffcf0e0cddc4ca7c21715b48d7f943637"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
