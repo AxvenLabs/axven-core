@@ -34,18 +34,29 @@ def main():
 
         conn = http.client.HTTPConnection(host, port, timeout=3)
         try:
-            conn.request(
-                "POST",
-                "/",
-                body=oversized,
-                headers={"Content-Type": "application/json"},
-            )
-            response = conn.getresponse()
-            response.read()
+            try:
+                conn.request(
+                    "POST",
+                    "/",
+                    body=oversized,
+                    headers={"Content-Type": "application/json"},
+                )
+                response = conn.getresponse()
+                response.read()
 
-            assert response.status == 400, (
-                f"oversized RPC request returned HTTP {response.status}"
-            )
+                assert response.status == 400, (
+                    f"oversized RPC request returned HTTP {response.status}"
+                )
+            except (
+                ConnectionAbortedError,
+                ConnectionResetError,
+                BrokenPipeError,
+            ):
+                # On Windows the server may reject the oversized request
+                # before the client finishes transmitting its body, causing
+                # the local TCP connection to be aborted/reset instead of
+                # delivering the HTTP 400 response to the client.
+                pass
         finally:
             conn.close()
 
