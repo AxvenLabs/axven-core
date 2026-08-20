@@ -57,6 +57,7 @@ SUITES=[
  ("security_sec028_p2p_inbound_peer_bounds_spec.py","SEC-028 inbound peer bounds"),
  ("security_sec029_rpc_request_timeout_spec.py","SEC-029 RPC request timeout"),
  ("security_sec030_rpc_concurrency_bounds_spec.py","SEC-030 RPC concurrency bounds"),
+ ("security_sec031_rpc_request_body_bounds_spec.py","SEC-031 RPC request body bounds"),
 ]
 
 def main():
