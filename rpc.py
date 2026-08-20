@@ -49,6 +49,8 @@ class RPCDispatcher:
         self.core = core
 
     def call(self, method, params=None):
+        if not isinstance(method, str):
+            raise RPCError("method must be string")
         if params is not None and not isinstance(params, dict):
             raise RPCError("params must be object")
         p = params or {}
