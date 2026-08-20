@@ -97,6 +97,11 @@ def _handler(dispatcher):
         def do_POST(self):
             self.connection.settimeout(RPC_REQUEST_TIMEOUT)
             try:
+                content_type = self.headers.get("Content-Type", "")
+                media_type = content_type.split(";", 1)[0].strip().lower()
+                if media_type != "application/json":
+                    raise RPCError("content type must be application/json")
+
                 n = int(self.headers.get("Content-Length", "0"))
                 if n <= 0 or n > MAX_RPC_REQUEST_BYTES:
                     raise RPCError("invalid request size")
