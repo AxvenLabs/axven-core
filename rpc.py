@@ -12,6 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 RPC_REQUEST_TIMEOUT = 5.0
 MAX_RPC_WORKERS = 32
+MAX_RPC_REQUEST_BYTES = 2 * 1024 * 1024
 
 
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
@@ -93,7 +94,7 @@ def _handler(dispatcher):
             self.connection.settimeout(RPC_REQUEST_TIMEOUT)
             try:
                 n = int(self.headers.get("Content-Length", "0"))
-                if n <= 0 or n > 2 * 1024 * 1024:
+                if n <= 0 or n > MAX_RPC_REQUEST_BYTES:
                     raise RPCError("invalid request size")
                 req = json.loads(self.rfile.read(n))
                 if not isinstance(req, dict):
