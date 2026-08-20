@@ -469,8 +469,8 @@
       "sha256": "9ca14d433e8d00996b288fcfe9222db5369fe28739c5439548ca4c31d2fd119f"
     },
     "security_sec031_rpc_request_body_bounds_spec.py": {
-      "bytes": 2191,
-      "sha256": "a9d3743f138428e3e8042635355deb9bbea19b7f5486694cd5ba6fe2dd0d4f71"
+      "bytes": 2709,
+      "sha256": "f2289f2142f9ad7cb2efc0427fba1eb05b6f8aa51cdfb579eac4d26003e2d9b5"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
