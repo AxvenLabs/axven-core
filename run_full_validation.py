@@ -66,6 +66,7 @@ SUITES=[
  ("security_sec037_rpc_param_key_bounds_spec.py","SEC-037 RPC param key bounds"),
  ("security_sec038_rpc_param_count_bounds_spec.py","SEC-038 RPC param count bounds"),
  ("security_sec039_rpc_duplicate_json_keys_spec.py","SEC-039 RPC duplicate JSON keys"),
+ ("security_sec040_rpc_param_depth_bounds_spec.py","SEC-040 RPC param depth bounds"),
 ]
 
 def main():
