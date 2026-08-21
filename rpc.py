@@ -55,6 +55,8 @@ class RPCDispatcher:
             raise RPCError("invalid method name")
         if params is not None and not isinstance(params, dict):
             raise RPCError("params must be object")
+        if params is not None and len(params) > 64:
+            raise RPCError("too many params")
         if params is not None:
             for key in params:
                 if not isinstance(key, str) or not key or len(key) > 256:
