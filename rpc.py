@@ -108,6 +108,14 @@ def _handler(dispatcher):
                 req = json.loads(self.rfile.read(n))
                 if not isinstance(req, dict):
                     raise RPCError("request must be object")
+
+                unknown_fields = set(req) - {"method", "params"}
+                if unknown_fields:
+                    raise RPCError(
+                        "unknown request field: "
+                        + sorted(unknown_fields)[0]
+                    )
+
                 result = dispatcher.call(req.get("method"), req.get("params"))
                 body = {"ok": True, "result": result}
                 status = 200
