@@ -51,6 +51,8 @@ class RPCDispatcher:
     def call(self, method, params=None):
         if not isinstance(method, str):
             raise RPCError("method must be string")
+        if not method or len(method) > 256:
+            raise RPCError("invalid method name")
         if params is not None and not isinstance(params, dict):
             raise RPCError("params must be object")
         p = params or {}
