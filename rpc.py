@@ -55,6 +55,10 @@ class RPCDispatcher:
             raise RPCError("invalid method name")
         if params is not None and not isinstance(params, dict):
             raise RPCError("params must be object")
+        if params is not None:
+            for key in params:
+                if not isinstance(key, str) or not key or len(key) > 256:
+                    raise RPCError("invalid param key")
         p = params or {}
         if method == "get_status": return self.core.status()
         if method == "get_overview": return self.core.overview()
