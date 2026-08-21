@@ -44,6 +44,15 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 class RPCError(ValueError): pass
 
 
+def _reject_duplicate_json_keys(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise RPCError(f"duplicate JSON key: {key}")
+        obj[key] = value
+    return obj
+
+
 class RPCDispatcher:
     def __init__(self, core):
         self.core = core
@@ -113,7 +122,7 @@ def _handler(dispatcher):
                 n = int(self.headers.get("Content-Length", "0"))
                 if n <= 0 or n > MAX_RPC_REQUEST_BYTES:
                     raise RPCError("invalid request size")
-                req = json.loads(self.rfile.read(n))
+                req = json.loads(self.rfile.read(n), object_pairs_hook=_reject_duplicate_json_keys)
                 if not isinstance(req, dict):
                     raise RPCError("request must be object")
 
