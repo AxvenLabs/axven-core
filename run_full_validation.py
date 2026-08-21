@@ -63,6 +63,7 @@ SUITES=[
  ("security_sec034_rpc_content_type_spec.py","SEC-034 RPC content type"),
  ("security_sec035_rpc_request_envelope_spec.py","SEC-035 RPC request envelope"),
  ("security_sec036_rpc_method_bounds_spec.py","SEC-036 RPC method bounds"),
+ ("security_sec037_rpc_param_key_bounds_spec.py","SEC-037 RPC param key bounds"),
 ]
 
 def main():
