@@ -69,6 +69,7 @@ SUITES=[
  ("security_sec040_rpc_param_depth_bounds_spec.py","SEC-040 RPC param depth bounds"),
  ("security_sec041_rpc_param_complexity_bounds_spec.py","SEC-041 RPC param complexity bounds"),
  ("security_sec042_rpc_mine_count_bounds_spec.py","SEC-042 RPC mine count bounds"),
+ ("security_sec043_rpc_send_value_bounds_spec.py","SEC-043 RPC send value bounds"),
 ]
 
 def main():
