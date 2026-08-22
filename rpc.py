@@ -96,10 +96,18 @@ class RPCDispatcher:
         if method == "get_status": return self.core.status()
         if method == "get_overview": return self.core.overview()
         if method == "get_explorer_summary": return self.core.explorer_summary()
-        if method == "get_recent_blocks": return self.core.recent_blocks(p.get("limit",20))
+        if method == "get_recent_blocks":
+            limit = int(p.get("limit", 20))
+            if limit < 1 or limit > 200:
+                raise RPCError("invalid recent blocks limit")
+            return self.core.recent_blocks(limit)
         if method == "get_block": return self.core.get_block(p["id"])
         if method == "get_transaction": return self.core.get_transaction(p["txid"])
-        if method == "get_mempool": return self.core.mempool_view(p.get("limit",100))
+        if method == "get_mempool":
+            limit = int(p.get("limit", 100))
+            if limit < 1 or limit > 500:
+                raise RPCError("invalid mempool limit")
+            return self.core.mempool_view(limit)
         if method == "get_chain_config": return self.core.chain_config()
         if method == "get_addresses": return self.core.addresses()
         if method == "get_balance": return self.core.balance(p.get("scheme"))
