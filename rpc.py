@@ -53,15 +53,23 @@ def _reject_duplicate_json_keys(pairs):
     return obj
 
 
-def _validate_param_depth(value, depth=0):
+def _validate_param_depth(value, depth=0, budget=None):
+    if budget is None:
+        budget = [4096]
+
+    budget[0] -= 1
+    if budget[0] < 0:
+        raise RPCError("params too complex")
+
     if depth > 16:
         raise RPCError("param nesting too deep")
+
     if isinstance(value, dict):
         for child in value.values():
-            _validate_param_depth(child, depth + 1)
+            _validate_param_depth(child, depth + 1, budget)
     elif isinstance(value, list):
         for child in value:
-            _validate_param_depth(child, depth + 1)
+            _validate_param_depth(child, depth + 1, budget)
 
 
 class RPCDispatcher:
@@ -81,8 +89,9 @@ class RPCDispatcher:
             for key in params:
                 if not isinstance(key, str) or not key or len(key) > 256:
                     raise RPCError("invalid param key")
+            budget = [4096]
             for value in params.values():
-                _validate_param_depth(value)
+                _validate_param_depth(value, budget=budget)
         p = params or {}
         if method == "get_status": return self.core.status()
         if method == "get_overview": return self.core.overview()
