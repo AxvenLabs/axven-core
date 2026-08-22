@@ -114,7 +114,11 @@ class RPCDispatcher:
             return self.core.sync_outbound_peers()
         if method == "remove_peer":
             return self.core.remove_outbound_peer((p["host"], int(p["port"])))
-        if method == "mine": return self.core.mine(int(p.get("count", 1)), p.get("scheme"))
+        if method == "mine":
+            count = int(p.get("count", 1))
+            if count <= 0 or count > 1000:
+                raise RPCError("invalid mine count")
+            return self.core.mine(count, p.get("scheme"))
         if method == "send":
             return self.core.send(p["input_scheme"], p["recipient"],
                                   int(p["amount"]), int(p["fee"]))
