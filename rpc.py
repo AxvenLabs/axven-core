@@ -140,8 +140,16 @@ class RPCDispatcher:
             return {"host": h, "port": port}
         if method == "stop": return self.core.request_shutdown()
         if method == "sync_peer":
-            return {"accepted": self.core.sync_peer(p["host"], int(p["port"]),
-                                                    int(p.get("batch", 128)))}
+            batch = int(p.get("batch", 128))
+            if batch < 1 or batch > 128:
+                raise RPCError("invalid sync batch")
+            return {
+                "accepted": self.core.sync_peer(
+                    p["host"],
+                    int(p["port"]),
+                    batch,
+                )
+            }
         raise RPCError("unknown method")
 
 
