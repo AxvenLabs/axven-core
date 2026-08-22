@@ -120,8 +120,21 @@ class RPCDispatcher:
                 raise RPCError("invalid mine count")
             return self.core.mine(count, p.get("scheme"))
         if method == "send":
-            return self.core.send(p["input_scheme"], p["recipient"],
-                                  int(p["amount"]), int(p["fee"]))
+            amount = int(p["amount"])
+            fee = int(p["fee"])
+
+            if amount <= 0 or amount > ((1 << 63) - 1):
+                raise RPCError("invalid send amount")
+
+            if fee < 0 or fee > ((1 << 63) - 1):
+                raise RPCError("invalid send fee")
+
+            return self.core.send(
+                p["input_scheme"],
+                p["recipient"],
+                amount,
+                fee,
+            )
         if method == "start_p2p":
             h, port = self.core.start_p2p(p.get("host", "127.0.0.1"), int(p.get("port", 0)))
             return {"host": h, "port": port}
