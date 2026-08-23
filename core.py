@@ -300,6 +300,8 @@ class AxvenCore:
             port=int(port)
         if not host:
             raise ValueError("peer host required")
+        if len(host) > 255:
+            raise ValueError("peer host too long")
         if not 1 <= port <= 65535:
             raise ValueError("invalid peer port")
         return (host,port)
