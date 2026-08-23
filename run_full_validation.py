@@ -75,6 +75,7 @@ SUITES=[
  ("security_sec046_rpc_sync_peer_port_bounds_spec.py","SEC-046 RPC sync peer port bounds"),
  ("security_sec047_rpc_peer_port_bounds_spec.py","SEC-047 RPC peer port bounds"),
  ("security_sec048_rpc_start_p2p_port_bounds_spec.py","SEC-048 RPC start_p2p port bounds"),
+ ("security_sec049_peer_host_bounds_spec.py","SEC-049 peer host bounds"),
 ]
 
 def main():
