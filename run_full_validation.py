@@ -73,6 +73,7 @@ SUITES=[
  ("security_sec044_rpc_sync_batch_bounds_spec.py","SEC-044 RPC sync batch bounds"),
  ("security_sec045_rpc_query_limit_bounds_spec.py","SEC-045 RPC query limit bounds"),
  ("security_sec046_rpc_sync_peer_port_bounds_spec.py","SEC-046 RPC sync peer port bounds"),
+ ("security_sec047_rpc_peer_port_bounds_spec.py","SEC-047 RPC peer port bounds"),
 ]
 
 def main():
