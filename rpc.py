@@ -116,12 +116,18 @@ class RPCDispatcher:
         if method == "get_peers": return self.core.outbound_peer_status()
         if method == "get_peer_health": return self.core.peer_health_summary()
         if method == "add_peer":
-            host, port = self.core.add_outbound_peer((p["host"], int(p["port"])))
+            port = int(p["port"])
+            if port < 1 or port > 65535:
+                raise RPCError("invalid peer port")
+            host, port = self.core.add_outbound_peer((p["host"], port))
             return {"host": host, "port": port}
         if method == "sync_peers":
             return self.core.sync_outbound_peers()
         if method == "remove_peer":
-            return self.core.remove_outbound_peer((p["host"], int(p["port"])))
+            port = int(p["port"])
+            if port < 1 or port > 65535:
+                raise RPCError("invalid peer port")
+            return self.core.remove_outbound_peer((p["host"], port))
         if method == "mine":
             count = int(p.get("count", 1))
             if count <= 0 or count > 1000:
