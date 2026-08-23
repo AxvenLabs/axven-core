@@ -253,8 +253,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 25702,
-      "sha256": "0f67b9692611c4bf9aedd74aa679b9d217a9f4089ac535367141611b5b55f791"
+      "bytes": 25735,
+      "sha256": "0ca9d27e94b81d20a1d4edfee2bffa03baa096df48f4f2464f49e225e0e3f595"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -341,8 +341,8 @@
       "sha256": "c16b2527904b714e33bc1ee368f441ddd62aaac321893d3ea456f4ec551fb9ee"
     },
     "run_full_validation.py": {
-      "bytes": 6131,
-      "sha256": "f893f3770de5b4a18e3d2c130c0e868d28cd0fc30c38cc1a746ebc7cd66d4d35"
+      "bytes": 6215,
+      "sha256": "63a9ee09228505087c96b2dbf29efee335d7a0a0814fe45696937f2b0ba39a4c"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -543,6 +543,10 @@
     "security_sec049_peer_host_bounds_spec.py": {
       "bytes": 1614,
       "sha256": "e2487447c7e1375d0b3933b269ee5f0ae0da4eb9a0be2664552284bea13b21f5"
+    },
+    "security_sec050_sync_peer_host_bounds_spec.py": {
+      "bytes": 2372,
+      "sha256": "2929c893aaa4e856dae55da916c7d4b6217678ba11c67ec9eb4c25880da933c7"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

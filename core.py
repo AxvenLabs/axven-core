@@ -651,7 +651,8 @@ class AxvenCore:
             self.p2p_server = None
 
     def sync_peer(self, host, port, batch=128):
+        addr = self._parse_peer((host, port))
         return p2p.sync_to_peer(
-            (host, int(port)), p2p.PeerSession(self.chain, self.mempool),
+            addr, p2p.PeerSession(self.chain, self.mempool),
             limit=int(batch)
         )
