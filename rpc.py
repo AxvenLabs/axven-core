@@ -151,10 +151,15 @@ class RPCDispatcher:
             batch = int(p.get("batch", 128))
             if batch < 1 or batch > 128:
                 raise RPCError("invalid sync batch")
+
+            port = int(p["port"])
+            if port < 1 or port > 65535:
+                raise RPCError("invalid sync peer port")
+
             return {
                 "accepted": self.core.sync_peer(
                     p["host"],
-                    int(p["port"]),
+                    port,
                     batch,
                 )
             }

@@ -337,12 +337,12 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 8595,
-      "sha256": "6a4026be2d4d910ac3e83ee0b29b584346a533b18592ff3be49abe2ee20e3812"
+      "bytes": 8719,
+      "sha256": "5c4c854a56f083240f1db8e70944234f6d0a8c390c4205d8148073d5fb8ed05b"
     },
     "run_full_validation.py": {
-      "bytes": 5791,
-      "sha256": "72855b0c3e8eb6d73ac5a4518d1b0600d114bd77228c47b67c0a87423d494011"
+      "bytes": 5883,
+      "sha256": "12e084101eacc219ec3b064270c2d333cf9cd9a1d2feaf4aa7f2ad435c5f4d3f"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -527,6 +527,10 @@
     "security_sec045_rpc_query_limit_bounds_spec.py": {
       "bytes": 2887,
       "sha256": "86040ecce9cc7e0b6162d9a6ecaf1d78178d244e5bcc07892024b3bdaca07aa2"
+    },
+    "security_sec046_rpc_sync_peer_port_bounds_spec.py": {
+      "bytes": 2446,
+      "sha256": "005d82cbdce1a720f106221c43e7ab760dcf0958c4e850e1ce939a983a79ef95"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
