@@ -150,7 +150,13 @@ class RPCDispatcher:
                 fee,
             )
         if method == "start_p2p":
-            h, port = self.core.start_p2p(p.get("host", "127.0.0.1"), int(p.get("port", 0)))
+            port = int(p.get("port", 0))
+            if port < 0 or port > 65535:
+                raise RPCError("invalid start_p2p port")
+            h, port = self.core.start_p2p(
+                p.get("host", "127.0.0.1"),
+                port,
+            )
             return {"host": h, "port": port}
         if method == "stop": return self.core.request_shutdown()
         if method == "sync_peer":
