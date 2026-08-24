@@ -186,7 +186,13 @@ class AxvenCore:
         w = self.require_wallet()
         return {"N": w.address_n, "M": w.address_m, "H": w.address_h}
 
+    @staticmethod
+    def _validate_scheme_bound(scheme):
+        if scheme is not None and len(str(scheme)) > 64:
+            raise ValueError("scheme too long")
+
     def balance(self, scheme=None):
+        self._validate_scheme_bound(scheme)
         w = self.require_wallet()
         if scheme is None:
             return {
@@ -197,6 +203,7 @@ class AxvenCore:
         return self.chain.balance(w.address_of(scheme))
 
     def wallet_status(self, scheme=None):
+        self._validate_scheme_bound(scheme)
         with self.chain._state_lock:
             return self._wallet_status_locked(scheme)
 
@@ -240,6 +247,7 @@ class AxvenCore:
         }
 
     def list_unspent(self, scheme):
+        self._validate_scheme_bound(scheme)
         with self.chain._state_lock:
             w = self.require_wallet()
             return [
@@ -249,6 +257,7 @@ class AxvenCore:
             ]
 
     def mine(self, count=1, scheme=None):
+        self._validate_scheme_bound(scheme)
         if count <= 0:
             raise ValueError("count must be positive")
         w = self.require_wallet()
@@ -270,6 +279,7 @@ class AxvenCore:
         return hashes
 
     def send(self, input_scheme, recipient, amount, fee):
+        self._validate_scheme_bound(input_scheme)
         if len(str(recipient)) > 256:
             raise ValueError("recipient address too long")
         w = self.require_wallet()

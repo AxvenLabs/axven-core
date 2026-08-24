@@ -81,6 +81,7 @@ SUITES=[
  ("security_sec052_transaction_id_bounds_spec.py","SEC-052 transaction lookup ID bounds"),
  ("security_sec053_block_id_bounds_spec.py","SEC-053 block ID bounds"),
  ("security_sec054_recipient_address_bounds_spec.py","SEC-054 send recipient bounds"),
+ ("security_sec055_scheme_bounds_spec.py","SEC-055 scheme bounds"),
 ]
 
 def main():
