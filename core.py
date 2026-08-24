@@ -270,6 +270,8 @@ class AxvenCore:
         return hashes
 
     def send(self, input_scheme, recipient, amount, fee):
+        if len(str(recipient)) > 256:
+            raise ValueError("recipient address too long")
         w = self.require_wallet()
         tx = wallet.build_transaction(
             self.chain, w, input_scheme, recipient, int(amount), int(fee),

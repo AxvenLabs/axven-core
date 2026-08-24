@@ -253,8 +253,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 26044,
-      "sha256": "6072c8da312174b1f014f48a68d79101b497b5413cbc210d3ed26b391dd8a106"
+      "bytes": 26141,
+      "sha256": "57222782020979026ad93d97bc2111ea1e36f2b5c0d18de98bef62d17c83450a"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -341,8 +341,8 @@
       "sha256": "c16b2527904b714e33bc1ee368f441ddd62aaac321893d3ea456f4ec551fb9ee"
     },
     "run_full_validation.py": {
-      "bytes": 6468,
-      "sha256": "017a9f5016d0976af4bb36a7e5ada7edbd30b3b8c0ef5ad983e99619d7a0422f"
+      "bytes": 6555,
+      "sha256": "d0b02cf3d642d5b39d049f70edc2c2e135cd5d68d33fcd4919c4189631f7be2c"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -559,6 +559,10 @@
     "security_sec053_block_id_bounds_spec.py": {
       "bytes": 1554,
       "sha256": "1b4944dc609d18c7119a22450e8b2e977a0d8191d73e963652ebb4e133018d1d"
+    },
+    "security_sec054_recipient_address_bounds_spec.py": {
+      "bytes": 1901,
+      "sha256": "110ae9128c56e01f03a3885e28cf1bf304841a160170a327069d8c4e50f0c944"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
