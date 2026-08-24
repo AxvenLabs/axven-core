@@ -104,6 +104,8 @@ class AxvenCore:
 
     def _get_block_locked(self, block_id):
         block=None
+        if isinstance(block_id, str) and block_id.isdigit() and len(block_id) > 64:
+            raise ValueError("block id too long")
         if isinstance(block_id,int) or (isinstance(block_id,str) and block_id.isdigit()):
             h=int(block_id)
             if 0 <= h < len(self.chain.blocks):
