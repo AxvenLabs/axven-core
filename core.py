@@ -6,6 +6,7 @@ changing consensus.  RPC is layered on top in rpc.py.
 """
 from __future__ import annotations
 from typing import Optional, Tuple
+import math
 from datetime import datetime, timezone
 
 import axven
@@ -582,8 +583,17 @@ class AxvenCore:
     def set_peer_retry_schedule(self, peer, delay_seconds, base_interval=5.0):
         """Record operator-visible retry scheduling state for one peer."""
         addr=self._parse_peer(peer)
-        delay=max(0.0,float(delay_seconds))
-        base=max(0.5,float(base_interval))
+        raw_delay=float(delay_seconds)
+        raw_base=float(base_interval)
+        if (
+            not math.isfinite(raw_delay)
+            or not math.isfinite(raw_base)
+            or raw_delay > 3600.0
+            or raw_base > 3600.0
+        ):
+            raise ValueError("invalid peer retry timing")
+        delay=max(0.0,raw_delay)
+        base=max(0.5,raw_base)
         self.peer_retry_delay_seconds[addr]=delay
         self.peer_retry_base_interval[addr]=base
         self.peer_next_retry_at[addr]=(
@@ -606,8 +616,17 @@ class AxvenCore:
     def peer_retry_delay(self, peer, base_interval=5.0, cap=60.0):
         """Return bounded exponential retry delay for one outbound peer."""
         addr=self._parse_peer(peer)
-        base=max(0.5,float(base_interval))
-        ceiling=max(base,float(cap))
+        raw_base=float(base_interval)
+        raw_cap=float(cap)
+        if (
+            not math.isfinite(raw_base)
+            or not math.isfinite(raw_cap)
+            or raw_base > 3600.0
+            or raw_cap > 3600.0
+        ):
+            raise ValueError("invalid peer retry timing")
+        base=max(0.5,raw_base)
+        ceiling=max(base,raw_cap)
         failures=max(0,int(self.peer_consecutive_failures.get(addr,0)))
 
         # Failure #1 still uses the normal interval. Each subsequent

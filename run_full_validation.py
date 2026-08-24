@@ -83,6 +83,7 @@ SUITES=[
  ("security_sec054_recipient_address_bounds_spec.py","SEC-054 send recipient bounds"),
  ("security_sec055_scheme_bounds_spec.py","SEC-055 scheme bounds"),
  ("security_sec056_block_string_id_bounds_spec.py","SEC-056 block string ID bounds"),
+ ("security_sec057_peer_retry_timing_bounds_spec.py","SEC-057 peer retry timing bounds"),
 ]
 
 def main():
