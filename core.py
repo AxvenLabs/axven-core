@@ -137,6 +137,8 @@ class AxvenCore:
 
     def _get_transaction_locked(self, txid):
         txid=str(txid)
+        if len(txid) > 64:
+            raise ValueError("transaction id too long")
         if txid in self.mempool.txs:
             tx=self.mempool.txs[txid]
             return {"txid":txid,"status":"mempool","tx":tx.to_dict()}
