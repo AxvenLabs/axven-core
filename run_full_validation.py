@@ -78,6 +78,7 @@ SUITES=[
  ("security_sec049_peer_host_bounds_spec.py","SEC-049 peer host bounds"),
  ("security_sec050_sync_peer_host_bounds_spec.py","SEC-050 sync_peer host bounds"),
  ("security_sec051_p2p_listener_host_bounds_spec.py","SEC-051 P2P listener host bounds"),
+ ("security_sec052_transaction_id_bounds_spec.py","SEC-052 transaction lookup ID bounds"),
 ]
 
 def main():
