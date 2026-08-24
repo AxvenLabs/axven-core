@@ -281,6 +281,8 @@ class AxvenCore:
     def start_p2p(self, host="127.0.0.1", port=0):
         if self.p2p_server is not None:
             return self.p2p_server.address
+        if len(str(host)) > 255:
+            raise ValueError("P2P listener host too long")
         self.p2p_server = p2p.NodeServer(
             self.chain, self.mempool, host=host, port=int(port)
         ).start()
