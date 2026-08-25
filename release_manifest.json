@@ -121,8 +121,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 38923,
-      "sha256": "c04b08019d13a491bd65fd0146b2dab2754a448f4417eb6b8107e6f8666ac5a4"
+      "bytes": 39358,
+      "sha256": "bd7f2ef6b92f092c727f3e636cf90fdb7e75a45bcc8093895b47a0b89ad6be05"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -301,8 +301,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 13660,
-      "sha256": "6b5b1a63a85c71ef947ad9b638c1eae0695d6410208b5eb56aefa7467ea29db6"
+      "bytes": 14336,
+      "sha256": "f54585fb3f47c5f8442ecf54e79b3c0332663d16249e4e67a2b2ed95c8ce995b"
     },
     "post_activation_audit.py": {
       "bytes": 1283,
@@ -341,8 +341,8 @@
       "sha256": "c16b2527904b714e33bc1ee368f441ddd62aaac321893d3ea456f4ec551fb9ee"
     },
     "run_full_validation.py": {
-      "bytes": 7157,
-      "sha256": "9c3a7d8dfd7ceb64cdcb6de88321179db8ed549b85674d6bcb721ae758e25ff8"
+      "bytes": 7439,
+      "sha256": "0f8dec3a4fe45611e2a4545fc385286a2a21e013b57f415311c837a0e5a4498f"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -581,16 +581,28 @@
       "sha256": "21277965ae953fffb51965de03509575e08c963d07ccac859611962abe78550f"
     },
     "security_sec059_p2p_previous_hash_bounds_spec.py": {
-      "bytes": 2989,
-      "sha256": "6bc72a94bd9ea0781e77fcdb719595eb68121a8856f5edc0f6ff61892db80500"
+      "bytes": 3003,
+      "sha256": "dc8af7a8b6b0a96bfffae2abfc06f667dbaa8b531d4555844959e6704921058b"
     },
     "security_sec060_p2p_merkle_root_bounds_spec.py": {
-      "bytes": 2967,
-      "sha256": "8ed1f28954678e342a0fed7877f81e62d2ac92ef97084ec9e3cfe86958167cc1"
+      "bytes": 2981,
+      "sha256": "7b76ada82358b97b6078034cefd90de2acd55807fdb85a8b0a01b7f1e00b875b"
     },
     "security_sec061_p2p_utxo_state_root_bounds_spec.py": {
-      "bytes": 3568,
-      "sha256": "82ceed7271435497a0b34dedafb82b1d3b3c54d071e5e615b23bc29269565083"
+      "bytes": 3582,
+      "sha256": "9651a8f6b75df567d56b1de272e52f1bfafe4ac26ae4857a592cadfe5d91ad80"
+    },
+    "security_sec062_miner_consensus_contract_spec.py": {
+      "bytes": 3986,
+      "sha256": "704be4603af39e4e6589c7522e67010941bd44417acf7c35d2e75e14fa2a1db1"
+    },
+    "security_sec062_p2p_miner_boundary_spec.py": {
+      "bytes": 5382,
+      "sha256": "8576c310965cc93a7f120cd16507393498c022e333aec637ee1a01cb31553267"
+    },
+    "security_sec062_protocol_v2_compat_spec.py": {
+      "bytes": 2154,
+      "sha256": "869d9281262a504a085256ba44368673a9070bf9c166e743ab5697e61ec9a682"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
