@@ -138,6 +138,8 @@ class PeerSession:
                 raise ProtocolError("locator too large")
             if any(not isinstance(h,str) for h in raw_locator):
                 raise ProtocolError("locator entries must be strings")
+            if any(len(h)>64 for h in raw_locator):
+                raise ProtocolError("locator entry too long")
             locator=list(raw_locator)
 
             try:

@@ -301,8 +301,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 11710,
-      "sha256": "b18695e3f13fa23df435ffc69e8ba25b0611ef5d9e63f39c656e317e177a8cdc"
+      "bytes": 11824,
+      "sha256": "86da57f569fa26585e9e4bbdd48271732d10153059327212db00be665d6f8a57"
     },
     "post_activation_audit.py": {
       "bytes": 1283,
@@ -341,8 +341,8 @@
       "sha256": "c16b2527904b714e33bc1ee368f441ddd62aaac321893d3ea456f4ec551fb9ee"
     },
     "run_full_validation.py": {
-      "bytes": 6799,
-      "sha256": "3b2a41aa1f9239e82da30a3e9e7a96e66df71019b37e066bbf6c19e61716aec2"
+      "bytes": 6887,
+      "sha256": "79ef83cb92bb489a169d75ee99a7a63c229875543f317b2677a0f3050c764da7"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -575,6 +575,10 @@
     "security_sec057_peer_retry_timing_bounds_spec.py": {
       "bytes": 2300,
       "sha256": "4e9dc6a3c94de7bc64654087b4394cb547569120dbaf91cfd1c08b9d95537e1d"
+    },
+    "security_sec058_p2p_locator_hash_bounds_spec.py": {
+      "bytes": 1993,
+      "sha256": "21277965ae953fffb51965de03509575e08c963d07ccac859611962abe78550f"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
