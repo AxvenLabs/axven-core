@@ -135,6 +135,11 @@ class PeerSession:
                 raise ProtocolError("block merkle_root must be string")
             if len(raw_merkle_root)>64:
                 raise ProtocolError("block merkle_root too long")
+            raw_utxo_state_root=raw_block.get("utxo_state_root")
+            if not isinstance(raw_utxo_state_root,str):
+                raise ProtocolError("block utxo_state_root must be string")
+            if len(raw_utxo_state_root)>64:
+                raise ProtocolError("block utxo_state_root too long")
             block=axven.Block.from_dict(raw_block)
             ok,status=self.chain.add_block(block)
             if not ok and status not in ("duplicate","orphan"):
@@ -198,6 +203,11 @@ class PeerSession:
                     raise ProtocolError("block merkle_root must be string")
                 if len(raw_merkle_root)>64:
                     raise ProtocolError("block merkle_root too long")
+                raw_utxo_state_root=raw.get("utxo_state_root")
+                if not isinstance(raw_utxo_state_root,str):
+                    raise ProtocolError("block utxo_state_root must be string")
+                if len(raw_utxo_state_root)>64:
+                    raise ProtocolError("block utxo_state_root too long")
                 b=axven.Block.from_dict(raw)
                 ok,status=self.chain.add_block(b)
                 if ok or status=="duplicate": accepted+=1

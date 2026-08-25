@@ -87,6 +87,7 @@ SUITES=[
  ("security_sec058_p2p_locator_hash_bounds_spec.py","SEC-058 P2P locator hash bounds"),
  ("security_sec059_p2p_previous_hash_bounds_spec.py","SEC-059 P2P previous_hash bounds"),
  ("security_sec060_p2p_merkle_root_bounds_spec.py","SEC-060 P2P merkle_root bounds"),
+ ("security_sec061_p2p_utxo_state_root_bounds_spec.py","SEC-061 P2P utxo_state_root bounds"),
 ]
 
 def main():

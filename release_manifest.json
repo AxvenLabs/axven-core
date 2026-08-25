@@ -301,8 +301,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 13024,
-      "sha256": "2a928451ce296fb140b737d48d17d56e3b2182d5fd9331ae8ebe03a32fdabe4b"
+      "bytes": 13660,
+      "sha256": "6b5b1a63a85c71ef947ad9b638c1eae0695d6410208b5eb56aefa7467ea29db6"
     },
     "post_activation_audit.py": {
       "bytes": 1283,
@@ -341,8 +341,8 @@
       "sha256": "c16b2527904b714e33bc1ee368f441ddd62aaac321893d3ea456f4ec551fb9ee"
     },
     "run_full_validation.py": {
-      "bytes": 7063,
-      "sha256": "1847ec7241ed53fdb2aa5eca9cd04223eba32e82c4408a2db6e03a130c5f17c3"
+      "bytes": 7157,
+      "sha256": "9c3a7d8dfd7ceb64cdcb6de88321179db8ed549b85674d6bcb721ae758e25ff8"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -587,6 +587,10 @@
     "security_sec060_p2p_merkle_root_bounds_spec.py": {
       "bytes": 2967,
       "sha256": "8ed1f28954678e342a0fed7877f81e62d2ac92ef97084ec9e3cfe86958167cc1"
+    },
+    "security_sec061_p2p_utxo_state_root_bounds_spec.py": {
+      "bytes": 3568,
+      "sha256": "82ceed7271435497a0b34dedafb82b1d3b3c54d071e5e615b23bc29269565083"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
