@@ -91,6 +91,7 @@ SUITES=[
  ("security_sec062_miner_consensus_contract_spec.py","SEC-062 canonical miner consensus contract"),
  ("security_sec062_p2p_miner_boundary_spec.py","SEC-062 P2P canonical miner boundary"),
  ("security_sec062_protocol_v2_compat_spec.py","SEC-062 protocol-v2 compatibility boundary"),
+ ("security_sec063_p2p_sync_response_budget_spec.py","SEC-063 P2P sync response frame budget"),
 ]
 
 def main():
