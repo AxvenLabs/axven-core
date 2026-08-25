@@ -85,6 +85,7 @@ SUITES=[
  ("security_sec056_block_string_id_bounds_spec.py","SEC-056 block string ID bounds"),
  ("security_sec057_peer_retry_timing_bounds_spec.py","SEC-057 peer retry timing bounds"),
  ("security_sec058_p2p_locator_hash_bounds_spec.py","SEC-058 P2P locator hash bounds"),
+ ("security_sec059_p2p_previous_hash_bounds_spec.py","SEC-059 P2P previous_hash bounds"),
 ]
 
 def main():
