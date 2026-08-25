@@ -35,8 +35,11 @@ def validate_handshake(msg: Dict[str, Any]) -> None:
         if msg.get(key) != expected[key]:
             raise ProtocolError(f"{key} mismatch")
 
+def _json_bytes(msg) -> bytes:
+    return json.dumps(msg,sort_keys=True,separators=(",",":")).encode()
+
 def send_message(sock: socket.socket, msg: Dict[str, Any]) -> None:
-    raw=json.dumps(msg,sort_keys=True,separators=(",",":")).encode()
+    raw=_json_bytes(msg)
     if len(raw)>MAX_MESSAGE_BYTES: raise ProtocolError("message too large")
     sock.sendall(struct.pack(">I",len(raw))+raw)
 
@@ -182,9 +185,25 @@ class PeerSession:
                         start:start+limit
                     ]
                 )
+
+            raw_blocks=[]
+            reply_size=len(_json_bytes({"type":"blocks","blocks":[]}))
+            for block in blocks:
+                raw_block=block.to_dict()
+                raw_block_size=len(_json_bytes(raw_block))
+                candidate_size=(
+                    reply_size
+                    + raw_block_size
+                    + (1 if raw_blocks else 0)
+                )
+                if candidate_size>MAX_MESSAGE_BYTES:
+                    break
+                raw_blocks.append(raw_block)
+                reply_size=candidate_size
+
             return {
                 "type":"blocks",
-                "blocks":[b.to_dict() for b in blocks],
+                "blocks":raw_blocks,
             }
         if typ=="blocks":
             raw_blocks=msg.get("blocks",[])
@@ -328,7 +347,6 @@ def sync_to_peer(address,session,limit=128,max_rounds=100):
             blocks=reply.get("blocks",[])
             if not blocks:break
             result=session.handle(reply); total+=result["count"]
-            if len(blocks)<limit:break
         return total
     finally:
         try:sock.close()
