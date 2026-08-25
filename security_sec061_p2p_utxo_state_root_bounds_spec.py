@@ -22,7 +22,7 @@ def raw_block(utxo_state_root, nonce=0):
         "target": axven.MAX_TARGET,
         "transactions": [],
         "nonce": nonce,
-        "miner": "",
+        "miner": "N" + ("a" * 40),
         "utxo_state_root": utxo_state_root,
     }
 

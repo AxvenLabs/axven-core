@@ -32,6 +32,14 @@ def output_scheme_allowed(recipient,height):
     if height<h2: return scheme in (SCHEME_ML_DSA,SCHEME_HYBRID)
     return scheme==SCHEME_ML_DSA
 
+def canonical_miner_address_valid(addr):
+    return (
+        isinstance(addr,str)
+        and len(addr)==41
+        and addr[0] in ("N","M","H")
+        and all(c in "0123456789abcdef" for c in addr[1:])
+    )
+
 @dataclass
 class TxInput:
     prev_txid:str; index:int; signature:str=""; public_key:str=""; scheme:str=""; ed_signature:str=""; ed_public_key:str=""; ml_signature:str=""; ml_public_key:str=""; wire_extra:Optional[Dict[str,Any]]=None
@@ -511,6 +519,9 @@ def _check_context(block: Block, path: List[Block], height: int):
     if not txs[0].is_coinbase: return f"First tx not coinbase at {height}"
     if any(t.is_coinbase for t in txs[1:]): return f"Extra coinbase at {height}"
     if txs[0].coinbase_height != height: return f"Coinbase height wrong at {height}"
+    if not canonical_miner_address_valid(block.miner): return f"Invalid miner at {height}"
+    if len(txs[0].outputs)==1 and block.miner != txs[0].outputs[0].recipient:
+        return f"Miner/coinbase mismatch at {height}"
     return None
 
 

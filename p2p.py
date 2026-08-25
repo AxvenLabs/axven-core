@@ -9,7 +9,7 @@ import json, socket, struct, threading
 from typing import Any, Dict, Optional
 import axven
 
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
 INBOUND_PEER_TIMEOUT = 5.0
 MAX_INBOUND_PEERS = 32
@@ -140,6 +140,12 @@ class PeerSession:
                 raise ProtocolError("block utxo_state_root must be string")
             if len(raw_utxo_state_root)>64:
                 raise ProtocolError("block utxo_state_root too long")
+            raw_miner=raw_block.get("miner")
+            if raw_block.get("height")==0:
+                if raw_miner!=axven.GENESIS_MINER:
+                    raise ProtocolError("invalid genesis miner")
+            elif not axven.canonical_miner_address_valid(raw_miner):
+                raise ProtocolError("block miner invalid")
             block=axven.Block.from_dict(raw_block)
             ok,status=self.chain.add_block(block)
             if not ok and status not in ("duplicate","orphan"):
@@ -208,6 +214,12 @@ class PeerSession:
                     raise ProtocolError("block utxo_state_root must be string")
                 if len(raw_utxo_state_root)>64:
                     raise ProtocolError("block utxo_state_root too long")
+                raw_miner=raw.get("miner")
+                if raw.get("height")==0:
+                    if raw_miner!=axven.GENESIS_MINER:
+                        raise ProtocolError("invalid genesis miner")
+                elif not axven.canonical_miner_address_valid(raw_miner):
+                    raise ProtocolError("block miner invalid")
                 b=axven.Block.from_dict(raw)
                 ok,status=self.chain.add_block(b)
                 if ok or status=="duplicate": accepted+=1

@@ -88,6 +88,9 @@ SUITES=[
  ("security_sec059_p2p_previous_hash_bounds_spec.py","SEC-059 P2P previous_hash bounds"),
  ("security_sec060_p2p_merkle_root_bounds_spec.py","SEC-060 P2P merkle_root bounds"),
  ("security_sec061_p2p_utxo_state_root_bounds_spec.py","SEC-061 P2P utxo_state_root bounds"),
+ ("security_sec062_miner_consensus_contract_spec.py","SEC-062 canonical miner consensus contract"),
+ ("security_sec062_p2p_miner_boundary_spec.py","SEC-062 P2P canonical miner boundary"),
+ ("security_sec062_protocol_v2_compat_spec.py","SEC-062 protocol-v2 compatibility boundary"),
 ]
 
 def main():
