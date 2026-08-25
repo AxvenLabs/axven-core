@@ -125,6 +125,11 @@ class PeerSession:
             raw_transactions=raw_block.get("transactions")
             if not isinstance(raw_transactions,list):
                 raise ProtocolError("block transactions must be list")
+            raw_previous_hash=raw_block.get("previous_hash")
+            if not isinstance(raw_previous_hash,str):
+                raise ProtocolError("block previous_hash must be string")
+            if len(raw_previous_hash)>64:
+                raise ProtocolError("block previous_hash too long")
             block=axven.Block.from_dict(raw_block)
             ok,status=self.chain.add_block(block)
             if not ok and status not in ("duplicate","orphan"):
@@ -178,6 +183,11 @@ class PeerSession:
                 raw_transactions=raw.get("transactions")
                 if not isinstance(raw_transactions,list):
                     raise ProtocolError("block transactions must be list")
+                raw_previous_hash=raw.get("previous_hash")
+                if not isinstance(raw_previous_hash,str):
+                    raise ProtocolError("block previous_hash must be string")
+                if len(raw_previous_hash)>64:
+                    raise ProtocolError("block previous_hash too long")
                 b=axven.Block.from_dict(raw)
                 ok,status=self.chain.add_block(b)
                 if ok or status=="duplicate": accepted+=1
