@@ -45,6 +45,16 @@ def _validate_block_numeric_fields(raw_block: Dict[str, Any]) -> None:
     if "nonce" in raw_block and type(raw_block["nonce"]) is not int:
         raise ProtocolError("block nonce must be integer")
 
+def _validate_tx_numeric_fields(raw_tx: Dict[str, Any]) -> None:
+    for raw_input in raw_tx.get("inputs",[]):
+        if type(raw_input.get("index")) is not int:
+            raise ProtocolError("tx input index must be integer")
+    for raw_output in raw_tx.get("outputs",[]):
+        if type(raw_output.get("amount")) is not int:
+            raise ProtocolError("tx output amount must be integer")
+    if "coinbase_height" in raw_tx and type(raw_tx["coinbase_height"]) is not int:
+        raise ProtocolError("tx coinbase_height must be integer")
+
 def send_message(sock: socket.socket, msg: Dict[str, Any]) -> None:
     raw=_json_bytes(msg)
     if len(raw)>MAX_MESSAGE_BYTES: raise ProtocolError("message too large")
@@ -125,6 +135,7 @@ class PeerSession:
                 raise ProtocolError("tx input entries must be objects")
             if any(not isinstance(o,dict) for o in raw_outputs):
                 raise ProtocolError("tx output entries must be objects")
+            _validate_tx_numeric_fields(raw_tx)
             tx=axven.Transaction.from_dict(raw_tx)
             tid=self.mempool.add(tx)
             return {"type":"accepted","kind":"tx","id":tid}
