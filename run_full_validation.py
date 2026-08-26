@@ -96,6 +96,7 @@ SUITES=[
  ("security_sec065_p2p_block_numeric_types_spec.py","SEC-065 P2P block numeric types"),
  ("security_sec066_p2p_sync_limit_numeric_types_spec.py","SEC-066 P2P sync limit numeric types"),
  ("security_sec067_p2p_tx_numeric_types_spec.py","SEC-067 P2P transaction numeric types"),
+ ("security_sec068_p2p_tx_string_types_spec.py","SEC-068 P2P transaction string types"),
 ]
 
 def main():

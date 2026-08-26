@@ -55,6 +55,27 @@ def _validate_tx_numeric_fields(raw_tx: Dict[str, Any]) -> None:
     if "coinbase_height" in raw_tx and type(raw_tx["coinbase_height"]) is not int:
         raise ProtocolError("tx coinbase_height must be integer")
 
+_TX_INPUT_OPTIONAL_STRING_FIELDS=(
+    "scheme",
+    "signature",
+    "public_key",
+    "ed_signature",
+    "ed_public_key",
+    "ml_signature",
+    "ml_public_key",
+)
+
+def _validate_tx_string_fields(raw_tx: Dict[str, Any]) -> None:
+    for raw_input in raw_tx.get("inputs",[]):
+        if not isinstance(raw_input.get("prev_txid"),str):
+            raise ProtocolError("tx input prev_txid must be string")
+        for field in _TX_INPUT_OPTIONAL_STRING_FIELDS:
+            if field in raw_input and not isinstance(raw_input[field],str):
+                raise ProtocolError(f"tx input {field} must be string")
+    for raw_output in raw_tx.get("outputs",[]):
+        if not isinstance(raw_output.get("recipient"),str):
+            raise ProtocolError("tx output recipient must be string")
+
 def send_message(sock: socket.socket, msg: Dict[str, Any]) -> None:
     raw=_json_bytes(msg)
     if len(raw)>MAX_MESSAGE_BYTES: raise ProtocolError("message too large")
@@ -136,6 +157,7 @@ class PeerSession:
             if any(not isinstance(o,dict) for o in raw_outputs):
                 raise ProtocolError("tx output entries must be objects")
             _validate_tx_numeric_fields(raw_tx)
+            _validate_tx_string_fields(raw_tx)
             tx=axven.Transaction.from_dict(raw_tx)
             tid=self.mempool.add(tx)
             return {"type":"accepted","kind":"tx","id":tid}
