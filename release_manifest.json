@@ -142,7 +142,7 @@
     },
     "canonical_node1_start.ps1": {
       "bytes": 718,
-      "sha256": "6a7cdaebfb3a792dc30469be16366c16cec844ec6472e45026f1c0adf7bd06c1"
+      "sha256": "6a7cdaebfb90dc71e8f01e908a879da4a6a18e77bb2c7d21cf06436f3524eb648"
     },
     "canonical_node1_status.ps1": {
       "bytes": 97,
@@ -301,8 +301,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 15161,
-      "sha256": "d07bc4fe42951af2bd3fc1ff72783eb9f65836e52f2ff910ae40cd67a02eee4e"
+      "bytes": 15633,
+      "sha256": "18aa2c3841234e66b6332efc09a68d4e70667ac85d5788f1590334078bebdc81"
     },
     "post_activation_audit.py": {
       "bytes": 1283,
@@ -341,8 +341,8 @@
       "sha256": "c16b2527904b714e33bc1ee368f441ddd62aaac321893d3ea456f4ec551fb9ee"
     },
     "run_full_validation.py": {
-      "bytes": 7636,
-      "sha256": "61520985f0aaf006e8daedf0c60f850c156eae845d0c0205eaec958b0ea831a1"
+      "bytes": 7724,
+      "sha256": "ce7b324e257721d7c92dd4846b2390854a73c7e098148ebeb804ed28aae81a00"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -350,7 +350,7 @@
     },
     "start-node1.cmd": {
       "bytes": 361,
-      "sha256": "eae86db6f37807ddaa4a21ebb7bd09d20de5024a44be647c34e27fa4827d48a1"
+      "sha256": "eae86db6f37807ddaa4e21ebb7bd09d20de5024a44be647c34e27fa4827d48a1"
     },
     "start-node2.cmd": {
       "bytes": 361,
@@ -611,6 +611,10 @@
     "security_sec064_p2p_block_tx_count_bounds_spec.py": {
       "bytes": 3791,
       "sha256": "641270f509c5ef21fbb92b45e535847e3927c5401d2f44ffc09f4d2669f8aece"
+    },
+    "security_sec065_p2p_block_numeric_types_spec.py": {
+      "bytes": 3874,
+      "sha256": "db259a4665d30cdb80adff7370f81079b97a282e4891a56b91f4a942b79129ba"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
