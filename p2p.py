@@ -176,10 +176,10 @@ class PeerSession:
                 raise ProtocolError("locator entry too long")
             locator=list(raw_locator)
 
-            try:
-                limit=int(msg.get("limit",128))
-            except (TypeError,ValueError):
+            raw_limit=msg.get("limit",MAX_SYNC_BLOCKS)
+            if type(raw_limit) is not int:
                 raise ProtocolError("invalid block limit")
+            limit=raw_limit
             if limit<1 or limit>MAX_SYNC_BLOCKS:
                 raise ProtocolError("invalid block limit")
 
