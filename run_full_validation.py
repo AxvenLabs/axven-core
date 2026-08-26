@@ -92,6 +92,7 @@ SUITES=[
  ("security_sec062_p2p_miner_boundary_spec.py","SEC-062 P2P canonical miner boundary"),
  ("security_sec062_protocol_v2_compat_spec.py","SEC-062 protocol-v2 compatibility boundary"),
  ("security_sec063_p2p_sync_response_budget_spec.py","SEC-063 P2P sync response frame budget"),
+ ("security_sec064_p2p_block_tx_count_bounds_spec.py","SEC-064 P2P block transaction count bounds"),
 ]
 
 def main():
