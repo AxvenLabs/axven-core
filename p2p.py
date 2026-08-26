@@ -38,6 +38,13 @@ def validate_handshake(msg: Dict[str, Any]) -> None:
 def _json_bytes(msg) -> bytes:
     return json.dumps(msg,sort_keys=True,separators=(",",":")).encode()
 
+def _validate_block_numeric_fields(raw_block: Dict[str, Any]) -> None:
+    for field in ("height","timestamp","target"):
+        if type(raw_block.get(field)) is not int:
+            raise ProtocolError(f"block {field} must be integer")
+    if "nonce" in raw_block and type(raw_block["nonce"]) is not int:
+        raise ProtocolError("block nonce must be integer")
+
 def send_message(sock: socket.socket, msg: Dict[str, Any]) -> None:
     raw=_json_bytes(msg)
     if len(raw)>MAX_MESSAGE_BYTES: raise ProtocolError("message too large")
@@ -130,6 +137,7 @@ class PeerSession:
                 raise ProtocolError("block transactions must be list")
             if len(raw_transactions)>axven.MAX_BLOCK_TXS:
                 raise ProtocolError("too many block transactions")
+            _validate_block_numeric_fields(raw_block)
             raw_previous_hash=raw_block.get("previous_hash")
             if not isinstance(raw_previous_hash,str):
                 raise ProtocolError("block previous_hash must be string")
@@ -222,6 +230,7 @@ class PeerSession:
                     raise ProtocolError("block transactions must be list")
                 if len(raw_transactions)>axven.MAX_BLOCK_TXS:
                     raise ProtocolError("too many block transactions")
+                _validate_block_numeric_fields(raw)
                 raw_previous_hash=raw.get("previous_hash")
                 if not isinstance(raw_previous_hash,str):
                     raise ProtocolError("block previous_hash must be string")
