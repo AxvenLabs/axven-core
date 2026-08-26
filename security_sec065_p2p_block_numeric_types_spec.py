@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """SEC-065 canonical P2P block numeric field contract."""
 
-import copy
-
 import p2p
 
 
