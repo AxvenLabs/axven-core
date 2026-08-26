@@ -142,7 +142,7 @@
     },
     "canonical_node1_start.ps1": {
       "bytes": 718,
-      "sha256": "6a7cdaebfb90dc71e8f01e908a879da4a6a18e77bb2c7d21cf06436f3524eb648"
+      "sha256": "6a7cdaebfb3a792dc30469be16366c16cec844ec6472e45026f1c0adf7bd06c1"
     },
     "canonical_node1_status.ps1": {
       "bytes": 97,
@@ -350,7 +350,7 @@
     },
     "start-node1.cmd": {
       "bytes": 361,
-      "sha256": "eae86db6f37807ddaa4e21ebb7bd09d20de5024a44be647c34e27fa4827d48a1"
+      "sha256": "eae86db6f37807ddaa4a21ebb7bd09d20de5024a44be647c34e27fa4827d48a1"
     },
     "start-node2.cmd": {
       "bytes": 361,
