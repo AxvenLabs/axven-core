@@ -8,6 +8,7 @@ from __future__ import annotations
 import json, socket, struct, threading
 from typing import Any, Dict, Optional
 import axven
+from p2p_tx_bounds import validate_tx_string_bounds
 
 PROTOCOL_VERSION = 2
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
@@ -158,6 +159,10 @@ class PeerSession:
                 raise ProtocolError("tx output entries must be objects")
             _validate_tx_numeric_fields(raw_tx)
             _validate_tx_string_fields(raw_tx)
+            try:
+                validate_tx_string_bounds(raw_tx)
+            except ValueError as exc:
+                raise ProtocolError(str(exc)) from exc
             tx=axven.Transaction.from_dict(raw_tx)
             tid=self.mempool.add(tx)
             return {"type":"accepted","kind":"tx","id":tid}
