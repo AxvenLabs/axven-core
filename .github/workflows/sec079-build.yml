@@ -1,0 +1,168 @@
+name: SEC-079 Build
+on:
+  push:
+    branches:
+      - security-sec079-orphan-aggregate-byte-budget
+permissions:
+  contents: write
+jobs:
+  build:
+    if: ${{ !contains(github.event.head_commit.message, '[sec079 built]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply SEC-079 and pin manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          ax = Path('axven.py')
+          text = ax.read_text(encoding='utf-8')
+
+          replacements = [
+              (
+                  'MAX_ORPHAN_BLOCKS = 256\nMAX_MEMPOOL_TXS = 4096',
+                  'MAX_ORPHAN_BLOCKS = 256\nMAX_ORPHAN_BYTES = 64 * 1024 * 1024\nMAX_MEMPOOL_TXS = 4096',
+              ),
+              (
+                  '        self.orphans = {}\n        self.mempool = None',
+                  '        self.orphans = {}\n        self.orphan_sizes = {}\n        self.orphan_bytes = 0\n        self.mempool = None',
+              ),
+              (
+                  '''        if parent not in self.index:\n            if not block_size_valid(block):\n                return False, "orphan exceeds max bytes"\n            bucket = self.orphans.setdefault(parent, [])\n            if any(child.hash() == h for child in bucket):\n                return False, "duplicate orphan"\n            orphan_count = sum(len(v) for v in self.orphans.values())\n            if orphan_count >= MAX_ORPHAN_BLOCKS:\n                return False, "orphan pool full"\n            bucket.append(block)\n            return False, "orphan"''',
+                  '''        if parent not in self.index:\n            block_bytes = serialized_block_size(block)\n            if block_bytes > int(CHAIN_CONFIG["max_block_bytes"]):\n                return False, "orphan exceeds max bytes"\n            bucket = self.orphans.get(parent, [])\n            if any(child.hash() == h for child in bucket):\n                return False, "duplicate orphan"\n            orphan_count = sum(len(v) for v in self.orphans.values())\n            if orphan_count >= MAX_ORPHAN_BLOCKS:\n                return False, "orphan pool full"\n            if self.orphan_bytes + block_bytes > MAX_ORPHAN_BYTES:\n                return False, "orphan byte budget full"\n            self.orphans.setdefault(parent, []).append(block)\n            self.orphan_sizes[h] = block_bytes\n            self.orphan_bytes += block_bytes\n            return False, "orphan"''',
+              ),
+              (
+                  '''    def _connect_orphans(self, h):\n        queue = [h]\n        while queue:\n            parent = queue.pop()\n            for child in self.orphans.pop(parent, []):\n                ok, _ = self.add_block(child)\n                if ok:\n                    queue.append(child.hash())''',
+                  '''    def _connect_orphans(self, h):\n        queue = [h]\n        while queue:\n            parent = queue.pop()\n            for child in self.orphans.pop(parent, []):\n                child_hash = child.hash()\n                child_bytes = self.orphan_sizes.pop(child_hash, 0)\n                self.orphan_bytes = max(0, self.orphan_bytes - child_bytes)\n                ok, _ = self.add_block(child)\n                if ok:\n                    queue.append(child_hash)''',
+              ),
+          ]
+
+          for old, new in replacements:
+              if text.count(old) != 1:
+                  raise SystemExit(f'expected exactly one SEC-079 patch anchor, found {text.count(old)}')
+              text = text.replace(old, new)
+          ax.write_text(text, encoding='utf-8')
+
+          spec = r'''#!/usr/bin/env python3
+"""SEC-079 aggregate orphan-pool byte budget contract."""
+from __future__ import annotations
+
+import axven
+
+
+def check(condition, message, state):
+    if not condition:
+        raise AssertionError(message)
+    state[0] += 1
+    print(f"[GREEN] {message}")
+
+
+def fake_orphan(i: int) -> axven.Block:
+    return axven.Block(
+        height=i + 1,
+        timestamp=i + 1,
+        previous_hash=axven.sha256(f"missing-parent-{i}".encode()),
+        merkle_root=axven.EMPTY_ROOT,
+        target=axven.MAX_TARGET,
+        transactions=[],
+        nonce=i,
+        miner="",
+        utxo_state_root="",
+    )
+
+
+def main():
+    checks = [0]
+    check(axven.MAX_ORPHAN_BYTES == 64 * 1024 * 1024,
+          "aggregate orphan byte budget pinned at 64 MiB", checks)
+
+    original_size = axven.serialized_block_size
+    try:
+        unit = 4 * 1024 * 1024
+        axven.serialized_block_size = lambda _block: unit
+        chain = axven.Blockchain()
+        retained = []
+        for i in range(16):
+            block = fake_orphan(i)
+            retained.append(block)
+            ok, reason = chain.add_block(block)
+            assert not ok and reason == "orphan"
+        check(chain.orphan_bytes == axven.MAX_ORPHAN_BYTES,
+              "exact aggregate byte budget remains admissible", checks)
+
+        before_count = sum(len(v) for v in chain.orphans.values())
+        before_bytes = chain.orphan_bytes
+        ok, reason = chain.add_block(fake_orphan(1000))
+        check(not ok and reason == "orphan byte budget full",
+              "aggregate byte overflow rejected before retention", checks)
+        check(sum(len(v) for v in chain.orphans.values()) == before_count
+              and chain.orphan_bytes == before_bytes,
+              "rejected aggregate overflow leaves orphan accounting unchanged", checks)
+
+        ok, reason = chain.add_block(retained[0])
+        check(not ok and reason == "duplicate orphan"
+              and chain.orphan_bytes == before_bytes,
+              "duplicate orphan consumes no additional byte budget", checks)
+
+        axven.serialized_block_size = lambda _block: 1
+        count_chain = axven.Blockchain()
+        for i in range(axven.MAX_ORPHAN_BLOCKS):
+            ok, reason = count_chain.add_block(fake_orphan(2000 + i))
+            assert not ok and reason == "orphan"
+        ok, reason = count_chain.add_block(fake_orphan(9999))
+        check(not ok and reason == "orphan pool full",
+              "existing 256-orphan count bound remains intact", checks)
+    finally:
+        axven.serialized_block_size = original_size
+
+    wallet = axven.Wallet()
+    shadow = axven.Blockchain()
+    parent = shadow.build_candidate(wallet.address)
+    ok, _ = shadow.add_block(parent)
+    assert ok
+    child = shadow.build_candidate(wallet.address)
+
+    chain = axven.Blockchain()
+    child_bytes = axven.serialized_block_size(child)
+    ok, reason = chain.add_block(child)
+    check(not ok and reason == "orphan" and chain.orphan_bytes == child_bytes,
+          "retained orphan records its serialized byte cost", checks)
+
+    ok, status = chain.add_block(parent)
+    check(ok and status == "extended" and chain.tip.hash() == child.hash(),
+          "parent arrival connects the retained orphan", checks)
+    check(chain.orphan_bytes == 0 and not chain.orphan_sizes
+          and sum(len(v) for v in chain.orphans.values()) == 0,
+          "orphan connection releases aggregate byte accounting", checks)
+
+    check(chain.validate(),
+          "chain remains valid after orphan accounting release", checks)
+
+    assert checks[0] == 10
+    print(f"SEC-079 orphan aggregate byte budget: {checks[0]}/10 GREEN")
+
+
+if __name__ == "__main__":
+    main()
+'''
+          Path('security_sec079_orphan_aggregate_byte_budget_spec.py').write_text(spec, encoding='utf-8')
+
+          manifest_path = Path('release_manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          ax_bytes = ax.read_bytes()
+          manifest['files']['axven.py'] = {
+              'bytes': len(ax_bytes),
+              'sha256': hashlib.sha256(ax_bytes).hexdigest(),
+          }
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+
+          Path('.github/workflows/sec079-build.yml').unlink()
+          PY
+          git config user.name AxvenLabs
+          git config user.email dogacan432@gmail.com
+          git add -A
+          git commit -m "SEC-079: Bound aggregate orphan-pool bytes [sec079 built]"
+          git push origin HEAD:security-sec079-orphan-aggregate-byte-budget
