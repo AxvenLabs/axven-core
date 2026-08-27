@@ -34,3 +34,8 @@ jobs:
         shell: pwsh
         run: |
           python run_full_validation.py
+
+      - name: SEC-076+ security tail
+        shell: pwsh
+        run: |
+          python security_tail_runner.py
