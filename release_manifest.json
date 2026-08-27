@@ -305,8 +305,8 @@
       "sha256": "bf44b22eb5a0702e29de368cb4e102709d6c5ef5ccdea449aff2ce4395facfbc"
     },
     "p2p_tx_bounds.py": {
-      "bytes": 1237,
-      "sha256": "685d6c193b4f54a146dadd9272f9522f5d7e459eba2caf4fce573702a0c7a0fa"
+      "bytes": 1410,
+      "sha256": "282fc14a49868f7025e948f1a309f7dfaa61413bb3054e6a52e93c131e7f2f1f"
     },
     "post_activation_audit.py": {
       "bytes": 1283,
@@ -683,6 +683,10 @@
     "security_sec085_p2p_tx_required_fields_spec.py": {
       "bytes": 1991,
       "sha256": "0456e008b3eeee9c23db1c6ff3feeb25f688f2847ef9985489468d4bee30adb4"
+    },
+    "security_sec086_p2p_tx_canonical_fields_spec.py": {
+      "bytes": 2202,
+      "sha256": "c9eb8a18561c00a08f8a604f85dee624514e0af6175f2b1626f023f23f010442"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

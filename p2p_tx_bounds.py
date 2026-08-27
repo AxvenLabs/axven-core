@@ -6,6 +6,8 @@ MAX_P2P_RECIPIENT_CHARS = 128
 MAX_P2P_TX_SCHEME_CHARS = 32
 MAX_P2P_TX_AUTH_CHARS = 8192
 
+_TX_TOP_LEVEL_FIELDS = {"inputs", "outputs", "coinbase_height"}
+
 _TX_AUTH_FIELDS = (
     "signature",
     "public_key",
@@ -17,6 +19,8 @@ _TX_AUTH_FIELDS = (
 
 
 def validate_tx_string_bounds(raw_tx):
+    if any(key not in _TX_TOP_LEVEL_FIELDS for key in raw_tx):
+        raise ValueError("unknown tx field")
     if "inputs" not in raw_tx:
         raise ValueError("tx inputs required")
     if "outputs" not in raw_tx:
