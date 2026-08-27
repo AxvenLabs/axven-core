@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P2P-only transaction string budgets for untrusted wire messages."""
+"""P2P-only transaction wire structure and string budgets for untrusted messages."""
 
 MAX_P2P_TXID_CHARS = 64
 MAX_P2P_RECIPIENT_CHARS = 128
@@ -17,6 +17,10 @@ _TX_AUTH_FIELDS = (
 
 
 def validate_tx_string_bounds(raw_tx):
+    if "inputs" not in raw_tx:
+        raise ValueError("tx inputs required")
+    if "outputs" not in raw_tx:
+        raise ValueError("tx outputs required")
     for raw_input in raw_tx.get("inputs", []):
         if len(raw_input["prev_txid"]) > MAX_P2P_TXID_CHARS:
             raise ValueError("tx input prev_txid too long")
