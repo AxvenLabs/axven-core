@@ -325,8 +325,8 @@
       "sha256": "4a4d485eedec4d982bb8abdf7505de483c07088c9e5a96bb254b39e6f0c084e6"
     },
     "pyproject.toml": {
-      "bytes": 604,
-      "sha256": "fb4cb9709bbac05f52e61b2e88265435dfd0e4040705e6de291c2af2327a1a53"
+      "bytes": 623,
+      "sha256": "47fdfdd6ccad224720d3690d0f2899536e2cd98e0d224dd49c239a48e90913db"
     },
     "rc_audit.py": {
       "bytes": 1256,
@@ -418,7 +418,7 @@
     },
     "security_sec017_p2p_block_batch_bounds_spec.py": {
       "bytes": 1395,
-      "sha256": "935a7ccafe2b43faaa0aaa68b88119e0f38c9724448d83907d05a58a9edb5f3e"
+      "sha256": "935a7ccafe3b43faaa0aaa68b88119e0f38c9724448d83907d05a58a9edb5f3e"
     },
     "security_sec018_p2p_tx_structural_bounds_spec.py": {
       "bytes": 1988,
