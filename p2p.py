@@ -521,12 +521,43 @@ def sync_to_peer(address,session,limit=128,max_rounds=100):
         try:sock.close()
         except OSError:pass
 
+_BLOCK_ACK_STATUSES = {
+    "extended",
+    "reorg",
+    "side-chain",
+    "duplicate",
+    "orphan",
+}
+
+def _validate_propagation_ack(reply,kind,expected_id):
+    if kind == "tx":
+        expected_fields={"type","kind","id"}
+    elif kind == "block":
+        expected_fields={"type","kind","id","status"}
+    else:
+        raise ValueError("unsupported propagation kind")
+    if set(reply) != expected_fields:
+        raise ProtocolError("invalid propagation acknowledgement fields")
+    if reply.get("type") != "accepted":
+        raise ProtocolError("expected propagation acknowledgement")
+    if reply.get("kind") != kind:
+        raise ProtocolError("propagation acknowledgement kind mismatch")
+    if reply.get("id") != expected_id:
+        raise ProtocolError("propagation acknowledgement id mismatch")
+    if kind == "block" and reply.get("status") not in _BLOCK_ACK_STATUSES:
+        raise ProtocolError("invalid block acknowledgement status")
+    return reply
+
 def propagate_tx(address,tx):
     sock=connect(address)
-    try:return request(sock,{"type":"tx","tx":tx.to_dict()})
+    try:
+        reply=request(sock,{"type":"tx","tx":tx.to_dict()})
+        return _validate_propagation_ack(reply,"tx",tx.txid())
     finally:sock.close()
 
 def propagate_block(address,block):
     sock=connect(address)
-    try:return request(sock,{"type":"block","block":block.to_dict()})
+    try:
+        reply=request(sock,{"type":"block","block":block.to_dict()})
+        return _validate_propagation_ack(reply,"block",block.hash())
     finally:sock.close()
