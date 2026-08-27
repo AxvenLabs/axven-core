@@ -237,7 +237,10 @@ class PeerSession:
     def handle(self,msg):
         typ=_validate_message_type(msg)
         if typ=="status": return None
-        if typ=="get_status": return self.status()
+        if typ=="get_status":
+            if any(key != "type" for key in msg):
+                raise ProtocolError("unknown get_status message field")
+            return self.status()
         if typ=="tx":
             if any(key not in ("type","tx") for key in msg):
                 raise ProtocolError("unknown tx message field")
