@@ -121,8 +121,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 39953,
-      "sha256": "1a7ac450130f8bd1c3b6643369a3f9e589ff6a16cb5b024760178663ab192088"
+      "bytes": 40346,
+      "sha256": "cc7a1cf9966e42cdbf1796d1b277e4f542fb77df6570e96988c859135dc7c3d7"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -663,6 +663,10 @@
     "security_sec080_p2p_duplicate_json_keys_spec.py": {
       "bytes": 2281,
       "sha256": "e03100a5c8a63683af780acd758e38a5c144097e666f26187b26b8a3f3ac979d"
+    },
+    "security_sec081_mempool_block_conflict_cleanup_spec.py": {
+      "bytes": 2935,
+      "sha256": "f7a99d5ccb4329564365d1be3d7835fef0b47ab1055aa9593d0f01214dab32e7"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
