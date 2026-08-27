@@ -19,6 +19,25 @@ class FakeChain:
         return True, "accepted"
 
 
+def canonical_dummy_tx():
+    return {
+        "inputs": [
+            {
+                "prev_txid": "0" * 64,
+                "index": 0,
+                "signature": "",
+                "public_key": "",
+            }
+        ],
+        "outputs": [
+            {
+                "amount": 1,
+                "recipient": "N" + ("0" * 40),
+            }
+        ],
+    }
+
+
 def raw_block(tx_count):
     return {
         "height": 1,
@@ -26,7 +45,7 @@ def raw_block(tx_count):
         "previous_hash": "0" * 64,
         "merkle_root": "0" * 64,
         "target": axven.MAX_TARGET,
-        "transactions": [{} for _ in range(tx_count)],
+        "transactions": [canonical_dummy_tx() for _ in range(tx_count)],
         "nonce": 0,
         "miner": "N" + ("0" * 40),
         "utxo_state_root": "0" * 64,
