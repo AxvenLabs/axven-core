@@ -341,8 +341,8 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 10605,
-      "sha256": "bfb143ac0b9b75c7eed15c3c5f5e8b5371655e5a0efcb93d93e523e836ce1a47"
+      "bytes": 12143,
+      "sha256": "440059e40d95d098e22bf3de9cdea5bdb1bde5bcd5bdcb77ee0db4d0b91e1aed"
     },
     "run_full_validation.py": {
       "bytes": 8663,
@@ -707,6 +707,10 @@
     "security_sec091_rpc_absolute_request_deadline_spec.py": {
       "bytes": 3524,
       "sha256": "d19bd425f898749b3b179d4c8c7ca870bc0b9dfeef788e31a8c0fbbea1395306"
+    },
+    "security_sec092_rpc_host_header_guard_spec.py": {
+      "bytes": 3806,
+      "sha256": "7fc6e90474d7f4f40ba488988501216a0f56722dd59e5b9f085b9b43dd5182a8"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
