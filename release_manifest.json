@@ -341,8 +341,8 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 9546,
-      "sha256": "2481d0731ff4839e0de950fd858a788522708297020f6c81805479642dfb1ef1"
+      "bytes": 10605,
+      "sha256": "bfb143ac0b9b75c7eed15c3c5f5e8b5371655e5a0efcb93d93e523e836ce1a47"
     },
     "run_full_validation.py": {
       "bytes": 8663,
@@ -703,6 +703,10 @@
     "security_sec090_mempool_atomicity_spec.py": {
       "bytes": 4137,
       "sha256": "1f8537aacc679bfb495eb92be4f6d888bc880dcff0c31f92f868fa0f8679e668"
+    },
+    "security_sec091_rpc_absolute_request_deadline_spec.py": {
+      "bytes": 3524,
+      "sha256": "d19bd425f898749b3b179d4c8c7ca870bc0b9dfeef788e31a8c0fbbea1395306"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
