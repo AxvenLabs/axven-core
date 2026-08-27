@@ -279,6 +279,8 @@ class PeerSession:
                 raise ProtocolError(f"block rejected: {status}")
             return {"type":"accepted","kind":"block","id":block.hash(),"status":status}
         if typ=="get_blocks":
+            if any(key not in ("type","locator","limit") for key in msg):
+                raise ProtocolError("unknown get_blocks message field")
             raw_locator=msg.get("locator",[])
             if not isinstance(raw_locator,list):
                 raise ProtocolError("locator must be list")
