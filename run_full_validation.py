@@ -99,6 +99,7 @@ SUITES=[
  ("security_sec068_p2p_tx_string_types_spec.py","SEC-068 P2P transaction string types"),
  ("security_sec069_p2p_tx_id_address_bounds_spec.py","SEC-069 P2P tx identifier/address bounds"),
  ("security_sec070_p2p_tx_auth_bounds_spec.py","SEC-070 P2P tx scheme/auth bounds"),
+ ("security_sec071_p2p_message_type_bounds_spec.py","SEC-071 P2P message type bounds"),
 ]
 
 def main():

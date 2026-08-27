@@ -18,6 +18,7 @@ MAX_SYNC_BLOCKS = 128
 MAX_LOCATOR_HASHES = 64
 MAX_P2P_TX_INPUTS = 1024
 MAX_P2P_TX_OUTPUTS = 1024
+MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
 
@@ -38,6 +39,14 @@ def validate_handshake(msg: Dict[str, Any]) -> None:
 
 def _json_bytes(msg) -> bytes:
     return json.dumps(msg,sort_keys=True,separators=(",",":")).encode()
+
+def _validate_message_type(msg: Dict[str, Any]) -> str:
+    raw_type=msg.get("type")
+    if not isinstance(raw_type,str):
+        raise ProtocolError("message type must be string")
+    if len(raw_type)>MAX_P2P_MESSAGE_TYPE_CHARS:
+        raise ProtocolError("message type too long")
+    return raw_type
 
 def _validate_block_numeric_fields(raw_block: Dict[str, Any]) -> None:
     for field in ("height","timestamp","target"):
@@ -135,7 +144,7 @@ class PeerSession:
             return hs
 
     def handle(self,msg):
-        typ=msg.get("type")
+        typ=_validate_message_type(msg)
         if typ=="status": return None
         if typ=="get_status": return self.status()
         if typ=="tx":
