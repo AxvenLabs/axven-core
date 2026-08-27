@@ -238,6 +238,8 @@ class PeerSession:
             tid=self.mempool.add(tx)
             return {"type":"accepted","kind":"tx","id":tid}
         if typ=="block":
+            if any(key not in ("type","block") for key in msg):
+                raise ProtocolError("unknown block message field")
             raw_block=msg.get("block")
             if not isinstance(raw_block,dict):
                 raise ProtocolError("block must be object")
@@ -328,6 +330,8 @@ class PeerSession:
                 "blocks":raw_blocks,
             }
         if typ=="blocks":
+            if any(key not in ("type","blocks") for key in msg):
+                raise ProtocolError("unknown blocks message field")
             raw_blocks=msg.get("blocks")
             if not isinstance(raw_blocks,list):
                 raise ProtocolError("blocks must be list")
