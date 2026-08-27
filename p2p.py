@@ -226,7 +226,7 @@ class PeerSession:
                 raise ProtocolError(f"block rejected: {status}")
             return {"type":"accepted","kind":"block","id":block.hash(),"status":status}
         if typ=="get_blocks":
-            raw_locator=msg.get("locator") or []
+            raw_locator=msg.get("locator",[])
             if not isinstance(raw_locator,list):
                 raise ProtocolError("locator must be list")
             if len(raw_locator)>MAX_LOCATOR_HASHES:
