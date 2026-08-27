@@ -1,0 +1,44 @@
+name: SEC-093 Finalize
+
+on:
+  push:
+    branches:
+      - security-sec093-rpc-exact-body-length
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Apply SEC-093 and refresh manifest
+        run: python sec093_apply.py
+      - name: Dedicated SEC-093 contract
+        run: python security_sec093_rpc_exact_body_length_spec.py
+      - name: Release packaging
+        run: python release_packaging_test.py
+      - name: Full validation
+        run: python run_full_validation.py
+      - name: SEC-076+ security tail
+        run: python security_tail_runner.py
+      - name: Commit generated final files
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rpc.py release_manifest.json security_sec093_rpc_exact_body_length_spec.py
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit"
+            exit 0
+          fi
+          git commit -m "SEC-093: Require exact RPC request body length"
+          git push origin HEAD:security-sec093-rpc-exact-body-length
