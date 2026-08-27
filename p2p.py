@@ -60,6 +60,24 @@ def _validate_message_type(msg: Dict[str, Any]) -> str:
         raise ProtocolError("message type too long")
     return raw_type
 
+_BLOCK_TOP_LEVEL_FIELDS = {
+    "height",
+    "timestamp",
+    "previous_hash",
+    "merkle_root",
+    "target",
+    "transactions",
+    "nonce",
+    "miner",
+    "utxo_state_root",
+}
+
+
+def _validate_block_fields(raw_block: Dict[str, Any]) -> None:
+    if any(key not in _BLOCK_TOP_LEVEL_FIELDS for key in raw_block):
+        raise ProtocolError("unknown block field")
+
+
 def _validate_block_numeric_fields(raw_block: Dict[str, Any]) -> None:
     for field in ("height","timestamp","target"):
         if type(raw_block.get(field)) is not int:
@@ -223,6 +241,7 @@ class PeerSession:
             raw_block=msg.get("block")
             if not isinstance(raw_block,dict):
                 raise ProtocolError("block must be object")
+            _validate_block_fields(raw_block)
             raw_transactions=raw_block.get("transactions")
             if not isinstance(raw_transactions,list):
                 raise ProtocolError("block transactions must be list")
@@ -318,6 +337,7 @@ class PeerSession:
             for raw in raw_blocks:
                 if not isinstance(raw,dict):
                     raise ProtocolError("block batch entries must be objects")
+                _validate_block_fields(raw)
                 raw_transactions=raw.get("transactions")
                 if not isinstance(raw_transactions,list):
                     raise ProtocolError("block transactions must be list")
