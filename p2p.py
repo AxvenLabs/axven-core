@@ -162,6 +162,8 @@ class PeerSession:
         if typ=="status": return None
         if typ=="get_status": return self.status()
         if typ=="tx":
+            if any(key not in ("type","tx") for key in msg):
+                raise ProtocolError("unknown tx message field")
             if self.mempool is None: raise ProtocolError("mempool unavailable")
             raw_tx=msg.get("tx")
             if not isinstance(raw_tx,dict):
