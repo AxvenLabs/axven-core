@@ -161,6 +161,7 @@ COINBASE_MATURITY = 100
 DUST = 1
 MAX_BLOCK_TXS = 1_000
 MAX_ORPHAN_BLOCKS = 256
+MAX_ORPHAN_BYTES = 64 * 1024 * 1024
 MAX_MEMPOOL_TXS = 4096
 MAX_MEMPOOL_BYTES = 64 * 1024 * 1024
 
@@ -622,6 +623,8 @@ class Blockchain:
         self.index = {}
         self.undo = {}
         self.orphans = {}
+        self.orphan_sizes = {}
+        self.orphan_bytes = 0
         self.mempool = None
         self._state_lock = threading.RLock()
         self._init_genesis()
@@ -722,15 +725,20 @@ class Blockchain:
             return False, "duplicate"
         parent = block.previous_hash
         if parent not in self.index:
-            if not block_size_valid(block):
+            block_bytes = serialized_block_size(block)
+            if block_bytes > int(CHAIN_CONFIG["max_block_bytes"]):
                 return False, "orphan exceeds max bytes"
-            bucket = self.orphans.setdefault(parent, [])
+            bucket = self.orphans.get(parent, [])
             if any(child.hash() == h for child in bucket):
                 return False, "duplicate orphan"
             orphan_count = sum(len(v) for v in self.orphans.values())
             if orphan_count >= MAX_ORPHAN_BLOCKS:
                 return False, "orphan pool full"
-            bucket.append(block)
+            if self.orphan_bytes + block_bytes > MAX_ORPHAN_BYTES:
+                return False, "orphan byte budget full"
+            self.orphans.setdefault(parent, []).append(block)
+            self.orphan_sizes[h] = block_bytes
+            self.orphan_bytes += block_bytes
             return False, "orphan"
         parent_node = self.index[parent]
         height = parent_node.height + 1
@@ -821,9 +829,12 @@ class Blockchain:
         while queue:
             parent = queue.pop()
             for child in self.orphans.pop(parent, []):
+                child_hash = child.hash()
+                child_bytes = self.orphan_sizes.pop(child_hash, 0)
+                self.orphan_bytes = max(0, self.orphan_bytes - child_bytes)
                 ok, _ = self.add_block(child)
                 if ok:
-                    queue.append(child.hash())
+                    queue.append(child_hash)
 
     def validate_reason(self):
         utxo, issued = {}, 0
