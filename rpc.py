@@ -280,6 +280,8 @@ def _handler(dispatcher):
                 if n <= 0 or n > MAX_RPC_REQUEST_BYTES:
                     raise RPCError("invalid request size")
                 raw_request = self.rfile.read(n)
+                if len(raw_request) != n:
+                    raise RPCError("incomplete request body")
                 self._cancel_request_deadline()
                 req = json.loads(raw_request, object_pairs_hook=_reject_duplicate_json_keys)
                 if not isinstance(req, dict):
