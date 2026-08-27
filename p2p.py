@@ -14,6 +14,7 @@ PROTOCOL_VERSION = 2
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
 INBOUND_PEER_TIMEOUT = 5.0
 INBOUND_MESSAGE_DEADLINE = 30.0
+OUTBOUND_MESSAGE_DEADLINE = 30.0
 MAX_INBOUND_PEERS = 32
 MAX_SYNC_BLOCKS = 128
 MAX_LOCATOR_HASHES = 64
@@ -357,8 +358,10 @@ def serve_connection(sock,session:PeerSession):
         except OSError:pass
 
 def sync_once(sock,session:PeerSession,limit=128):
-    send_message(sock,{"type":"get_blocks","locator":session.locator(),"limit":limit})
-    msg=recv_message(sock)
+    msg=request(
+        sock,
+        {"type":"get_blocks","locator":session.locator(),"limit":limit},
+    )
     if msg.get("type")!="blocks": raise ProtocolError("expected blocks")
     return session.handle(msg)
 
@@ -425,12 +428,26 @@ class NodeServer:
 def connect(address,timeout=3.0):
     s=socket.create_connection(address,timeout=timeout)
     s.settimeout(timeout)
-    handshake(s)
+    deadline=(None if timeout is None else time.monotonic()+timeout)
+    try:
+        handshake(s,deadline=deadline)
+    except Exception:
+        try:s.close()
+        except OSError:pass
+        raise
+    s.settimeout(timeout)
     return s
 
-def request(sock,msg):
+def request(sock,msg,deadline=None):
     send_message(sock,msg)
-    return recv_message(sock)
+    if deadline is None:
+        deadline=time.monotonic()+OUTBOUND_MESSAGE_DEADLINE
+    original_timeout=sock.gettimeout()
+    try:
+        return recv_message(sock,deadline=deadline)
+    finally:
+        try:sock.settimeout(original_timeout)
+        except OSError:pass
 
 def sync_to_peer(address,session,limit=128,max_rounds=100):
     """Reconnect-friendly catch-up until the peer returns no more blocks."""
