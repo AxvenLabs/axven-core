@@ -8,6 +8,7 @@ from __future__ import annotations
 from contextlib import nullcontext
 from typing import Optional, Tuple
 import math
+import threading
 from datetime import datetime, timezone
 
 import axven
@@ -18,6 +19,16 @@ import wallet
 def _mempool_guard(mempool):
     lock=getattr(mempool,"_lock",None)
     return lock if lock is not None else nullcontext()
+
+def _peer_guard(core):
+    lock=getattr(core,"_peer_lock",None)
+    return lock if lock is not None else nullcontext()
+
+def _peer_locked(method):
+    def wrapped(self,*args,**kwargs):
+        with _peer_guard(self):
+            return method(self,*args,**kwargs)
+    return wrapped
 
 
 class AxvenCore:
@@ -32,6 +43,7 @@ class AxvenCore:
         self.identity = identity
         self.pending = wallet.PendingTracker()
         self.p2p_server = None
+        self._peer_lock = threading.RLock()
         self.outbound_peers = []
         self.peer_last_error = {}
         self.peer_sync_successes = {}
@@ -339,22 +351,28 @@ class AxvenCore:
     def _peer_health_timestamp():
         return datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
 
+    def outbound_peer_addresses(self):
+        with _peer_guard(self):
+            return list(self.outbound_peers)
+
+    @_peer_locked
     def add_outbound_peer(self, peer):
         addr=self._parse_peer(peer)
         if addr not in self.outbound_peers:
             self.outbound_peers.append(addr)
             self.peer_health_current_state[addr]=self.peer_health_state(addr)
             if self.peer_persist_callback is not None:
-                self.peer_persist_callback(self.outbound_peers)
+                self.peer_persist_callback(list(self.outbound_peers))
         return addr
 
+    @_peer_locked
     def remove_outbound_peer(self, peer):
         addr=self._parse_peer(peer)
         removed=addr in self.outbound_peers
         if removed:
             self.outbound_peers.remove(addr)
             if self.peer_persist_callback is not None:
-                self.peer_persist_callback(self.outbound_peers)
+                self.peer_persist_callback(list(self.outbound_peers))
         self.peer_last_error.pop(addr,None)
         self.peer_sync_successes.pop(addr,None)
         self.peer_consecutive_failures.pop(addr,None)
@@ -376,6 +394,7 @@ class AxvenCore:
         self.clear_peer_retry_schedule(addr)
         return {"host":addr[0],"port":addr[1],"removed":removed}
 
+    @_peer_locked
     def peer_health_state(self, peer):
         """Return the operator-facing health classification for one peer."""
         addr=self._parse_peer(peer)
@@ -403,6 +422,7 @@ class AxvenCore:
 
         return "healthy"
 
+    @_peer_locked
     def peer_health_incident_history(self, peer):
         """Return a defensive copy of bounded completed incident history."""
         addr=self._parse_peer(peer)
@@ -411,6 +431,7 @@ class AxvenCore:
             for entry in self.peer_health_incident_history_entries.get(addr,[])
         ]
 
+    @_peer_locked
     def peer_health_history(self, peer):
         """Return a defensive copy of bounded health transition history."""
         addr=self._parse_peer(peer)
@@ -419,6 +440,7 @@ class AxvenCore:
             for entry in self.peer_health_transition_history.get(addr,[])
         ]
 
+    @_peer_locked
     def record_peer_health_transition(self, peer):
         """Record a health-state change for one configured outbound peer."""
         addr=self._parse_peer(peer)
@@ -519,6 +541,7 @@ class AxvenCore:
             "current":new_state,
         }
 
+    @_peer_locked
     def outbound_peer_status(self):
         return [
             {
@@ -554,6 +577,7 @@ class AxvenCore:
             for host,port in self.outbound_peers
         ]
 
+    @_peer_locked
     def peer_health_summary(self):
         peers=self.outbound_peer_status()
         total=len(peers)
@@ -590,6 +614,7 @@ class AxvenCore:
             "never_connected":never_connected,
         }
 
+    @_peer_locked
     def set_peer_retry_schedule(self, peer, delay_seconds, base_interval=5.0):
         """Record operator-visible retry scheduling state for one peer."""
         addr=self._parse_peer(peer)
@@ -616,6 +641,7 @@ class AxvenCore:
             ).isoformat().replace("+00:00","Z")
         )
 
+    @_peer_locked
     def clear_peer_retry_schedule(self, peer):
         """Clear operator-visible retry scheduling state for one peer."""
         addr=self._parse_peer(peer)
@@ -623,6 +649,7 @@ class AxvenCore:
         self.peer_next_retry_at.pop(addr,None)
         self.peer_retry_base_interval.pop(addr,None)
 
+    @_peer_locked
     def peer_retry_delay(self, peer, base_interval=5.0, cap=60.0):
         """Return bounded exponential retry delay for one outbound peer."""
         addr=self._parse_peer(peer)
@@ -651,42 +678,54 @@ class AxvenCore:
             accepted=p2p.sync_to_peer(
                 addr,p2p.PeerSession(self.chain,self.mempool),limit=128
             )
-            self.peer_last_error[addr]=None
-            self.peer_sync_successes[addr]=self.peer_sync_successes.get(addr,0)+1
-            self.peer_consecutive_failures[addr]=0
-            self.peer_last_success_at[addr]=self._peer_health_timestamp()
-            self.record_peer_health_transition(addr)
-            return {"peer":f"{addr[0]}:{addr[1]}","ok":True,
-                    "accepted":accepted}
         except Exception as e:
-            self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
-            self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1
-            self.peer_last_failure_at[addr]=self._peer_health_timestamp()
-            self.record_peer_health_transition(addr)
+            error=f"{type(e).__name__}: {e}"
+            with _peer_guard(self):
+                if addr in self.outbound_peers:
+                    self.peer_last_error[addr]=error
+                    self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1
+                    self.peer_last_failure_at[addr]=self._peer_health_timestamp()
+                    self.record_peer_health_transition(addr)
             return {"peer":f"{addr[0]}:{addr[1]}","ok":False,
-                    "error":self.peer_last_error[addr]}
+                    "error":error}
+
+        with _peer_guard(self):
+            if addr in self.outbound_peers:
+                self.peer_last_error[addr]=None
+                self.peer_sync_successes[addr]=self.peer_sync_successes.get(addr,0)+1
+                self.peer_consecutive_failures[addr]=0
+                self.peer_last_success_at[addr]=self._peer_health_timestamp()
+                self.record_peer_health_transition(addr)
+        return {"peer":f"{addr[0]}:{addr[1]}","ok":True,
+                "accepted":accepted}
 
     def sync_outbound_peers(self):
         return [
             self.sync_outbound_peer(addr)
-            for addr in list(self.outbound_peers)
+            for addr in self.outbound_peer_addresses()
         ]
 
     def _propagate_block_outbound(self, block):
-        for addr in list(self.outbound_peers):
+        for addr in self.outbound_peer_addresses():
             try:
                 p2p.propagate_block(addr,block)
-                self.peer_last_error[addr]=None
+                error=None
             except Exception as e:
-                self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
+                error=f"{type(e).__name__}: {e}"
+            with _peer_guard(self):
+                if addr in self.outbound_peers:
+                    self.peer_last_error[addr]=error
 
     def _propagate_tx_outbound(self, tx):
-        for addr in list(self.outbound_peers):
+        for addr in self.outbound_peer_addresses():
             try:
                 p2p.propagate_tx(addr,tx)
-                self.peer_last_error[addr]=None
+                error=None
             except Exception as e:
-                self.peer_last_error[addr]=f"{type(e).__name__}: {e}"
+                error=f"{type(e).__name__}: {e}"
+            with _peer_guard(self):
+                if addr in self.outbound_peers:
+                    self.peer_last_error[addr]=error
 
     def request_shutdown(self):
         self.shutdown_requested = True
