@@ -131,6 +131,9 @@ _SCRYPT_R = 8
 _SCRYPT_P = 1
 _SCRYPT_DKLEN = 32
 _SCRYPT_PARAMS = {"n": _SCRYPT_N, "r": _SCRYPT_R, "p": _SCRYPT_P, "dklen": _SCRYPT_DKLEN}
+MAX_BACKUP_FILE_BYTES = 64 * 1024
+MAX_BACKUP_CIPHERTEXT_BYTES = 16 * 1024
+_MAX_CIPHERTEXT_B64_CHARS = 4 * ((MAX_BACKUP_CIPHERTEXT_BYTES + 2) // 3)
 
 def _validated_scrypt_params(value):
     if type(value) is not dict or set(value) != set(_SCRYPT_PARAMS):
@@ -139,6 +142,33 @@ def _validated_scrypt_params(value):
         if type(value[name]) is not int or value[name] != expected:
             raise BackupError("unsupported scrypt parameters")
     return _SCRYPT_PARAMS
+
+def _validated_backup_envelope(backup, passphrase):
+    if type(backup) is not dict:
+        raise BackupError("backup must be an object")
+    if type(passphrase) is not str or not passphrase:
+        raise BackupError("non-empty passphrase required")
+    if type(backup.get("version")) is not int or backup.get("version") != BACKUP_VERSION:
+        raise BackupError("unsupported backup version")
+    if backup.get("kdf") != "scrypt" or backup.get("cipher") != "aes-256-gcm":
+        raise BackupError("unsupported backup crypto")
+    kp = _validated_scrypt_params(backup.get("kdf_params"))
+
+    salt_text = backup.get("salt")
+    nonce_text = backup.get("nonce")
+    cipher_text = backup.get("ciphertext")
+    checksum = backup.get("checksum")
+    if type(salt_text) is not str or len(salt_text) != 24:
+        raise BackupError("invalid backup salt")
+    if type(nonce_text) is not str or len(nonce_text) != 16:
+        raise BackupError("invalid backup nonce")
+    if (type(cipher_text) is not str or not cipher_text
+            or len(cipher_text) > _MAX_CIPHERTEXT_B64_CHARS):
+        raise BackupError("backup ciphertext too large or invalid")
+    if (type(checksum) is not str or len(checksum) != 64
+            or any(c not in "0123456789abcdef" for c in checksum)):
+        raise BackupError("invalid backup checksum")
+    return kp, salt_text, nonce_text, cipher_text, checksum
 
 def _raw_ed_private(identity):
     return identity.ed_private_key.private_bytes(
@@ -174,16 +204,19 @@ def export_backup(identity, passphrase: str):
 
 def restore_backup(backup, passphrase: str):
     try:
-        if int(backup.get("version")) != BACKUP_VERSION:
-            raise BackupError("unsupported backup version")
-        if backup.get("kdf") != "scrypt" or backup.get("cipher") != "aes-256-gcm":
-            raise BackupError("unsupported backup crypto")
-        salt = base64.b64decode(backup["salt"], validate=True)
-        nonce = base64.b64decode(backup["nonce"], validate=True)
-        cipher = base64.b64decode(backup["ciphertext"], validate=True)
-        if hashlib.sha256(cipher).hexdigest() != backup.get("checksum"):
+        kp, salt_text, nonce_text, cipher_text, checksum = _validated_backup_envelope(
+            backup, passphrase)
+        salt = base64.b64decode(salt_text, validate=True)
+        nonce = base64.b64decode(nonce_text, validate=True)
+        cipher = base64.b64decode(cipher_text, validate=True)
+        if len(salt) != 16:
+            raise BackupError("invalid backup salt")
+        if len(nonce) != 12:
+            raise BackupError("invalid backup nonce")
+        if len(cipher) < 16 or len(cipher) > MAX_BACKUP_CIPHERTEXT_BYTES:
+            raise BackupError("backup ciphertext too large or invalid")
+        if hashlib.sha256(cipher).hexdigest() != checksum:
             raise BackupError("backup checksum mismatch")
-        kp = _validated_scrypt_params(backup.get("kdf_params"))
         key = hashlib.scrypt(passphrase.encode(), salt=salt, n=kp["n"],
                              r=kp["r"], p=kp["p"], dklen=kp["dklen"])
         plain = AESGCM(key).decrypt(nonce, cipher, b"axven-wallet-backup-v1")
@@ -211,6 +244,13 @@ def save_backup_file(identity, path, passphrase: str):
     os.replace(tmp, path)
 
 def load_backup_file(path, passphrase: str):
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    path = os.fspath(path)
+    with open(path, "rb") as f:
+        raw = f.read(MAX_BACKUP_FILE_BYTES + 1)
+    if len(raw) > MAX_BACKUP_FILE_BYTES:
+        raise BackupError("backup file too large")
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as e:
+        raise BackupError("corrupt backup file") from e
     return restore_backup(data, passphrase)

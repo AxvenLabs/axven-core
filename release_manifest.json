@@ -397,8 +397,8 @@
       "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
     },
     "wallet.py": {
-      "bytes": 9467,
-      "sha256": "7c48784aa502de1f223b8e5a693fb72d21f268d2be5774748a5f10f4a160e868"
+      "bytes": 11365,
+      "sha256": "3a76921744cd691e94a4cbd01d7b52f0b5754f676ab3fbded17b68be091888db"
     },
     "security_sec014_atomic_read_spec.py": {
       "bytes": 5624,
