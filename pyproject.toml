@@ -23,6 +23,7 @@ py-modules = [
   "axven",
   "wallet",
   "p2p",
+  "p2p_tx_bounds",
   "core",
   "rpc",
   "datadir",
