@@ -277,7 +277,7 @@ class PeerSession:
                 "blocks":raw_blocks,
             }
         if typ=="blocks":
-            raw_blocks=msg.get("blocks",[])
+            raw_blocks=msg.get("blocks")
             if not isinstance(raw_blocks,list):
                 raise ProtocolError("blocks must be list")
             if len(raw_blocks)>MAX_SYNC_BLOCKS:
@@ -418,7 +418,8 @@ def sync_to_peer(address,session,limit=128,max_rounds=100):
         for _ in range(max_rounds):
             reply=request(sock,{"type":"get_blocks","locator":session.locator(),"limit":limit})
             if reply.get("type")!="blocks":raise ProtocolError("expected blocks")
-            blocks=reply.get("blocks",[])
+            blocks=reply.get("blocks")
+            if not isinstance(blocks,list):raise ProtocolError("blocks must be list")
             if not blocks:break
             result=session.handle(reply); total+=result["count"]
         return total
