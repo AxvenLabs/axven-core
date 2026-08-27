@@ -173,7 +173,7 @@ jobs:
           pin(p2p_path)
           pin(spec_path)
           manifest_path.write_text(
-              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              json.dumps(manifest, indent=2, sort_keys=False) + "\n",
               encoding="utf-8",
               newline="\n",
           )
