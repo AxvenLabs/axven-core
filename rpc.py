@@ -6,11 +6,13 @@ API; public authentication/TLS belongs to a later hardening milestone.
 """
 from __future__ import annotations
 import json
+import socket
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
 RPC_REQUEST_TIMEOUT = 5.0
+RPC_REQUEST_DEADLINE = 5.0
 MAX_RPC_WORKERS = 32
 MAX_RPC_REQUEST_BYTES = 2 * 1024 * 1024
 
@@ -186,6 +188,35 @@ class RPCDispatcher:
 
 def _handler(dispatcher):
     class Handler(BaseHTTPRequestHandler):
+        def setup(self):
+            super().setup()
+            self.connection.settimeout(RPC_REQUEST_TIMEOUT)
+            self._request_deadline_timer = threading.Timer(
+                RPC_REQUEST_DEADLINE,
+                self._expire_request,
+            )
+            self._request_deadline_timer.daemon = True
+            self._request_deadline_timer.start()
+
+        def _expire_request(self):
+            try:
+                self.connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+
+        def _cancel_request_deadline(self):
+            timer = getattr(self, "_request_deadline_timer", None)
+            if timer is not None:
+                timer.cancel()
+                self._request_deadline_timer = None
+
+        def finish(self):
+            self._cancel_request_deadline()
+            try:
+                super().finish()
+            except OSError:
+                pass
+
         def log_message(self, fmt, *args):
             pass
 
@@ -200,7 +231,9 @@ def _handler(dispatcher):
                 n = int(self.headers.get("Content-Length", "0"))
                 if n <= 0 or n > MAX_RPC_REQUEST_BYTES:
                     raise RPCError("invalid request size")
-                req = json.loads(self.rfile.read(n), object_pairs_hook=_reject_duplicate_json_keys)
+                raw_request = self.rfile.read(n)
+                self._cancel_request_deadline()
+                req = json.loads(raw_request, object_pairs_hook=_reject_duplicate_json_keys)
                 if not isinstance(req, dict):
                     raise RPCError("request must be object")
 
