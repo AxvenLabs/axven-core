@@ -761,7 +761,7 @@ class Blockchain:
             self.total_issued += reward
             self.chainwork = cw
             if self.mempool:
-                self.mempool.remove_confirmed(block.txs()[1:])
+                self.mempool.remove_conflicts(block.txs()[1:])
             status = "extended"
         elif cw > self.chainwork:
             ok, reason = self._reorg_to(node)
@@ -920,6 +920,19 @@ class Mempool:
             if len(chosen) >= limit:
                 break
         return chosen
+
+    def remove_conflicts(self, txs):
+        spent = {
+            outpoint(i.prev_txid, i.index)
+            for tx in txs
+            for i in tx._in()
+        }
+        if not spent:
+            return
+        for tid, tx in list(self.txs.items()):
+            tx_spent = {outpoint(i.prev_txid, i.index) for i in tx._in()}
+            if tx_spent & spent:
+                self.remove(tid)
 
     def remove_confirmed(self, txs):
         for tx in txs:
