@@ -1,0 +1,16 @@
+name: SEC-078 Hash Probe
+on: [push]
+jobs:
+  hash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hash changed release files
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, pathlib
+          for name in ("wallet.py", "security_sec078_wallet_backup_envelope_bounds_spec.py"):
+              data = pathlib.Path(name).read_bytes()
+              print(f"HASH {name} bytes={len(data)} sha256={hashlib.sha256(data).hexdigest()}")
+          PY
