@@ -133,8 +133,8 @@
       "sha256": "2d93f7c9c1a06b895586c61182996d0951817db3091df3ca213390c6078210a0"
     },
     "axven_core.py": {
-      "bytes": 5285,
-      "sha256": "7a75d8b426b77b9b355cd37221f7f155301bcbee622f76dfa15dbeac2daefcda"
+      "bytes": 5483,
+      "sha256": "6acc9f727ca9ae3bf0e6ebb585db5a4bffa90cea4fe2683d0280f9328db1af82"
     },
     "canonical_node1_mine1.ps1": {
       "bytes": 114,
@@ -253,8 +253,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 27522,
-      "sha256": "c328843fa9c953a38f857d0253befe4d3e52208316a4d87bf5ce3fb7c384ea97"
+      "bytes": 29245,
+      "sha256": "00bc3c50c3084e73eb26c55cf1c63504410615890b074f4633f5e49d6bc44a1a"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -691,6 +691,10 @@
     "security_sec100_p2p_propagation_ack_spec.py": {
       "bytes": 2313,
       "sha256": "1867654257dbb267b2752fd147a4c63f34a0f7d2eadc62f4041d52c652938323"
+    },
+    "security_sec101_peer_lifecycle_atomicity_spec.py": {
+      "bytes": 4014,
+      "sha256": "7f37ef5e04b2b3272c58d98d5a63b14488e1538fc4428355b9328558631d5b7d"
     },
     "setup.cmd": {
       "bytes": 172,
