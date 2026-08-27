@@ -41,6 +41,8 @@ def local_identity() -> Dict[str, Any]:
 def validate_handshake(msg: Dict[str, Any]) -> None:
     expected=local_identity()
     if msg.get("type") != "hello": raise ProtocolError("expected hello")
+    if type(msg.get("protocol_version")) is not int:
+        raise ProtocolError("protocol_version must be integer")
     for key in ("protocol_version","chain_id","config_fingerprint","genesis_hash"):
         if msg.get(key) != expected[key]:
             raise ProtocolError(f"{key} mismatch")
