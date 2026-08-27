@@ -22,6 +22,14 @@ MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
 
+def _reject_duplicate_json_keys(pairs):
+    obj={}
+    for key,value in pairs:
+        if key in obj:
+            raise ProtocolError(f"duplicate JSON key: {key}")
+        obj[key]=value
+    return obj
+
 def local_identity() -> Dict[str, Any]:
     return {
         "protocol_version": PROTOCOL_VERSION,
@@ -102,8 +110,12 @@ def _recv_exact(sock,n):
 def recv_message(sock: socket.socket) -> Dict[str, Any]:
     n=struct.unpack(">I",_recv_exact(sock,4))[0]
     if n<=0 or n>MAX_MESSAGE_BYTES: raise ProtocolError("invalid message length")
-    try: msg=json.loads(_recv_exact(sock,n))
-    except Exception as e: raise ProtocolError("invalid json") from e
+    try:
+        msg=json.loads(_recv_exact(sock,n),object_pairs_hook=_reject_duplicate_json_keys)
+    except ProtocolError:
+        raise
+    except Exception as e:
+        raise ProtocolError("invalid json") from e
     if not isinstance(msg,dict): raise ProtocolError("message must be object")
     return msg
 
