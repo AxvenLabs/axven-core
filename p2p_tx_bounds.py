@@ -7,6 +7,19 @@ MAX_P2P_TX_SCHEME_CHARS = 32
 MAX_P2P_TX_AUTH_CHARS = 8192
 
 _TX_TOP_LEVEL_FIELDS = {"inputs", "outputs", "coinbase_height"}
+_TX_INPUT_FIELDS = {
+    "ed25519": {"prev_txid", "index", "signature", "public_key"},
+    "ml-dsa-44": {"prev_txid", "index", "scheme", "signature", "public_key"},
+    "hybrid-ed25519+ml-dsa-44": {
+        "prev_txid",
+        "index",
+        "scheme",
+        "ed_signature",
+        "ed_public_key",
+        "ml_signature",
+        "ml_public_key",
+    },
+}
 
 _TX_AUTH_FIELDS = (
     "signature",
@@ -18,6 +31,18 @@ _TX_AUTH_FIELDS = (
 )
 
 
+def _validate_tx_input_fields(raw_input):
+    raw_scheme = raw_input.get("scheme", "")
+    if type(raw_scheme) is not str:
+        raise ValueError("tx input scheme must be string")
+    scheme = raw_scheme or "ed25519"
+    allowed = _TX_INPUT_FIELDS.get(scheme)
+    if allowed is None:
+        raise ValueError("unknown tx input scheme")
+    if any(key not in allowed for key in raw_input):
+        raise ValueError("unknown tx input field")
+
+
 def validate_tx_string_bounds(raw_tx):
     if any(key not in _TX_TOP_LEVEL_FIELDS for key in raw_tx):
         raise ValueError("unknown tx field")
@@ -26,6 +51,7 @@ def validate_tx_string_bounds(raw_tx):
     if "outputs" not in raw_tx:
         raise ValueError("tx outputs required")
     for raw_input in raw_tx.get("inputs", []):
+        _validate_tx_input_fields(raw_input)
         if len(raw_input["prev_txid"]) > MAX_P2P_TXID_CHARS:
             raise ValueError("tx input prev_txid too long")
         if "scheme" in raw_input and len(raw_input["scheme"]) > MAX_P2P_TX_SCHEME_CHARS:
