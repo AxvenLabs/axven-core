@@ -44,6 +44,12 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 class RPCError(ValueError): pass
 
 
+def _require_rpc_int(value, label):
+    if type(value) is not int:
+        raise RPCError(f"{label} must be integer")
+    return value
+
+
 def _reject_duplicate_json_keys(pairs):
     obj = {}
     for key, value in pairs:
@@ -97,14 +103,14 @@ class RPCDispatcher:
         if method == "get_overview": return self.core.overview()
         if method == "get_explorer_summary": return self.core.explorer_summary()
         if method == "get_recent_blocks":
-            limit = int(p.get("limit", 20))
+            limit = _require_rpc_int(p.get("limit", 20), "recent blocks limit")
             if limit < 1 or limit > 200:
                 raise RPCError("invalid recent blocks limit")
             return self.core.recent_blocks(limit)
         if method == "get_block": return self.core.get_block(p["id"])
         if method == "get_transaction": return self.core.get_transaction(p["txid"])
         if method == "get_mempool":
-            limit = int(p.get("limit", 100))
+            limit = _require_rpc_int(p.get("limit", 100), "mempool limit")
             if limit < 1 or limit > 500:
                 raise RPCError("invalid mempool limit")
             return self.core.mempool_view(limit)
@@ -116,7 +122,7 @@ class RPCDispatcher:
         if method == "get_peers": return self.core.outbound_peer_status()
         if method == "get_peer_health": return self.core.peer_health_summary()
         if method == "add_peer":
-            port = int(p["port"])
+            port = _require_rpc_int(p["port"], "peer port")
             if port < 1 or port > 65535:
                 raise RPCError("invalid peer port")
             host, port = self.core.add_outbound_peer((p["host"], port))
@@ -124,18 +130,18 @@ class RPCDispatcher:
         if method == "sync_peers":
             return self.core.sync_outbound_peers()
         if method == "remove_peer":
-            port = int(p["port"])
+            port = _require_rpc_int(p["port"], "peer port")
             if port < 1 or port > 65535:
                 raise RPCError("invalid peer port")
             return self.core.remove_outbound_peer((p["host"], port))
         if method == "mine":
-            count = int(p.get("count", 1))
+            count = _require_rpc_int(p.get("count", 1), "mine count")
             if count <= 0 or count > 1000:
                 raise RPCError("invalid mine count")
             return self.core.mine(count, p.get("scheme"))
         if method == "send":
-            amount = int(p["amount"])
-            fee = int(p["fee"])
+            amount = _require_rpc_int(p["amount"], "send amount")
+            fee = _require_rpc_int(p["fee"], "send fee")
 
             if amount <= 0 or amount > ((1 << 63) - 1):
                 raise RPCError("invalid send amount")
@@ -150,7 +156,7 @@ class RPCDispatcher:
                 fee,
             )
         if method == "start_p2p":
-            port = int(p.get("port", 0))
+            port = _require_rpc_int(p.get("port", 0), "start_p2p port")
             if port < 0 or port > 65535:
                 raise RPCError("invalid start_p2p port")
             h, port = self.core.start_p2p(
@@ -160,11 +166,11 @@ class RPCDispatcher:
             return {"host": h, "port": port}
         if method == "stop": return self.core.request_shutdown()
         if method == "sync_peer":
-            batch = int(p.get("batch", 128))
+            batch = _require_rpc_int(p.get("batch", 128), "sync batch")
             if batch < 1 or batch > 128:
                 raise RPCError("invalid sync batch")
 
-            port = int(p["port"])
+            port = _require_rpc_int(p["port"], "sync peer port")
             if port < 1 or port > 65535:
                 raise RPCError("invalid sync peer port")
 

@@ -100,6 +100,10 @@ SUITES=[
  ("security_sec069_p2p_tx_id_address_bounds_spec.py","SEC-069 P2P tx identifier/address bounds"),
  ("security_sec070_p2p_tx_auth_bounds_spec.py","SEC-070 P2P tx scheme/auth bounds"),
  ("security_sec071_p2p_message_type_bounds_spec.py","SEC-071 P2P message type bounds"),
+ ("security_sec072_rpc_query_limit_numeric_types_spec.py","SEC-072 RPC query limit numeric types"),
+ ("security_sec073_rpc_peer_port_numeric_types_spec.py","SEC-073 RPC peer port numeric types"),
+ ("security_sec074_rpc_operation_count_numeric_types_spec.py","SEC-074 RPC operation count numeric types"),
+ ("security_sec075_rpc_send_numeric_types_spec.py","SEC-075 RPC send numeric types"),
 ]
 
 def main():

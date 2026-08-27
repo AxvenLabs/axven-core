@@ -341,12 +341,12 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 9122,
-      "sha256": "c16b2527904b714e33bc1ee368f441ddd62aaac321893d3ea456f4ec551fb9ee"
+      "bytes": 9546,
+      "sha256": "2481d0731ff4839e0de950fd858a788522708297020f6c81805479642dfb1ef1"
     },
     "run_full_validation.py": {
-      "bytes": 8272,
-      "sha256": "daa07ffda6e913aaacb87d54304c8014d5e908596747c0e6ce6e4044f0dbe264"
+      "bytes": 8663,
+      "sha256": "35f82cd5d9dfbb136eed077c0d8051c8fab758c65922328ee816fe748013c2b8"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -643,6 +643,22 @@
     "security_sec071_p2p_message_type_bounds_spec.py": {
       "bytes": 1920,
       "sha256": "110680365a8acf291ed24fb7c4762669b4f9fb0f8ee8c521fb9933527cf3c70c"
+    },
+    "security_sec072_rpc_query_limit_numeric_types_spec.py": {
+      "bytes": 1742,
+      "sha256": "5f5c4a1c9320967ccca334e1b1bd60af6f6aed533113b2c49da0ac91e3a476c0"
+    },
+    "security_sec073_rpc_peer_port_numeric_types_spec.py": {
+      "bytes": 2234,
+      "sha256": "14de54500e174e13f4a5aa2bf18161747f0e1cca8a02712a5314a4a6ae0a23ec"
+    },
+    "security_sec074_rpc_operation_count_numeric_types_spec.py": {
+      "bytes": 1765,
+      "sha256": "640dc5d9808e16218524c97f328d5b2158a2b3064f93dea98ef3231017abb9ea"
+    },
+    "security_sec075_rpc_send_numeric_types_spec.py": {
+      "bytes": 1673,
+      "sha256": "c3f96e59c195c88754454d47df935df6bdbf8d83cab3886dee28217af7fb9578"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
