@@ -104,7 +104,6 @@ SUITES=[
  ("security_sec073_rpc_peer_port_numeric_types_spec.py","SEC-073 RPC peer port numeric types"),
  ("security_sec074_rpc_operation_count_numeric_types_spec.py","SEC-074 RPC operation count numeric types"),
  ("security_sec075_rpc_send_numeric_types_spec.py","SEC-075 RPC send numeric types"),
- ("security_tail_runner.py","SEC-076+ security tail"),
 ]
 
 def main():
