@@ -1,0 +1,41 @@
+name: SEC-098 Build
+
+on:
+  push:
+    branches:
+      - security-sec098-builder-temp
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Enable UTF-8
+        run: chcp 65001
+      - name: Install
+        run: python -m pip install -r requirements.txt
+      - name: Apply SEC-098
+        run: python sec098_apply.py
+      - name: Stage final tree
+        run: git add -A
+      - name: SEC-098 contract
+        run: python security_sec098_p2p_hello_fields_spec.py
+      - name: Release packaging
+        run: python release_packaging_test.py
+      - name: Full validation
+        run: python run_full_validation.py
+      - name: SEC-076+ security tail
+        run: python security_tail_runner.py
+      - name: Commit final SEC-098 tree
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "SEC-098: Enforce canonical P2P hello fields"
+          git push origin HEAD:security-sec098-builder-temp
