@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """SEC-079 aggregate orphan-pool byte budget contract."""
+# This contract also serves as the final branch-validation trigger.
 from __future__ import annotations
 
 import axven
