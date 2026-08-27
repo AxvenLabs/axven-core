@@ -1,0 +1,41 @@
+name: SEC-089 Finalize
+
+on:
+  push:
+    branches:
+      - security-sec089-finalizer-temp
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security-sec089-finalizer-temp
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Apply SEC-089
+        shell: pwsh
+        run: |
+          python sec089_apply.py
+      - name: Remove temporary workflow
+        shell: pwsh
+        run: |
+          Remove-Item .github/workflows/sec089_build.yml -Force
+          Remove-Item .github/workflows/sec089_finalize.yml -Force
+      - name: Commit generated final files
+        shell: pwsh
+        run: |
+          git config user.name "AxvenLabs"
+          git config user.email "dogacan432@gmail.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "SEC-089: Bound outbound P2P receive time"
+          git push origin HEAD:security-sec089-finalizer-temp
