@@ -121,8 +121,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 40346,
-      "sha256": "cc7a1cf9966e42cdbf1796d1b277e4f542fb77df6570e96988c859135dc7c3d7"
+      "bytes": 41438,
+      "sha256": "78ace74066964b878dd386784518f60c09e36e3ebe8ea2c5ac2a12d0d040531a"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -253,8 +253,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 27086,
-      "sha256": "2580b64ef21c1089c0072fbcc1b4fcade5531c8f1a5f0f570b25a9ddaf2ef194"
+      "bytes": 27522,
+      "sha256": "c328843fa9c953a38f857d0253befe4d3e52208316a4d87bf5ce3fb7c384ea97"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -699,6 +699,10 @@
     "security_sec089_p2p_outbound_recv_deadline_spec.py": {
       "bytes": 2784,
       "sha256": "d3cf9dcc13479113f873b37dfaf347c3ff797a0db4675f6dfb2adfd0b7e6534b"
+    },
+    "security_sec090_mempool_atomicity_spec.py": {
+      "bytes": 4137,
+      "sha256": "1f8537aacc679bfb495eb92be4f6d888bc880dcff0c31f92f868fa0f8679e668"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

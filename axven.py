@@ -814,15 +814,20 @@ class Blockchain:
     def _reevaluate_mempool(self, disconnected=None):
         if self.mempool is None:
             return
-        candidates = list(self.mempool.txs.values())
-        for blk in disconnected or []:
-            candidates.extend(blk.txs()[1:])
-        self.mempool.txs.clear(); self.mempool.fees.clear(); self.mempool.spent.clear(); self.mempool.tx_sizes.clear(); self.mempool.total_bytes = 0
-        for tx in candidates:
-            try:
-                self.mempool.add(tx)
-            except ValueError:
-                pass
+        # Lock order is always chain state -> mempool state.  _reorg_to already
+        # owns the chain RLock; reacquiring it here keeps this helper safe if it
+        # is ever called from another internal path.
+        with self._state_lock:
+            with self.mempool._lock:
+                candidates = list(self.mempool.txs.values())
+                for blk in disconnected or []:
+                    candidates.extend(blk.txs()[1:])
+                self.mempool.txs.clear(); self.mempool.fees.clear(); self.mempool.spent.clear(); self.mempool.tx_sizes.clear(); self.mempool.total_bytes = 0
+                for tx in candidates:
+                    try:
+                        self.mempool.add(tx)
+                    except ValueError:
+                        pass
 
     def _connect_orphans(self, h):
         queue = [h]
@@ -863,12 +868,20 @@ class Blockchain:
 class Mempool:
     def __init__(self, chain: Blockchain):
         self.chain = chain
+        self._lock = threading.RLock()
         self.txs, self.fees, self.spent = {}, {}, set()
         self.tx_sizes = {}
         self.total_bytes = 0
         chain.mempool = self
 
     def add(self, tx: Transaction) -> str:
+        # UTXO/tip validation and mempool conflict publication are one atomic
+        # operation.  Keep the global lock order chain -> mempool.
+        with self.chain._state_lock:
+            with self._lock:
+                return self._add_locked(tx)
+
+    def _add_locked(self, tx: Transaction) -> str:
         if tx.is_coinbase:
             raise ValueError("Coinbase cannot enter the mempool")
         tid = tx.txid()
@@ -910,6 +923,10 @@ class Mempool:
         return tid
 
     def select(self, limit=MAX_BLOCK_TXS - 1):
+        with self._lock:
+            return self._select_locked(limit)
+
+    def _select_locked(self, limit=MAX_BLOCK_TXS - 1):
         chosen, used = [], set()
         for tid in sorted(self.txs, key=lambda t: self.fees[t], reverse=True):
             tx = self.txs[tid]
@@ -922,6 +939,10 @@ class Mempool:
         return chosen
 
     def remove_conflicts(self, txs):
+        with self._lock:
+            return self._remove_conflicts_locked(txs)
+
+    def _remove_conflicts_locked(self, txs):
         spent = {
             outpoint(i.prev_txid, i.index)
             for tx in txs
@@ -935,10 +956,15 @@ class Mempool:
                 self.remove(tid)
 
     def remove_confirmed(self, txs):
-        for tx in txs:
-            self.remove(tx.txid())
+        with self._lock:
+            for tx in txs:
+                self.remove(tx.txid())
 
     def remove(self, txid):
+        with self._lock:
+            return self._remove_locked(txid)
+
+    def _remove_locked(self, txid):
         tx = self.txs.pop(txid, None)
         self.fees.pop(txid, None)
         tx_bytes = self.tx_sizes.pop(txid, 0)

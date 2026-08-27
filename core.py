@@ -5,6 +5,7 @@ Unifies chain, mempool, wallet orchestration, mining and P2P helpers without
 changing consensus.  RPC is layered on top in rpc.py.
 """
 from __future__ import annotations
+from contextlib import nullcontext
 from typing import Optional, Tuple
 import math
 from datetime import datetime, timezone
@@ -12,6 +13,11 @@ from datetime import datetime, timezone
 import axven
 import p2p
 import wallet
+
+
+def _mempool_guard(mempool):
+    lock=getattr(mempool,"_lock",None)
+    return lock if lock is not None else nullcontext()
 
 
 class AxvenCore:
@@ -60,17 +66,18 @@ class AxvenCore:
         # Height, tip hash and chainwork form one logical chain snapshot.
         # Serialize this read with active-chain mutation/reorg publication.
         with self.chain._state_lock:
-            tip = self.chain.tip
-            return {
-                "chain_id": axven.CHAIN_ID,
-                "config_fingerprint": axven.CONFIG_FINGERPRINT,
-                "genesis_hash": axven._genesis().hash(),
-                "height": tip.height,
-                "tip_hash": tip.hash(),
-                "chainwork": self.chain.chainwork,
-                "mempool_size": len(self.mempool.txs),
-                "wallet_loaded": self.identity is not None,
-            }
+            with _mempool_guard(self.mempool):
+                tip = self.chain.tip
+                return {
+                    "chain_id": axven.CHAIN_ID,
+                    "config_fingerprint": axven.CONFIG_FINGERPRINT,
+                    "genesis_hash": axven._genesis().hash(),
+                    "height": tip.height,
+                    "tip_hash": tip.hash(),
+                    "chainwork": self.chain.chainwork,
+                    "mempool_size": len(self.mempool.txs),
+                    "wallet_loaded": self.identity is not None,
+                }
 
     def overview(self):
         data = self.status()
@@ -142,9 +149,10 @@ class AxvenCore:
         txid=str(txid)
         if len(txid) > 64:
             raise ValueError("transaction id too long")
-        if txid in self.mempool.txs:
-            tx=self.mempool.txs[txid]
-            return {"txid":txid,"status":"mempool","tx":tx.to_dict()}
+        with _mempool_guard(self.mempool):
+            if txid in self.mempool.txs:
+                tx=self.mempool.txs[txid]
+                return {"txid":txid,"status":"mempool","tx":tx.to_dict()}
         for block in reversed(self.chain.blocks):
             for tx in block.txs():
                 if tx.txid()==txid:
@@ -159,15 +167,16 @@ class AxvenCore:
 
     def mempool_view(self, limit=100):
         limit=max(1,min(int(limit),500))
-        out=[]
-        for txid,tx in list(self.mempool.txs.items())[:limit]:
-            out.append({
-                "txid":txid,
-                "fee":int(self.mempool.fees.get(txid,0)),
-                "inputs":len(tx.inputs),
-                "outputs":len(tx.outputs),
-            })
-        return {"size":len(self.mempool.txs),"transactions":out}
+        with _mempool_guard(self.mempool):
+            out=[]
+            for txid,tx in list(self.mempool.txs.items())[:limit]:
+                out.append({
+                    "txid":txid,
+                    "fee":int(self.mempool.fees.get(txid,0)),
+                    "inputs":len(tx.inputs),
+                    "outputs":len(tx.outputs),
+                })
+            return {"size":len(self.mempool.txs),"transactions":out}
 
     def explorer_summary(self):
         with self.chain._state_lock:
@@ -275,7 +284,8 @@ class AxvenCore:
         for _ in range(count):
             block = self.chain.mine(address, self.mempool)
             hashes.append(block.hash())
-            self.pending.reconcile(self.mempool)
+            with _mempool_guard(self.mempool):
+                self.pending.reconcile(self.mempool)
             self._propagate_block_outbound(block)
         return hashes
 
