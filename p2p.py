@@ -98,6 +98,39 @@ def _validate_tx_string_fields(raw_tx: Dict[str, Any]) -> None:
         if not isinstance(raw_output.get("recipient"),str):
             raise ProtocolError("tx output recipient must be string")
 
+
+def _validate_wire_transaction(raw_tx: Dict[str, Any]) -> None:
+    """Apply the canonical standalone P2P tx preflight to any wire transaction."""
+    if not isinstance(raw_tx, dict):
+        raise ProtocolError("tx must be object")
+    if "inputs" not in raw_tx:
+        raise ProtocolError("tx inputs required")
+    if "outputs" not in raw_tx:
+        raise ProtocolError("tx outputs required")
+
+    raw_inputs = raw_tx["inputs"]
+    raw_outputs = raw_tx["outputs"]
+    if not isinstance(raw_inputs, list):
+        raise ProtocolError("tx inputs must be list")
+    if not isinstance(raw_outputs, list):
+        raise ProtocolError("tx outputs must be list")
+    if len(raw_inputs) > MAX_P2P_TX_INPUTS:
+        raise ProtocolError("too many tx inputs")
+    if len(raw_outputs) > MAX_P2P_TX_OUTPUTS:
+        raise ProtocolError("too many tx outputs")
+    if any(not isinstance(i, dict) for i in raw_inputs):
+        raise ProtocolError("tx input entries must be objects")
+    if any(not isinstance(o, dict) for o in raw_outputs):
+        raise ProtocolError("tx output entries must be objects")
+
+    _validate_tx_numeric_fields(raw_tx)
+    _validate_tx_string_fields(raw_tx)
+    try:
+        validate_tx_string_bounds(raw_tx)
+    except ValueError as exc:
+        raise ProtocolError(str(exc)) from exc
+
+
 def send_message(sock: socket.socket, msg: Dict[str, Any]) -> None:
     raw=_json_bytes(msg)
     if len(raw)>MAX_MESSAGE_BYTES: raise ProtocolError("message too large")
@@ -182,28 +215,7 @@ class PeerSession:
                 raise ProtocolError("unknown tx message field")
             if self.mempool is None: raise ProtocolError("mempool unavailable")
             raw_tx=msg.get("tx")
-            if not isinstance(raw_tx,dict):
-                raise ProtocolError("tx must be object")
-            raw_inputs=raw_tx.get("inputs",[])
-            raw_outputs=raw_tx.get("outputs",[])
-            if not isinstance(raw_inputs,list):
-                raise ProtocolError("tx inputs must be list")
-            if not isinstance(raw_outputs,list):
-                raise ProtocolError("tx outputs must be list")
-            if len(raw_inputs)>MAX_P2P_TX_INPUTS:
-                raise ProtocolError("too many tx inputs")
-            if len(raw_outputs)>MAX_P2P_TX_OUTPUTS:
-                raise ProtocolError("too many tx outputs")
-            if any(not isinstance(i,dict) for i in raw_inputs):
-                raise ProtocolError("tx input entries must be objects")
-            if any(not isinstance(o,dict) for o in raw_outputs):
-                raise ProtocolError("tx output entries must be objects")
-            _validate_tx_numeric_fields(raw_tx)
-            _validate_tx_string_fields(raw_tx)
-            try:
-                validate_tx_string_bounds(raw_tx)
-            except ValueError as exc:
-                raise ProtocolError(str(exc)) from exc
+            _validate_wire_transaction(raw_tx)
             tx=axven.Transaction.from_dict(raw_tx)
             tid=self.mempool.add(tx)
             return {"type":"accepted","kind":"tx","id":tid}
@@ -216,6 +228,8 @@ class PeerSession:
                 raise ProtocolError("block transactions must be list")
             if len(raw_transactions)>axven.MAX_BLOCK_TXS:
                 raise ProtocolError("too many block transactions")
+            for raw_tx in raw_transactions:
+                _validate_wire_transaction(raw_tx)
             _validate_block_numeric_fields(raw_block)
             raw_previous_hash=raw_block.get("previous_hash")
             if not isinstance(raw_previous_hash,str):
@@ -309,6 +323,8 @@ class PeerSession:
                     raise ProtocolError("block transactions must be list")
                 if len(raw_transactions)>axven.MAX_BLOCK_TXS:
                     raise ProtocolError("too many block transactions")
+                for raw_tx in raw_transactions:
+                    _validate_wire_transaction(raw_tx)
                 _validate_block_numeric_fields(raw)
                 raw_previous_hash=raw.get("previous_hash")
                 if not isinstance(raw_previous_hash,str):
