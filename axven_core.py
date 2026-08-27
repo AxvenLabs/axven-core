@@ -71,9 +71,9 @@ def main():
             base_sync_interval=max(.5,args.sync_interval)
             peer_next_sync={
                 addr:time.monotonic()+base_sync_interval
-                for addr in core.outbound_peers
+                for addr in core.outbound_peer_addresses()
             }
-            for addr in core.outbound_peers:
+            for addr in core.outbound_peer_addresses():
                 core.set_peer_retry_schedule(
                     addr,
                     base_sync_interval,
@@ -83,7 +83,7 @@ def main():
             while not stop and not core.shutdown_requested:
                 time.sleep(.2)
                 now=time.monotonic()
-                configured=set(core.outbound_peers)
+                configured=set(core.outbound_peer_addresses())
 
                 # Drop scheduler state for peers removed at runtime.
                 for addr in list(peer_next_sync):
@@ -102,11 +102,15 @@ def main():
 
                 # Each peer is scheduled independently. A failing peer's
                 # backoff must never slow healthy peers.
-                for addr in list(core.outbound_peers):
+                for addr in core.outbound_peer_addresses():
                     if now < peer_next_sync.get(addr,now):
                         continue
 
                     core.sync_outbound_peer(addr)
+
+                    if addr not in set(core.outbound_peer_addresses()):
+                        peer_next_sync.pop(addr,None)
+                        continue
 
                     retry_delay=core.peer_retry_delay(
                         addr,base_sync_interval,60.0
