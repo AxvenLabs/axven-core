@@ -23,7 +23,7 @@ def main():
         built = subprocess.run(
             [
                 sys.executable, "-m", "pip", "wheel",
-                "--no-deps", "--no-build-isolation",
+                "--no-deps",
                 "-w", str(wheel_dir), ".",
             ],
             cwd=ROOT,
@@ -34,7 +34,7 @@ def main():
         wheels = list(wheel_dir.glob("axven_core-*.whl"))
         assert len(wheels) == 1
         checks += 1
-        print("[GREEN] wheel builds from repository metadata")
+        print("[GREEN] wheel builds from isolated repository metadata")
 
         wheel = wheels[0]
         with zipfile.ZipFile(wheel) as zf:
