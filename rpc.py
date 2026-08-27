@@ -46,6 +46,53 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 class RPCError(ValueError): pass
 
 
+_ALLOWED_RPC_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _require_safe_rpc_host(headers):
+    values = headers.get_all("Host") or []
+    if len(values) != 1:
+        raise RPCError("invalid host header")
+
+    authority = values[0].strip()
+    if (
+        not authority
+        or any(ch in authority for ch in "/\\@ \t\r\n")
+    ):
+        raise RPCError("invalid host header")
+
+    if authority.startswith("["):
+        end = authority.find("]")
+        if end <= 1:
+            raise RPCError("invalid host header")
+        host = authority[1:end].lower()
+        suffix = authority[end + 1:]
+        if suffix:
+            if not suffix.startswith(":") or not suffix[1:].isdigit():
+                raise RPCError("invalid host header")
+            port = int(suffix[1:])
+            if not 1 <= port <= 65535:
+                raise RPCError("invalid host header")
+    else:
+        if authority.count(":") > 1:
+            raise RPCError("invalid host header")
+        if ":" in authority:
+            host, port_text = authority.rsplit(":", 1)
+            if not port_text.isdigit():
+                raise RPCError("invalid host header")
+            port = int(port_text)
+            if not 1 <= port <= 65535:
+                raise RPCError("invalid host header")
+        else:
+            host = authority
+        host = host.lower()
+
+    if host.endswith("."):
+        host = host[:-1]
+    if host not in _ALLOWED_RPC_HOSTS:
+        raise RPCError("invalid host header")
+
+
 def _require_rpc_int(value, label):
     if type(value) is not int:
         raise RPCError(f"{label} must be integer")
@@ -223,6 +270,7 @@ def _handler(dispatcher):
         def do_POST(self):
             self.connection.settimeout(RPC_REQUEST_TIMEOUT)
             try:
+                _require_safe_rpc_host(self.headers)
                 content_type = self.headers.get("Content-Type", "")
                 media_type = content_type.split(";", 1)[0].strip().lower()
                 if media_type != "application/json":
