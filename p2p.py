@@ -5,7 +5,7 @@ Length-prefixed JSON framing, identity-bound handshake, tx/block propagation,
 orphan-safe block acceptance, and locator-based active-chain sync.
 """
 from __future__ import annotations
-import json, socket, struct, threading
+import json, socket, struct, threading, time
 from typing import Any, Dict, Optional
 import axven
 from p2p_tx_bounds import validate_tx_string_bounds
@@ -13,6 +13,7 @@ from p2p_tx_bounds import validate_tx_string_bounds
 PROTOCOL_VERSION = 2
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
 INBOUND_PEER_TIMEOUT = 5.0
+INBOUND_HANDSHAKE_TIMEOUT = 5.0
 MAX_INBOUND_PEERS = 32
 MAX_SYNC_BLOCKS = 128
 MAX_LOCATOR_HASHES = 64
@@ -101,19 +102,31 @@ def send_message(sock: socket.socket, msg: Dict[str, Any]) -> None:
     if len(raw)>MAX_MESSAGE_BYTES: raise ProtocolError("message too large")
     sock.sendall(struct.pack(">I",len(raw))+raw)
 
-def _recv_exact(sock,n):
+def _recv_exact(sock,n,deadline=None):
     out=bytearray()
     while len(out)<n:
-        chunk=sock.recv(n-len(out))
+        if deadline is not None:
+            remaining=deadline-time.monotonic()
+            if remaining<=0:
+                raise ProtocolError("handshake timeout")
+            current=sock.gettimeout()
+            if current is None or current>remaining:
+                sock.settimeout(remaining)
+        try:
+            chunk=sock.recv(n-len(out))
+        except socket.timeout as exc:
+            if deadline is not None and time.monotonic()>=deadline:
+                raise ProtocolError("handshake timeout") from exc
+            raise
         if not chunk: raise EOFError("peer closed")
         out.extend(chunk)
     return bytes(out)
 
-def recv_message(sock: socket.socket) -> Dict[str, Any]:
-    n=struct.unpack(">I",_recv_exact(sock,4))[0]
+def recv_message(sock: socket.socket,deadline=None) -> Dict[str, Any]:
+    n=struct.unpack(">I",_recv_exact(sock,4,deadline))[0]
     if n<=0 or n>MAX_MESSAGE_BYTES: raise ProtocolError("invalid message length")
     try:
-        msg=json.loads(_recv_exact(sock,n),object_pairs_hook=_reject_duplicate_json_keys)
+        msg=json.loads(_recv_exact(sock,n,deadline),object_pairs_hook=_reject_duplicate_json_keys)
     except ProtocolError:
         raise
     except Exception as e:
@@ -124,9 +137,9 @@ def recv_message(sock: socket.socket) -> Dict[str, Any]:
 def hello_message():
     return {"type":"hello",**local_identity()}
 
-def handshake(sock: socket.socket) -> Dict[str, Any]:
+def handshake(sock: socket.socket,deadline=None) -> Dict[str, Any]:
     send_message(sock,hello_message())
-    peer=recv_message(sock)
+    peer=recv_message(sock,deadline=deadline)
     validate_handshake(peer)
     return peer
 
@@ -325,7 +338,9 @@ class PeerSession:
 
 def serve_connection(sock,session:PeerSession):
     try:
-        handshake(sock)
+        handshake_deadline=time.monotonic()+INBOUND_HANDSHAKE_TIMEOUT
+        handshake(sock,deadline=handshake_deadline)
+        sock.settimeout(INBOUND_PEER_TIMEOUT)
         while True:
             msg=recv_message(sock)
             reply=session.handle(msg)
