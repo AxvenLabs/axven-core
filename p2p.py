@@ -40,7 +40,17 @@ def local_identity() -> Dict[str, Any]:
         "genesis_hash": axven._genesis().hash(),
     }
 
+_HELLO_FIELDS = {
+    "type",
+    "protocol_version",
+    "chain_id",
+    "config_fingerprint",
+    "genesis_hash",
+}
+
 def validate_handshake(msg: Dict[str, Any]) -> None:
+    if any(key not in _HELLO_FIELDS for key in msg):
+        raise ProtocolError("unknown hello field")
     expected=local_identity()
     if msg.get("type") != "hello": raise ProtocolError("expected hello")
     if type(msg.get("protocol_version")) is not int:
