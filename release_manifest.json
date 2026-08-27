@@ -58,7 +58,7 @@
     "canonical_ops.py": {"bytes": 5802, "sha256": "72b27ed1fdcc2b4a3007d5e2cab0e27d4ff0deea9c04298d3a49b5adf91c84d3"},
     "canonical_ops_audit.py": {"bytes": 960, "sha256": "6a051cb124ba17b0042c1c02969325206a8be4120835433753a76054dab16758"},
     "canonical_stop_all.ps1": {"bytes": 227, "sha256": "d5d2e99dd84a5bebab5d905ec412d818a9b699d46f6ec49401d514efcb5ce73d"},
-    "checkpoint42_peer_reconnect_spec.py": {"bytes": 6318, "sha256": "22a54591e4b89205a3c08f486a2ce104abf96465c7"},
+    "checkpoint42_peer_reconnect_spec.py": {"bytes": 6318, "sha256": "22a54591e4b68ab7c0cc076cb1c0aede7ca46fc57fa54951cabc4a596d15f43d"},
     "checkpoint43_peer_health_spec.py": {"bytes": 1988, "sha256": "fb95bfdda88dc83e9b85c2d543afdb397ce087df55588b511bc3a9be51f81955"},
     "checkpoint44_peer_health_summary_spec.py": {"bytes": 1709, "sha256": "85c0d8269bec98cd86bf8bbf8da5acb374abf4e2e2bc915b926aa8fa6da834da"},
     "checkpoint45_peer_health_timestamps_spec.py": {"bytes": 2186, "sha256": "1a8e76df06b4c42690a32a4fc66f97c67835ab1c76f9e1262585611bd274ee46"},
