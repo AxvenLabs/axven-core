@@ -1,0 +1,49 @@
+name: SEC-100 Build
+
+on:
+  push:
+    branches:
+      - security-sec100-builder-temp
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Enable UTF-8
+        shell: pwsh
+        run: |
+          chcp 65001
+      - name: Install
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Apply SEC-100
+        run: python sec100_apply.py
+      - name: Stage final tree
+        run: git add -A
+      - name: SEC-100 contract
+        run: python security_sec100_p2p_propagation_ack_spec.py
+      - name: Release packaging
+        run: python release_packaging_test.py
+      - name: Full validation
+        run: python run_full_validation.py
+      - name: SEC-076+ security tail
+        run: python security_tail_runner.py
+      - name: Commit final SEC-100 tree
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "SEC-100: Validate outbound propagation acknowledgements"
+          git push origin HEAD:security-sec100-builder-temp
