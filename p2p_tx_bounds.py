@@ -20,6 +20,7 @@ _TX_INPUT_FIELDS = {
         "ml_public_key",
     },
 }
+_TX_INPUT_ALL_FIELDS = set().union(*_TX_INPUT_FIELDS.values())
 
 _TX_AUTH_FIELDS = (
     "signature",
@@ -35,10 +36,10 @@ def _validate_tx_input_fields(raw_input):
     raw_scheme = raw_input.get("scheme", "")
     if type(raw_scheme) is not str:
         raise ValueError("tx input scheme must be string")
-    scheme = raw_scheme or "ed25519"
-    allowed = _TX_INPUT_FIELDS.get(scheme)
-    if allowed is None:
-        raise ValueError("unknown tx input scheme")
+    if raw_scheme in ("", "ed25519"):
+        allowed = _TX_INPUT_FIELDS["ed25519"]
+    else:
+        allowed = _TX_INPUT_FIELDS.get(raw_scheme, _TX_INPUT_ALL_FIELDS)
     if any(key not in allowed for key in raw_input):
         raise ValueError("unknown tx input field")
 
