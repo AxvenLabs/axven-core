@@ -1,0 +1,54 @@
+name: SEC-089 Build
+
+on:
+  push:
+    branches:
+      - security-sec089-p2p-outbound-recv-deadline
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Apply SEC-089 in workspace
+        shell: pwsh
+        run: |
+          python sec089_apply.py
+      - name: SEC-089 contract
+        shell: pwsh
+        run: |
+          python security_sec089_p2p_outbound_recv_deadline_spec.py
+      - name: Full validation
+        shell: pwsh
+        run: |
+          python run_full_validation.py
+      - name: SEC-076+ security tail
+        shell: pwsh
+        run: |
+          python security_tail_runner.py
+      - name: Stage final SEC-089 files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path sec089_artifact | Out-Null
+          Copy-Item p2p.py sec089_artifact/p2p.py
+          Copy-Item release_manifest.json sec089_artifact/release_manifest.json
+          Copy-Item security_sec089_p2p_outbound_recv_deadline_spec.py sec089_artifact/security_sec089_p2p_outbound_recv_deadline_spec.py
+      - name: Upload final SEC-089 files
+        uses: actions/upload-artifact@v4
+        with:
+          name: sec089-final-files
+          path: sec089_artifact
