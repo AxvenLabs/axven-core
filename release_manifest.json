@@ -345,8 +345,8 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 13226,
-      "sha256": "b853b86548bad75f2cdf83c833fd51dbd648ee20062c4aa0909d2c4bc46d6d8e"
+      "bytes": 13805,
+      "sha256": "441c480e737d71924c33187a68d9a75e8128df2e46e861cf676c328d20624a69"
     },
     "run_full_validation.py": {
       "bytes": 8663,
@@ -811,6 +811,10 @@
     "security_sec129_wallet_inner_material_canonicality_spec.py": {
       "bytes": 8612,
       "sha256": "62ae28e74229d3184a75f831bdbd0e9debd0da042a2dca0989e70d2ccd07d070"
+    },
+    "security_sec130_rpc_json_preparse_complexity_spec.py": {
+      "bytes": 6036,
+      "sha256": "66e32391b1c1621cd9a2faa101fffb529e8be4809e0e76ac5eee600e89ad4a67"
     },
     "setup.cmd": {
       "bytes": 172,
