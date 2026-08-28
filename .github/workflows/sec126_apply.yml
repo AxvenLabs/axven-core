@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/sec126_apply.yml
       - .github/sec126_patch.py
+      - .github/sec126_fix_spec.py
 
 permissions:
   contents: write
@@ -34,6 +35,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .
           python .github/sec126_patch.py
+          python .github/sec126_fix_spec.py
           python security_sec126_peer_config_resource_bounds_spec.py
           python checkpoint41_peer_persistence_spec.py
           python security_sec110_peer_config_atomic_file_spec.py
@@ -57,6 +59,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
-          git rm .github/workflows/sec126_apply.yml .github/sec126_patch.py
+          git rm .github/workflows/sec126_apply.yml .github/sec126_patch.py .github/sec126_fix_spec.py
           git commit -m "SEC-126: remove temporary apply workflow"
           git push origin HEAD:security-sec126-peer-config-resource-bounds
