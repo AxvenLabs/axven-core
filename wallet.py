@@ -135,7 +135,36 @@ _SCRYPT_DKLEN = 32
 _SCRYPT_PARAMS = {"n": _SCRYPT_N, "r": _SCRYPT_R, "p": _SCRYPT_P, "dklen": _SCRYPT_DKLEN}
 MAX_BACKUP_FILE_BYTES = 64 * 1024
 MAX_BACKUP_CIPHERTEXT_BYTES = 16 * 1024
+MAX_BACKUP_JSON_NESTING_DEPTH = 32
 _MAX_CIPHERTEXT_B64_CHARS = 4 * ((MAX_BACKUP_CIPHERTEXT_BYTES + 2) // 3)
+
+def _preflight_backup_json_nesting(raw):
+    """Bound backup JSON container nesting before invoking Python's parser."""
+    stack = []
+    in_string = False
+    escaped = False
+    for byte in raw:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif byte == 0x5C:  # backslash
+                escaped = True
+            elif byte == 0x22:  # quote
+                in_string = False
+            continue
+
+        if byte == 0x22:
+            in_string = True
+            continue
+        if byte in (0x7B, 0x5B):  # { [
+            stack.append(byte)
+            if len(stack) > MAX_BACKUP_JSON_NESTING_DEPTH:
+                raise BackupError("backup JSON nesting depth exceeded")
+            continue
+        if byte in (0x7D, 0x5D):  # } ]
+            expected = 0x7B if byte == 0x7D else 0x5B
+            if stack and stack[-1] == expected:
+                stack.pop()
 
 def _validated_scrypt_params(value):
     if type(value) is not dict or set(value) != set(_SCRYPT_PARAMS):
@@ -222,6 +251,7 @@ def restore_backup(backup, passphrase: str):
         key = hashlib.scrypt(passphrase.encode(), salt=salt, n=kp["n"],
                              r=kp["r"], p=kp["p"], dklen=kp["dklen"])
         plain = AESGCM(key).decrypt(nonce, cipher, b"axven-wallet-backup-v1")
+        _preflight_backup_json_nesting(plain)
         material = json.loads(plain)
         ed_raw = base64.b64decode(material["ed_private"], validate=True)
         ml_pub = base64.b64decode(material["ml_public"], validate=True)
@@ -275,6 +305,7 @@ def load_backup_file(path, passphrase: str):
         raw = f.read(MAX_BACKUP_FILE_BYTES + 1)
     if len(raw) > MAX_BACKUP_FILE_BYTES:
         raise BackupError("backup file too large")
+    _preflight_backup_json_nesting(raw)
     try:
         data = json.loads(raw.decode("utf-8"))
     except (UnicodeError, json.JSONDecodeError) as e:
