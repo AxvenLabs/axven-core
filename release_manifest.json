@@ -121,8 +121,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 41438,
-      "sha256": "78ace74066964b878dd386784518f60c09e36e3ebe8ea2c5ac2a12d0d040531a"
+      "bytes": 43641,
+      "sha256": "880c9eb1b5667495cb2121245858107f2fba93605c373cfe9f4ca07ec573506c"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -711,6 +711,10 @@
     "security_sec105_p2p_inbound_per_host_bounds_spec.py": {
       "bytes": 2842,
       "sha256": "80f75c50fbf31b05e92f9720c64201130935df05397c18336f89d32da6f320f1"
+    },
+    "security_sec106_sidechain_state_validation_spec.py": {
+      "bytes": 2263,
+      "sha256": "48016de706594c4dbf47c11ea5aea0111ab789ff922cdf6651a5c6b198286ca3"
     },
     "setup.cmd": {
       "bytes": 172,

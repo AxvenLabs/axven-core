@@ -651,6 +651,51 @@ class Blockchain:
         out.reverse()
         return out
 
+    def _state_for_index_node(self, node):
+        """Build an isolated validated state snapshot at an indexed node."""
+        active_hashes = {b.hash() for b in self.blocks}
+        branch = []
+        cur = node
+        while cur.block.hash() not in active_hashes:
+            branch.append(cur)
+            cur = self.index[cur.parent_hash]
+        fork_hash = cur.block.hash()
+        branch.reverse()
+
+        trial_utxo = copy.deepcopy(self.utxo)
+        trial_blocks = list(self.blocks)
+        trial_issued = self.total_issued
+
+        while trial_blocks[-1].hash() != fork_hash:
+            blk = trial_blocks.pop()
+            undo = self.undo.get(blk.hash())
+            if undo is None:
+                return False, f"Missing active undo at {blk.height}", None, 0
+            _undo_forward(undo, trial_utxo)
+            trial_issued -= undo.reward
+
+        for branch_node in branch:
+            blk = branch_node.block
+            height = len(trial_blocks)
+            ok, reason, _undo, reward, _fees = _apply_forward(
+                blk, trial_utxo, height, trial_issued
+            )
+            if not ok:
+                return False, reason, None, 0
+            trial_blocks.append(blk)
+            trial_issued += reward
+
+        return True, "OK", trial_utxo, trial_issued
+
+    def _validate_side_block_state(self, block, parent_node, height):
+        ok, reason, trial_utxo, trial_issued = self._state_for_index_node(parent_node)
+        if not ok:
+            return False, reason
+        ok, reason, _undo, _reward, _fees = _apply_forward(
+            block, trial_utxo, height, trial_issued
+        )
+        return ok, reason
+
     def balance(self, address):
         with self._state_lock:
             return sum(
@@ -747,6 +792,18 @@ class Blockchain:
         if err:
             return False, err
         cw = parent_node.chainwork + work_of(block.target)
+
+        # A non-winning side branch used to be indexed after header/context
+        # checks only. Validate its transaction transition and committed state
+        # root now, so invalid branch state never becomes trusted index state.
+        # Winning branches are validated atomically by _reorg_to below.
+        if parent != self.tip.hash() and cw <= self.chainwork:
+            ok, reason = self._validate_side_block_state(
+                block, parent_node, height
+            )
+            if not ok:
+                return False, reason
+
         node = BlockNode(block, height, cw, parent)
         self.index[h] = node
 
