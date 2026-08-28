@@ -5,6 +5,8 @@ import base64
 import hashlib
 import json
 import os
+import tempfile
+from pathlib import Path
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -235,13 +237,37 @@ def restore_backup(backup, passphrase: str):
 
 def save_backup_file(identity, path, passphrase: str):
     data = export_backup(identity, passphrase)
-    path = os.fspath(path)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, sort_keys=True, separators=(",", ":"))
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
+    target = Path(os.fspath(path))
+    parent = target.parent if str(target.parent) else Path(".")
+    fd = None
+    tmp_path = None
+    try:
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=f".{target.name}.",
+            suffix=".tmp",
+            dir=str(parent),
+            text=True,
+        )
+        tmp_path = Path(tmp_name)
+        if os.name == "posix":
+            os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            fd = None
+            json.dump(data, f, sort_keys=True, separators=(",", ":"))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, target)
+        tmp_path = None
+        if os.name == "posix":
+            os.chmod(target, 0o600)
+    finally:
+        if fd is not None:
+            os.close(fd)
+        if tmp_path is not None:
+            try:
+                tmp_path.unlink()
+            except FileNotFoundError:
+                pass
 
 def load_backup_file(path, passphrase: str):
     path = os.fspath(path)

@@ -728,6 +728,10 @@
       "bytes": 2183,
       "sha256": "1c4020c834c99c87bf41642ebe6022b5c93352777363c4dc88c157f1888336d8"
     },
+    "security_sec109_wallet_backup_atomic_file_spec.py": {
+      "bytes": 2134,
+      "sha256": "cf1dae823083aea319bc5dcb3550078fb20998fb457415ae159b6bf0b815d038"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -777,8 +781,8 @@
       "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
     },
     "wallet.py": {
-      "bytes": 11365,
-      "sha256": "3a76921744cd691e94a4cbd01d7b52f0b5754f676ab3fbded17b68be091888db"
+      "bytes": 12116,
+      "sha256": "185f4b0887c34ca3d7a2b387f88a078bac189399628f16fbdc75302ed7b3a59b"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
