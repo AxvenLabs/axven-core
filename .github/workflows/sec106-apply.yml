@@ -1,0 +1,32 @@
+name: SEC-106 Apply
+
+on:
+  push:
+    branches:
+      - security-sec106-sidechain-state-validation-clean
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security-sec106-sidechain-state-validation-clean
+          fetch-depth: 1
+      - name: Apply SEC-106 hardening
+        run: python .github/sec106_apply.py
+      - name: Validate and commit clean tree
+        shell: bash
+        run: |
+          python security_sec106_sidechain_state_validation_spec.py
+          python consensus_rebuild_test.py
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/sec106-apply.yml .github/sec106_apply.py
+          git add axven.py security_sec106_sidechain_state_validation_spec.py release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-106: Validate side-chain state before indexing"
+          git push origin HEAD:security-sec106-sidechain-state-validation-clean
