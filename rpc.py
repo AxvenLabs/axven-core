@@ -16,6 +16,8 @@ RPC_REQUEST_DEADLINE = 5.0
 MAX_RPC_WORKERS = 32
 MAX_RPC_REQUEST_BYTES = 2 * 1024 * 1024
 MAX_RPC_JSON_NESTING_DEPTH = 32
+MAX_RPC_PARAM_NODES = 4096
+MAX_RPC_JSON_STRUCTURAL_ITEMS = 2 * MAX_RPC_PARAM_NODES
 
 
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
@@ -110,8 +112,9 @@ def _reject_duplicate_json_keys(pairs):
 
 
 def _preflight_json_nesting(raw):
-    """Bound raw JSON container nesting before invoking Python's parser."""
+    """Bound raw JSON nesting and structural fan-out before parser allocation."""
     stack = []
+    structural_items = 0
     in_string = False
     escaped = False
     for byte in raw:
@@ -128,9 +131,17 @@ def _preflight_json_nesting(raw):
             in_string = True
             continue
         if byte in (0x7B, 0x5B):  # { [
+            structural_items += 1
+            if structural_items > MAX_RPC_JSON_STRUCTURAL_ITEMS:
+                raise RPCError("JSON structural complexity exceeded")
             stack.append(byte)
             if len(stack) > MAX_RPC_JSON_NESTING_DEPTH:
                 raise RPCError("JSON nesting depth exceeded")
+            continue
+        if byte == 0x2C and stack:  # comma between container members/items
+            structural_items += 1
+            if structural_items > MAX_RPC_JSON_STRUCTURAL_ITEMS:
+                raise RPCError("JSON structural complexity exceeded")
             continue
         if byte in (0x7D, 0x5D):  # } ]
             expected = 0x7B if byte == 0x7D else 0x5B
@@ -140,7 +151,7 @@ def _preflight_json_nesting(raw):
 
 def _validate_param_depth(value, depth=0, budget=None):
     if budget is None:
-        budget = [4096]
+        budget = [MAX_RPC_PARAM_NODES]
 
     budget[0] -= 1
     if budget[0] < 0:
@@ -174,7 +185,7 @@ class RPCDispatcher:
             for key in params:
                 if not isinstance(key, str) or not key or len(key) > 256:
                     raise RPCError("invalid param key")
-            budget = [4096]
+            budget = [MAX_RPC_PARAM_NODES]
             for value in params.values():
                 _validate_param_depth(value, budget=budget)
         p = params or {}

@@ -345,8 +345,8 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 13226,
-      "sha256": "b853b86548bad75f2cdf83c833fd51dbd648ee20062c4aa0909d2c4bc46d6d8e"
+      "bytes": 13805,
+      "sha256": "441c480e737d71924c33187a68d9a75e8128df2e46e861cf676c328d20624a69"
     },
     "run_full_validation.py": {
       "bytes": 8663,
@@ -803,6 +803,10 @@
     "security_sec127_rpc_json_preparse_depth_spec.py": {
       "bytes": 5464,
       "sha256": "55ea3cd52029bd43a96fb3f1fba7e4e56aa53e6296512ee0279aebf63e43a431"
+    },
+    "security_sec128_rpc_json_preparse_complexity_spec.py": {
+      "bytes": 6036,
+      "sha256": "8fdbdee12adb65b726b8ac51f890177bcac1a6a2b5676b4eced7e16c05fd12fc"
     },
     "setup.cmd": {
       "bytes": 172,
