@@ -345,8 +345,8 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 12247,
-      "sha256": "df06f52f6816025b2af8ed3b698fa0c70dcff0a896f2d071ef0de7bf5e713bd8"
+      "bytes": 13226,
+      "sha256": "b853b86548bad75f2cdf83c833fd51dbd648ee20062c4aa0909d2c4bc46d6d8e"
     },
     "run_full_validation.py": {
       "bytes": 8663,
@@ -799,6 +799,10 @@
     "security_sec126_peer_config_resource_bounds_spec.py": {
       "bytes": 6499,
       "sha256": "d68deaec1244fff438bac32613e203c4210be42a032fed37f275f6b402b6927a"
+    },
+    "security_sec127_rpc_json_preparse_depth_spec.py": {
+      "bytes": 5464,
+      "sha256": "55ea3cd52029bd43a96fb3f1fba7e4e56aa53e6296512ee0279aebf63e43a431"
     },
     "setup.cmd": {
       "bytes": 172,

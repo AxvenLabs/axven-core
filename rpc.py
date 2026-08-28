@@ -15,6 +15,7 @@ RPC_REQUEST_TIMEOUT = 5.0
 RPC_REQUEST_DEADLINE = 5.0
 MAX_RPC_WORKERS = 32
 MAX_RPC_REQUEST_BYTES = 2 * 1024 * 1024
+MAX_RPC_JSON_NESTING_DEPTH = 32
 
 
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
@@ -106,6 +107,35 @@ def _reject_duplicate_json_keys(pairs):
             raise RPCError(f"duplicate JSON key: {key}")
         obj[key] = value
     return obj
+
+
+def _preflight_json_nesting(raw):
+    """Bound raw JSON container nesting before invoking Python's parser."""
+    stack = []
+    in_string = False
+    escaped = False
+    for byte in raw:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif byte == 0x5C:  # backslash
+                escaped = True
+            elif byte == 0x22:  # quote
+                in_string = False
+            continue
+
+        if byte == 0x22:
+            in_string = True
+            continue
+        if byte in (0x7B, 0x5B):  # { [
+            stack.append(byte)
+            if len(stack) > MAX_RPC_JSON_NESTING_DEPTH:
+                raise RPCError("JSON nesting depth exceeded")
+            continue
+        if byte in (0x7D, 0x5D):  # } ]
+            expected = 0x7B if byte == 0x7D else 0x5B
+            if stack and stack[-1] == expected:
+                stack.pop()
 
 
 def _validate_param_depth(value, depth=0, budget=None):
@@ -283,6 +313,7 @@ def _handler(dispatcher):
                 if len(raw_request) != n:
                     raise RPCError("incomplete request body")
                 self._cancel_request_deadline()
+                _preflight_json_nesting(raw_request)
                 req = json.loads(raw_request, object_pairs_hook=_reject_duplicate_json_keys)
                 if not isinstance(req, dict):
                     raise RPCError("request must be object")
