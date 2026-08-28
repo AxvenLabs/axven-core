@@ -20,9 +20,14 @@ rewrite(
     """            block=axven.Block.from_dict(raw_block)\n            ok,status=self.chain.add_block(block,work_gate=block_work_gate)\n""",
     """            block=axven.Block.from_dict(raw_block)\n            if block_work_gate is None:\n                ok,status=self.chain.add_block(block)\n            else:\n                ok,status=self.chain.add_block(block,work_gate=block_work_gate)\n""",
 )
+rewrite(
+    "p2p.py",
+    """                b=axven.Block.from_dict(raw)\n                ok,status=self.chain.add_block(b,work_gate=block_work_gate)\n""",
+    """                b=axven.Block.from_dict(raw)\n                if block_work_gate is None:\n                    ok,status=self.chain.add_block(b)\n                else:\n                    ok,status=self.chain.add_block(b,work_gate=block_work_gate)\n""",
+)
 
 spec_anchor = """    outbound_session = p2p.PeerSession(axven.Blockchain(), None)\n    reply = outbound_session.handle(msg)\n    green(\n        \"internal/outbound block handling remains unthrottled\",\n        reply[\"type\"] == \"accepted\"\n        and reply[\"status\"] == \"extended\"\n        and outbound_session.chain.validate(),\n    )\n\n"""
-spec_replacement = spec_anchor + """    class LegacyCompatibleChain:\n        def __init__(self):\n            self.seen = None\n        def add_block(self, block):\n            self.seen = block\n            return True, \"extended\"\n\n    legacy_chain = LegacyCompatibleChain()\n    legacy_reply = p2p.PeerSession(legacy_chain, None).handle(msg)\n    green(\n        \"unmetered session preserves legacy add_block call shape\",\n        legacy_reply[\"type\"] == \"accepted\"\n        and legacy_reply[\"status\"] == \"extended\"\n        and legacy_chain.seen is not None,\n    )\n\n"""
+spec_replacement = spec_anchor + """    class LegacyCompatibleChain:\n        def __init__(self):\n            self.seen = []\n        def add_block(self, block):\n            self.seen.append(block)\n            return True, \"extended\"\n\n    legacy_single = LegacyCompatibleChain()\n    legacy_reply = p2p.PeerSession(legacy_single, None).handle(msg)\n    green(\n        \"unmetered single-block session preserves legacy add_block call shape\",\n        legacy_reply[\"type\"] == \"accepted\"\n        and legacy_reply[\"status\"] == \"extended\"\n        and len(legacy_single.seen) == 1,\n    )\n\n    legacy_batch = LegacyCompatibleChain()\n    legacy_batch_reply = p2p.PeerSession(legacy_batch, None).handle(\n        {\"type\": \"blocks\", \"blocks\": [block4.to_dict()]}\n    )\n    green(\n        \"unmetered block-batch session preserves legacy add_block call shape\",\n        legacy_batch_reply == {\"type\": \"accepted\", \"kind\": \"blocks\", \"count\": 1}\n        and len(legacy_batch.seen) == 1,\n    )\n\n"""
 rewrite(
     "security_sec118_p2p_inbound_block_work_budget_spec.py",
     spec_anchor,
