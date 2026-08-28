@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 46628,
-      "sha256": "fe49834a1aa71141ff3e88c09077c0a261128164fbd3f320cb63c9da2f1fbe62"
+      "bytes": 48201,
+      "sha256": "c5728614f97e48f3bfa3798f073fc9e6707f89245ff37ad786264a8decb06efd"
     },
     "p2p_tx_bounds.py": {
       "bytes": 2261,
@@ -787,6 +787,10 @@
     "security_sec123_get_blocks_response_budget_spec.py": {
       "bytes": 8203,
       "sha256": "a76f4c666ffe9ed41f35e561eaf53629c7a587c071a69fd3c304b7379744e3a5"
+    },
+    "security_sec124_p2p_message_rate_budget_spec.py": {
+      "bytes": 7926,
+      "sha256": "2b2b2df10966a074edc88015a845cd7ca394feb0aaf26dd1b95b860e280c455e"
     },
     "setup.cmd": {
       "bytes": 172,

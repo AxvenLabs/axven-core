@@ -85,6 +85,15 @@ INBOUND_SYNC_RESPONSE_BYTE_GLOBAL_BURST = 128 * 1024 * 1024
 INBOUND_SYNC_RESPONSE_BYTE_PER_HOST_RATE = 16 * 1024 * 1024
 INBOUND_SYNC_RESPONSE_BYTE_PER_HOST_BURST = 64 * 1024 * 1024
 MAX_INBOUND_SYNC_RESPONSE_BYTE_HOSTS = 1024
+# Even cheap post-handshake messages still consume JSON/dispatch/lock/reply
+# work. Bound their aggregate rate independently from the heavier block, TX,
+# signature, frame-lifetime, and sync-response budgets. Listener ownership
+# keeps source buckets alive across reconnects. Transport policy only.
+INBOUND_MESSAGE_GLOBAL_RATE = 512.0
+INBOUND_MESSAGE_GLOBAL_BURST = 2048
+INBOUND_MESSAGE_PER_HOST_RATE = 128.0
+INBOUND_MESSAGE_PER_HOST_BURST = 256
+MAX_INBOUND_MESSAGE_HOSTS = 1024
 MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
@@ -347,6 +356,24 @@ class _OutboundSyncBlockSignatureWorkLimiter(_InboundBlockSignatureWorkLimiter):
         per_host_rate=OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_PER_HOST_RATE,
         per_host_burst=OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_PER_HOST_BURST,
         max_hosts=MAX_OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_HOSTS,
+    ):
+        super().__init__(
+            clock=clock, global_rate=global_rate, global_burst=global_burst,
+            per_host_rate=per_host_rate, per_host_burst=per_host_burst,
+            max_hosts=max_hosts,
+        )
+
+
+class _InboundMessageRateLimiter(_InboundBlockWorkLimiter):
+    """Persistent global + source budget for post-handshake dispatch rate."""
+    def __init__(
+        self,
+        clock=time.monotonic,
+        global_rate=INBOUND_MESSAGE_GLOBAL_RATE,
+        global_burst=INBOUND_MESSAGE_GLOBAL_BURST,
+        per_host_rate=INBOUND_MESSAGE_PER_HOST_RATE,
+        per_host_burst=INBOUND_MESSAGE_PER_HOST_BURST,
+        max_hosts=MAX_INBOUND_MESSAGE_HOSTS,
     ):
         super().__init__(
             clock=clock, global_rate=global_rate, global_burst=global_burst,
@@ -910,7 +937,7 @@ class PeerSession:
 def serve_connection(
     sock, session:PeerSession, block_work_gate=None, tx_work_gate=None,
     block_signature_work_gate=None, frame_byte_budget=None,
-    sync_response_byte_reserve=None,
+    sync_response_byte_reserve=None, message_gate=None,
 ):
     try:
         handshake(sock,deadline=time.monotonic()+INBOUND_PEER_TIMEOUT)
@@ -930,6 +957,8 @@ def serve_connection(
                         frame_byte_budget=frame_byte_budget,
                     )
                 sock.settimeout(INBOUND_PEER_TIMEOUT)
+                if message_gate is not None and not message_gate():
+                    raise ProtocolError("inbound message rate exceeded")
                 if (
                     tx_work_gate is not None
                     or block_signature_work_gate is not None
@@ -978,6 +1007,7 @@ class NodeServer:
         self._block_work_limiter=_InboundBlockWorkLimiter()
         self._tx_work_limiter=_InboundTxWorkLimiter()
         self._block_signature_work_limiter=_InboundBlockSignatureWorkLimiter()
+        self._message_rate_limiter=_InboundMessageRateLimiter()
         self._frame_byte_budget=_InboundFrameByteBudget()
         self._sync_response_byte_limiter=_InboundSyncResponseByteLimiter()
 
@@ -1030,6 +1060,9 @@ class NodeServer:
                     sync_response_byte_reserve=lambda cost: (
                         self._sync_response_byte_limiter.reserve(source_host,cost)
                     )
+                    message_gate=lambda: self._message_rate_limiter.consume(
+                        source_host
+                    )
                     try:
                         serve_connection(
                             client,self.session,
@@ -1038,6 +1071,7 @@ class NodeServer:
                             block_signature_work_gate=block_signature_gate,
                             frame_byte_budget=self._frame_byte_budget,
                             sync_response_byte_reserve=sync_response_byte_reserve,
+                            message_gate=message_gate,
                         )
                     finally:
                         with self._lock:
