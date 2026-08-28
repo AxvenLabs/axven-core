@@ -2,6 +2,7 @@
 from __future__ import annotations
 import base64, hashlib, json, os, tempfile
 import threading
+from collections import OrderedDict
 from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -167,6 +168,7 @@ MAX_SIDECHAIN_BLOCKS = 64
 MAX_SIDECHAIN_BYTES = 64 * 1024 * 1024
 MAX_MEMPOOL_TXS = 4096
 MAX_MEMPOOL_BYTES = 64 * 1024 * 1024
+MAX_VERIFIED_INPUT_CACHE = 32768
 
 EMPTY_ROOT = sha256(b"")
 SMT_DEPTH = 256
@@ -529,11 +531,66 @@ def _check_context(block: Block, path: List[Block], height: int):
     return None
 
 
-def _transition(block: Block, utxo: Dict[str, Dict[str, Any]], height: int, issued: int):
+class _VerifiedInputCache:
+    """Bounded positive-only LRU for exact successful input verifications."""
+    def __init__(self, max_entries=MAX_VERIFIED_INPUT_CACHE):
+        if type(max_entries) is not int or max_entries < 1:
+            raise ValueError("invalid verified-input cache bound")
+        self.max_entries = max_entries
+        self._items = OrderedDict()
+        self._lock = threading.Lock()
+
+    def contains(self, key):
+        with self._lock:
+            if key not in self._items:
+                return False
+            self._items.move_to_end(key)
+            return True
+
+    def remember(self, key):
+        with self._lock:
+            self._items[key] = True
+            self._items.move_to_end(key)
+            while len(self._items) > self.max_entries:
+                self._items.popitem(last=False)
+
+    def __len__(self):
+        with self._lock:
+            return len(self._items)
+
+
+def _verified_input_cache_key(inp, utxo, sighash, height):
+    payload = {
+        "height": height,
+        "sighash": sighash.hex(),
+        "input": canonical_input(inp),
+        "utxo": {
+            "amount": utxo["amount"],
+            "recipient": utxo["recipient"],
+            "coinbase": utxo["coinbase"],
+            "height": utxo["height"],
+        },
+    }
+    return sha256(b"axven-verified-input-v1|" + canonical(payload))
+
+
+def _transition(
+    block: Block,
+    utxo: Dict[str, Dict[str, Any]],
+    height: int,
+    issued: int,
+    signature_work_gate=None,
+    verification_cache=None,
+):
     """Apply transactions in place WITHOUT checking the header state-root."""
     txs = block.txs()
     coinbase = txs[0]
     spent, created, created_set, total_fees = [], [], set(), 0
+    auth_cost = {
+        SCHEME_ED25519: 1,
+        SCHEME_ML_DSA: 4,
+        SCHEME_HYBRID: 5,
+    }
 
     def rollback():
         for op in created:
@@ -546,7 +603,9 @@ def _transition(block: Block, utxo: Dict[str, Dict[str, Any]], height: int, issu
         sh = tx.sighash()
         seen = set()
         in_sum = 0
-        # Validate all inputs first against the current live state.
+        resolved = []
+        # Resolve all cheap validity conditions before reserving scarce crypto
+        # work.  Cache hits are exact positive results and require no crypto.
         for i in tx._in():
             op = outpoint(i.prev_txid, i.index)
             if op in seen:
@@ -557,9 +616,23 @@ def _transition(block: Block, utxo: Dict[str, Dict[str, Any]], height: int, issu
                 rollback(); return False, f"Missing/spent input at {height}", None, 0, 0
             if u["coinbase"] and height - u["height"] < COINBASE_MATURITY:
                 rollback(); return False, f"Immature coinbase spend at {height}", None, 0, 0
-            if not verify_input(i, u, sh, height):
+            if not canonical_input_valid(i):
                 rollback(); return False, f"Bad signature at {height}", None, 0, 0
+            try:
+                required_scheme = scheme_of_address(u["recipient"])
+            except ValueError:
+                rollback(); return False, f"Bad signature at {height}", None, 0, 0
+            supplied_scheme = _input_get(i, "scheme", "") or SCHEME_ED25519
+            if supplied_scheme != required_scheme:
+                rollback(); return False, f"Bad signature at {height}", None, 0, 0
+            cache_key = _verified_input_cache_key(i, u, sh, height)
+            cached = (
+                verification_cache is not None
+                and verification_cache.contains(cache_key)
+            )
+            resolved.append((i, u, cache_key, cached, auth_cost[required_scheme]))
             in_sum += int(u["amount"])
+
         out_sum = 0
         for o in tx.outputs:
             if o.amount < DUST:
@@ -569,6 +642,22 @@ def _transition(block: Block, utxo: Dict[str, Dict[str, Any]], height: int, issu
             out_sum += int(o.amount)
         if out_sum > in_sum:
             rollback(); return False, f"Overspend at {height}", None, 0, 0
+
+        crypto_work = sum(cost for _i, _u, _key, cached, cost in resolved if not cached)
+        if (
+            crypto_work
+            and signature_work_gate is not None
+            and not signature_work_gate(crypto_work)
+        ):
+            rollback(); return False, f"Signature work budget exceeded at {height}", None, 0, 0
+        for i, u, cache_key, cached, _cost in resolved:
+            if cached:
+                continue
+            if not verify_input(i, u, sh, height):
+                rollback(); return False, f"Bad signature at {height}", None, 0, 0
+            if verification_cache is not None:
+                verification_cache.remember(cache_key)
+
         total_fees += in_sum - out_sum
         for i in tx._in():
             op = outpoint(i.prev_txid, i.index)
@@ -606,8 +695,14 @@ def _undo_forward(undo: BlockUndo, utxo):
             utxo[op] = u
 
 
-def _apply_forward(block, utxo, height, issued):
-    ok, reason, undo, reward, fees = _transition(block, utxo, height, issued)
+def _apply_forward(
+    block, utxo, height, issued, signature_work_gate=None, verification_cache=None
+):
+    ok, reason, undo, reward, fees = _transition(
+        block, utxo, height, issued,
+        signature_work_gate=signature_work_gate,
+        verification_cache=verification_cache,
+    )
     if not ok:
         return False, reason, None, 0, 0
     got = expected_state_root(utxo, height)
@@ -739,6 +834,7 @@ class Blockchain:
         self.orphan_bytes = 0
         self.mempool = None
         self._state_lock = threading.RLock()
+        self._verified_input_cache = _VerifiedInputCache()
         self._init_genesis()
 
     def _init_genesis(self):
@@ -788,7 +884,7 @@ class Blockchain:
             if cur is None:
                 raise RuntimeError("side-chain ancestry is not indexed")
 
-    def _state_for_index_node(self, node):
+    def _state_for_index_node(self, node, signature_work_gate=None):
         """Build an isolated validated state snapshot at an indexed node."""
         path = self._indexed_path_view(node)
         branch = list(path.side_nodes)
@@ -810,7 +906,9 @@ class Blockchain:
             blk = branch_node.block
             height = len(trial_blocks)
             ok, reason, _undo, reward, _fees = _apply_forward(
-                blk, trial_utxo, height, trial_issued
+                blk, trial_utxo, height, trial_issued,
+                signature_work_gate=signature_work_gate,
+                verification_cache=self._verified_input_cache,
             )
             if not ok:
                 return False, reason, None, 0
@@ -819,12 +917,18 @@ class Blockchain:
 
         return True, "OK", trial_utxo, trial_issued
 
-    def _validate_side_block_state(self, block, parent_node, height):
-        ok, reason, trial_utxo, trial_issued = self._state_for_index_node(parent_node)
+    def _validate_side_block_state(
+        self, block, parent_node, height, signature_work_gate=None
+    ):
+        ok, reason, trial_utxo, trial_issued = self._state_for_index_node(
+            parent_node, signature_work_gate=signature_work_gate
+        )
         if not ok:
             return False, reason
         ok, reason, _undo, _reward, _fees = _apply_forward(
-            block, trial_utxo, height, trial_issued
+            block, trial_utxo, height, trial_issued,
+            signature_work_gate=signature_work_gate,
+            verification_cache=self._verified_input_cache,
         )
         return ok, reason
 
@@ -971,11 +1075,15 @@ class Blockchain:
             raise RuntimeError(f"Self-mined block rejected: {status}")
         return block
 
-    def add_block(self, block, work_gate=None):
+    def add_block(self, block, work_gate=None, signature_work_gate=None):
         with self._state_lock:
-            return self._add_block_locked(block, work_gate=work_gate)
+            return self._add_block_locked(
+                block,
+                work_gate=work_gate,
+                signature_work_gate=signature_work_gate,
+            )
 
-    def _add_block_locked(self, block, work_gate=None):
+    def _add_block_locked(self, block, work_gate=None, signature_work_gate=None):
         h = block.hash()
         if h in self.index:
             return False, "duplicate"
@@ -1017,7 +1125,8 @@ class Blockchain:
         is_nonwinning_side = parent != self.tip.hash() and cw <= self.chainwork
         if is_nonwinning_side:
             ok, reason = self._validate_side_block_state(
-                block, parent_node, height
+                block, parent_node, height,
+                signature_work_gate=signature_work_gate,
             )
             if not ok:
                 return False, reason
@@ -1043,7 +1152,10 @@ class Blockchain:
 
         if parent == self.tip.hash():
             ok, reason, undo, reward, _fees = _apply_forward(
-                block, self.utxo, height, self.total_issued)
+                block, self.utxo, height, self.total_issued,
+                signature_work_gate=signature_work_gate,
+                verification_cache=self._verified_input_cache,
+            )
             if not ok:
                 del self.index[h]
                 return False, reason
@@ -1055,7 +1167,9 @@ class Blockchain:
                 self.mempool.remove_conflicts(block.txs()[1:])
             status = "extended"
         elif cw > self.chainwork:
-            ok, reason = self._reorg_to(node)
+            ok, reason = self._reorg_to(
+                node, signature_work_gate=signature_work_gate
+            )
             if not ok:
                 del self.index[h]
                 return False, f"reorg aborted: {reason}"
@@ -1064,10 +1178,14 @@ class Blockchain:
         else:
             self.side_sizes[h] = block_bytes
             status = "side-chain"
-        self._connect_orphans(h, work_gate=work_gate)
+        self._connect_orphans(
+            h,
+            work_gate=work_gate,
+            signature_work_gate=signature_work_gate,
+        )
         return True, status
 
-    def _reorg_to(self, node):
+    def _reorg_to(self, node, signature_work_gate=None):
         tu = _UTXOOverlay(self.utxo)
         tblocks = list(self.blocks)
         tissued, tcw = self.total_issued, self.chainwork
@@ -1087,7 +1205,11 @@ class Blockchain:
         for bn in branch:
             blk = bn.block
             hh = len(tblocks)
-            ok, reason, undo, reward, _fees = _apply_forward(blk, tu, hh, tissued)
+            ok, reason, undo, reward, _fees = _apply_forward(
+                blk, tu, hh, tissued,
+                signature_work_gate=signature_work_gate,
+                verification_cache=self._verified_input_cache,
+            )
             if not ok:
                 return False, reason
             tblocks.append(blk)
@@ -1126,7 +1248,9 @@ class Blockchain:
                     except ValueError:
                         pass
 
-    def _connect_orphans(self, h, work_gate=None):
+    def _connect_orphans(
+        self, h, work_gate=None, signature_work_gate=None
+    ):
         queue = [h]
         while queue:
             parent = queue.pop()
@@ -1134,7 +1258,11 @@ class Blockchain:
                 child_hash = child.hash()
                 child_bytes = self.orphan_sizes.pop(child_hash, 0)
                 self.orphan_bytes = max(0, self.orphan_bytes - child_bytes)
-                ok, _ = self.add_block(child, work_gate=work_gate)
+                ok, _ = self.add_block(
+                    child,
+                    work_gate=work_gate,
+                    signature_work_gate=signature_work_gate,
+                )
                 if ok:
                     queue.append(child_hash)
 
