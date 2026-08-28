@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import base64, hashlib, json
+import base64, hashlib, json, os, tempfile
 import threading
+from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
@@ -1043,9 +1044,33 @@ class StateStore:
             "config_fingerprint": CONFIG_FINGERPRINT,
             "blocks": [b.to_dict() for b in chain.blocks],
         }
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(payload, sort_keys=True, separators=(",", ":")))
-        os.replace(tmp, self.path)
+        fd = None
+        tmp_path = None
+        try:
+            fd, tmp_name = tempfile.mkstemp(
+                prefix=f".{self.path.name}.",
+                suffix=".tmp",
+                dir=str(self.directory),
+                text=True,
+            )
+            tmp_path = Path(tmp_name)
+            if os.name == "posix":
+                os.fchmod(fd, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                fd = None
+                f.write(json.dumps(payload, sort_keys=True, separators=(",", ":")))
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, self.path)
+            tmp_path = None
+        finally:
+            if fd is not None:
+                os.close(fd)
+            if tmp_path is not None:
+                try:
+                    tmp_path.unlink()
+                except FileNotFoundError:
+                    pass
 
     def load(self) -> Blockchain:
         payload = json.loads(self.path.read_text())
