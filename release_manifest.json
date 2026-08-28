@@ -20,6 +20,10 @@
   "explorer_node1_port": 18445,
   "explorer_node2_port": 18455,
   "files": {
+    ".github/workflows/validation.yml": {
+      "bytes": 822,
+      "sha256": "0233cb6858eebe67e08c8a4f659db91267d0393df1a2bc4fbe4e39d41eee7820"
+    },
     "CANONICAL_OPERATIONS.md": {
       "bytes": 1434,
       "sha256": "42b702ea99a53bcfed309d2a271104a6115242447dffa54c0b6813e54ed8004d"
@@ -715,6 +719,10 @@
     "security_sec106_sidechain_state_validation_spec.py": {
       "bytes": 2263,
       "sha256": "48016de706594c4dbf47c11ea5aea0111ab789ff922cdf6651a5c6b198286ca3"
+    },
+    "security_sec107_github_actions_immutable_pins_spec.py": {
+      "bytes": 1546,
+      "sha256": "e20213ad3c6a4b0ab9614dc835bb6128c1dfdb4c67e4f8f15af3b76b9103ba7d"
     },
     "setup.cmd": {
       "bytes": 172,
