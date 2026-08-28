@@ -144,7 +144,7 @@ def main():
 
         source = Path(wallet.__file__).read_text(encoding="utf-8")
         assert "tempfile.mkstemp" in source
-        assert "tmp = path + \".tmp\"" not in source
+        assert 'tmp = path + ".tmp"' not in source
         assert "os.replace(tmp, path)" in source
         assert "os.unlink(tmp)" in source
         checks += 1
