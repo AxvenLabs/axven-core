@@ -62,7 +62,12 @@ def main():
     )
     checks += 1
 
-    assert session.handle({"type": "status"}) is None
+    assert session.handle({
+        "type": "status",
+        "height": 0,
+        "tip_hash": "0" * 64,
+        "chainwork": 0,
+    }) is None
     checks += 1
 
     assert checks == 8
