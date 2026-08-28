@@ -30,7 +30,7 @@ jobs:
         run: python .github/sec128_apply.py
 
       - name: Remove one-shot automation before validation
-        run: git rm .github/sec128_anchor_fix.py .github/sec128_apply.py .github/workflows/sec128-apply.yml
+        run: git rm -f .github/sec128_anchor_fix.py .github/sec128_apply.py .github/workflows/sec128-apply.yml
 
       - name: Focused validation
         run: |
