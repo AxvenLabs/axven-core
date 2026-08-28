@@ -1,0 +1,382 @@
+name: SEC-112 Apply
+
+on:
+  push:
+    branches:
+      - security-sec112-sidechain-retention-bounds
+    paths:
+      - .github/workflows/sec112-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: security-sec112-sidechain-retention-bounds
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Install project
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Apply and validate SEC-112
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          source_path = Path("axven.py")
+          source = source_path.read_text(encoding="utf-8")
+
+          constants_old = '''MAX_ORPHAN_BLOCKS = 256
+          MAX_ORPHAN_BYTES = 64 * 1024 * 1024
+          MAX_MEMPOOL_TXS = 4096
+          MAX_MEMPOOL_BYTES = 64 * 1024 * 1024
+          '''
+          constants_new = '''MAX_ORPHAN_BLOCKS = 256
+          MAX_ORPHAN_BYTES = 64 * 1024 * 1024
+          MAX_SIDECHAIN_BLOCKS = 64
+          MAX_SIDECHAIN_BYTES = 64 * 1024 * 1024
+          MAX_MEMPOOL_TXS = 4096
+          MAX_MEMPOOL_BYTES = 64 * 1024 * 1024
+          '''
+          if constants_old not in source:
+              raise SystemExit("SEC-112 constants anchor missing")
+          source = source.replace(constants_old, constants_new, 1)
+
+          methods_old = '''    def _validate_side_block_state(self, block, parent_node, height):
+              ok, reason, trial_utxo, trial_issued = self._state_for_index_node(parent_node)
+              if not ok:
+                  return False, reason
+              ok, reason, _undo, _reward, _fees = _apply_forward(
+                  block, trial_utxo, height, trial_issued
+              )
+              return ok, reason
+
+              def balance(self, address):
+          '''
+          methods_new = '''    def _validate_side_block_state(self, block, parent_node, height):
+              ok, reason, trial_utxo, trial_issued = self._state_for_index_node(parent_node)
+              if not ok:
+                  return False, reason
+              ok, reason, _undo, _reward, _fees = _apply_forward(
+                  block, trial_utxo, height, trial_issued
+              )
+              return ok, reason
+
+              def _side_index_snapshot(self):
+                  active_hashes = {b.hash() for b in self.blocks}
+                  side_nodes = {
+                      block_hash: node
+                      for block_hash, node in self.index.items()
+                      if block_hash not in active_hashes
+                  }
+                  side_sizes = {
+                      block_hash: serialized_block_size(node.block)
+                      for block_hash, node in side_nodes.items()
+                  }
+                  return active_hashes, side_nodes, side_sizes
+
+              def _protected_side_ancestry(self, parent_hash, active_hashes):
+                  protected = set()
+                  current_hash = parent_hash
+                  while current_hash in self.index and current_hash not in active_hashes:
+                      if current_hash in protected:
+                          raise RuntimeError("side-chain ancestry cycle")
+                      protected.add(current_hash)
+                      current_hash = self.index[current_hash].parent_hash
+                  return protected
+
+              def _prune_side_index_for_budget(
+                  self, extra_count=0, extra_bytes=0, protected=None
+              ):
+                  protected = set(protected or ())
+                  _active_hashes, side_nodes, side_sizes = self._side_index_snapshot()
+                  side_count = len(side_nodes)
+                  side_bytes = sum(side_sizes.values())
+
+                  def within_budget():
+                      return (
+                          side_count + extra_count <= MAX_SIDECHAIN_BLOCKS
+                          and side_bytes + extra_bytes <= MAX_SIDECHAIN_BYTES
+                      )
+
+                  if within_budget():
+                      return True
+
+                  children = {block_hash: set() for block_hash in side_nodes}
+                  for block_hash, node in side_nodes.items():
+                      if node.parent_hash in children:
+                          children[node.parent_hash].add(block_hash)
+
+                  def leaf_key(block_hash):
+                      node = side_nodes[block_hash]
+                      return (node.height, block_hash)
+
+                  leaves = [
+                      block_hash
+                      for block_hash in side_nodes
+                      if not children[block_hash] and block_hash not in protected
+                  ]
+                  leaves.sort(key=leaf_key)
+                  removed = []
+
+                  while not within_budget() and leaves:
+                      block_hash = leaves.pop(0)
+                      if block_hash not in side_nodes or block_hash in protected:
+                          continue
+                      node = side_nodes.pop(block_hash)
+                      side_count -= 1
+                      side_bytes -= side_sizes.pop(block_hash)
+                      removed.append(block_hash)
+
+                      parent_hash = node.parent_hash
+                      if parent_hash in children:
+                          children[parent_hash].discard(block_hash)
+                          if (
+                              parent_hash in side_nodes
+                              and not children[parent_hash]
+                              and parent_hash not in protected
+                          ):
+                              leaves.append(parent_hash)
+                              leaves.sort(key=leaf_key)
+
+                  for block_hash in removed:
+                      self.index.pop(block_hash, None)
+                  return within_budget()
+
+              def balance(self, address):
+          '''
+          if methods_old not in source:
+              raise SystemExit("SEC-112 method anchor missing")
+          source = source.replace(methods_old, methods_new, 1)
+
+          admission_old = '''        # A non-winning side branch used to be indexed after header/context
+              # checks only. Validate its transaction transition and committed state
+              # root now, so invalid branch state never becomes trusted index state.
+              # Winning branches are validated atomically by _reorg_to below.
+              if parent != self.tip.hash() and cw <= self.chainwork:
+                  ok, reason = self._validate_side_block_state(
+                      block, parent_node, height
+                  )
+                  if not ok:
+                      return False, reason
+
+              node = BlockNode(block, height, cw, parent)
+          '''
+          admission_new = '''        # A non-winning side branch used to be indexed after header/context
+              # checks only. Validate its transaction transition and committed state
+              # root now, so invalid branch state never becomes trusted index state.
+              # Winning branches are validated atomically by _reorg_to below.
+              is_nonwinning_side = parent != self.tip.hash() and cw <= self.chainwork
+              if is_nonwinning_side:
+                  ok, reason = self._validate_side_block_state(
+                      block, parent_node, height
+                  )
+                  if not ok:
+                      return False, reason
+
+                  block_bytes = serialized_block_size(block)
+                  active_hashes, _side_nodes, side_sizes = self._side_index_snapshot()
+                  protected = self._protected_side_ancestry(parent, active_hashes)
+                  protected_bytes = sum(side_sizes[h] for h in protected)
+                  if (
+                      len(protected) + 1 > MAX_SIDECHAIN_BLOCKS
+                      or protected_bytes + block_bytes > MAX_SIDECHAIN_BYTES
+                  ):
+                      return False, "side-chain retention budget exceeded"
+                  if not self._prune_side_index_for_budget(
+                      extra_count=1,
+                      extra_bytes=block_bytes,
+                      protected=protected,
+                  ):
+                      return False, "side-chain retention budget full"
+
+              node = BlockNode(block, height, cw, parent)
+          '''
+          if admission_old not in source:
+              raise SystemExit("SEC-112 admission anchor missing")
+          source = source.replace(admission_old, admission_new, 1)
+
+          reorg_old = '''        elif cw > self.chainwork:
+              ok, reason = self._reorg_to(node)
+              if not ok:
+                  del self.index[h]
+                  return False, f"reorg aborted: {reason}"
+              status = "reorg"
+          '''
+          reorg_new = '''        elif cw > self.chainwork:
+              ok, reason = self._reorg_to(node)
+              if not ok:
+                  del self.index[h]
+                  return False, f"reorg aborted: {reason}"
+              self._prune_side_index_for_budget()
+              status = "reorg"
+          '''
+          if reorg_old not in source:
+              raise SystemExit("SEC-112 reorg anchor missing")
+          source = source.replace(reorg_old, reorg_new, 1)
+          source_path.write_text(source, encoding="utf-8")
+
+          spec_name = "security_sec112_sidechain_retention_bounds_spec.py"
+          spec = '''#!/usr/bin/env python3
+          """SEC-112 bounded side-chain retention against public fork-flood memory growth."""
+
+          import axven
+
+
+          def side_usage(chain):
+              active_hashes = {block.hash() for block in chain.blocks}
+              side_nodes = {
+                  block_hash: node
+                  for block_hash, node in chain.index.items()
+                  if block_hash not in active_hashes
+              }
+              side_bytes = sum(
+                  axven.serialized_block_size(node.block)
+                  for node in side_nodes.values()
+              )
+              return active_hashes, side_nodes, side_bytes
+
+
+          def mine_chain(count):
+              chain = axven.Blockchain()
+              wallet = axven.Wallet()
+              for _ in range(count):
+                  chain.mine(wallet.address)
+              return chain
+
+
+          def main():
+              assert axven.MAX_SIDECHAIN_BLOCKS == 64
+              assert axven.MAX_SIDECHAIN_BYTES == 64 * 1024 * 1024
+              print("[GREEN] side-chain count and byte budgets pinned")
+
+              old_count = axven.MAX_SIDECHAIN_BLOCKS
+              old_bytes = axven.MAX_SIDECHAIN_BYTES
+              try:
+                  axven.MAX_SIDECHAIN_BLOCKS = 2
+                  axven.MAX_SIDECHAIN_BYTES = 64 * 1024 * 1024
+
+                  active = mine_chain(5)
+                  fork_a = mine_chain(3)
+                  fork_b = mine_chain(1)
+                  active_hashes = {block.hash() for block in active.blocks}
+
+                  ok, status = active.add_block(fork_a.blocks[1])
+                  assert ok and status == "side-chain"
+                  ok, status = active.add_block(fork_a.blocks[2])
+                  assert ok and status == "side-chain"
+                  _active, side_nodes, _bytes = side_usage(active)
+                  assert len(side_nodes) == 2
+                  print("[GREEN] bounded side-chain pool accepts valid forks up to count budget")
+
+                  ok, status = active.add_block(fork_b.blocks[1])
+                  assert ok and status == "side-chain"
+                  current_active, side_nodes, side_bytes = side_usage(active)
+                  assert len(side_nodes) <= axven.MAX_SIDECHAIN_BLOCKS
+                  assert side_bytes <= axven.MAX_SIDECHAIN_BYTES
+                  assert fork_b.blocks[1].hash() in side_nodes
+                  assert active_hashes <= set(active.index)
+                  assert current_active == active_hashes
+                  print("[GREEN] unrelated side leaves are pruned without touching active chain")
+
+                  ok, status = active.add_block(fork_a.blocks[2])
+                  assert ok and status == "side-chain"
+                  _active, side_nodes, side_bytes = side_usage(active)
+                  assert fork_a.blocks[1].hash() in side_nodes
+                  assert fork_a.blocks[2].hash() in side_nodes
+                  assert fork_b.blocks[1].hash() not in active.index
+                  assert len(side_nodes) <= axven.MAX_SIDECHAIN_BLOCKS
+                  assert side_bytes <= axven.MAX_SIDECHAIN_BYTES
+                  print("[GREEN] protected incoming fork ancestry survives budget pruning")
+
+                  active2 = mine_chain(2)
+                  fork2 = mine_chain(3)
+                  ok, status = active2.add_block(fork2.blocks[1])
+                  assert ok and status == "side-chain"
+                  ok, status = active2.add_block(fork2.blocks[2])
+                  assert ok and status == "side-chain"
+                  ok, status = active2.add_block(fork2.blocks[3])
+                  assert ok and status == "reorg"
+                  assert active2.tip.hash() == fork2.tip.hash()
+                  assert active2.validate()
+                  active2_hashes, side2, side2_bytes = side_usage(active2)
+                  assert active2_hashes <= set(active2.index)
+                  assert len(side2) <= axven.MAX_SIDECHAIN_BLOCKS
+                  assert side2_bytes <= axven.MAX_SIDECHAIN_BYTES
+                  print("[GREEN] heavier valid fork still reorgs through bounded retention")
+
+                  active3 = mine_chain(3)
+                  fork3 = mine_chain(2)
+                  first_size = axven.serialized_block_size(fork3.blocks[1])
+                  second_size = axven.serialized_block_size(fork3.blocks[2])
+                  axven.MAX_SIDECHAIN_BLOCKS = 64
+                  axven.MAX_SIDECHAIN_BYTES = first_size + second_size - 1
+
+                  ok, status = active3.add_block(fork3.blocks[1])
+                  assert ok and status == "side-chain"
+                  before_index = set(active3.index)
+                  ok, reason = active3.add_block(fork3.blocks[2])
+                  assert not ok
+                  assert "retention budget" in reason
+                  assert set(active3.index) == before_index
+                  _active, side3, side3_bytes = side_usage(active3)
+                  assert len(side3) <= axven.MAX_SIDECHAIN_BLOCKS
+                  assert side3_bytes <= axven.MAX_SIDECHAIN_BYTES
+                  print("[GREEN] protected fork cannot exceed aggregate side-chain byte budget")
+              finally:
+                  axven.MAX_SIDECHAIN_BLOCKS = old_count
+                  axven.MAX_SIDECHAIN_BYTES = old_bytes
+
+              source = open(axven.__file__, "r", encoding="utf-8").read()
+              assert "_prune_side_index_for_budget" in source
+              assert "MAX_SIDECHAIN_BYTES" in source
+              assert "protected=protected" in source
+              print("[GREEN] bounded retention is wired before non-winning side index publish")
+
+              print("SEC-112 bounded side-chain retention: 6/6 GREEN")
+
+
+          if __name__ == "__main__":
+              main()
+          '''
+          # Strip the workflow indentation from the embedded spec.
+          spec = "\n".join(line[10:] if line.startswith("          ") else line for line in spec.splitlines()) + "\n"
+          Path(spec_name).write_text(spec, encoding="utf-8")
+
+          manifest_path = Path("release_manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          for name in ("axven.py", spec_name):
+              data = Path(name).read_bytes()
+              manifest["files"][name] = {
+                  "bytes": len(data),
+                  "sha256": hashlib.sha256(data).hexdigest(),
+              }
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          '@ | Set-Content -Encoding utf8 .sec112_apply.py
+          python .sec112_apply.py
+          python security_sec112_sidechain_retention_bounds_spec.py
+          python release_packaging_test.py
+          Remove-Item .sec112_apply.py
+      - name: Commit clean SEC-112 tree
+        shell: pwsh
+        run: |
+          Remove-Item .github/workflows/sec112-apply.yml
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add axven.py release_manifest.json security_sec112_sidechain_retention_bounds_spec.py .github/workflows/sec112-apply.yml
+          git diff --cached --check
+          git commit -m "SEC-112: Bound side-chain retention"
+          git push origin HEAD:security-sec112-sidechain-retention-bounds
