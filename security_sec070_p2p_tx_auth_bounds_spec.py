@@ -41,6 +41,26 @@ def raw_tx():
     }
 
 
+def hybrid_tx():
+    raw = raw_tx()
+    raw["inputs"][0] = {
+        "prev_txid": "0" * 64,
+        "index": 0,
+        "scheme": "hybrid-ed25519+ml-dsa-44",
+        "ed_signature": "ed-sig",
+        "ed_public_key": "ed-pub",
+        "ml_signature": "ml-sig",
+        "ml_public_key": "ml-pub",
+    }
+    return raw
+
+
+def raw_tx_for_auth_field(field):
+    if field in ("ed_signature", "ed_public_key", "ml_signature", "ml_public_key"):
+        return hybrid_tx()
+    return raw_tx()
+
+
 def expect_reject(session, raw, expected_error, deserialize_calls, mempool):
     before_deserialize = deserialize_calls[0]
     before_add = mempool.add_calls
@@ -51,7 +71,7 @@ def expect_reject(session, raw, expected_error, deserialize_calls, mempool):
         assert deserialize_calls[0] == before_deserialize
         assert mempool.add_calls == before_add
         return
-    raise AssertionError("oversized transaction auth string reached admission")
+    raise AssertionError("invalid transaction auth string reached admission")
 
 
 def expect_accept(session, raw, deserialize_calls, mempool):
@@ -96,11 +116,17 @@ def main():
         checks += 1
         print("[GREEN] 33-char scheme rejected before deserialization")
 
-        boundary_scheme = raw_tx()
-        boundary_scheme["inputs"][0]["scheme"] = "s" * 32
-        expect_accept(session, boundary_scheme, deserialize_calls, mempool)
+        boundary_unknown_scheme = raw_tx()
+        boundary_unknown_scheme["inputs"][0]["scheme"] = "s" * 32
+        expect_reject(
+            session,
+            boundary_unknown_scheme,
+            "unknown tx input scheme",
+            deserialize_calls,
+            mempool,
+        )
         checks += 1
-        print("[GREEN] 32-char scheme passes P2P budget")
+        print("[GREEN] bounded unknown scheme fails closed")
 
         auth_fields = (
             "signature",
@@ -111,7 +137,7 @@ def main():
             "ml_public_key",
         )
         for field in auth_fields:
-            raw = raw_tx()
+            raw = raw_tx_for_auth_field(field)
             raw["inputs"][0][field] = "x" * 8193
             expect_reject(
                 session,
@@ -123,25 +149,16 @@ def main():
             checks += 1
             print(f"[GREEN] 8193-char {field} rejected before deserialization")
 
-        boundary_auth = raw_tx()
+        boundary_auth = hybrid_tx()
         boundary_auth["inputs"][0]["ml_signature"] = "x" * 8192
         expect_accept(session, boundary_auth, deserialize_calls, mempool)
         checks += 1
-        print("[GREEN] 8192-char auth field passes P2P budget")
+        print("[GREEN] 8192-char canonical auth field passes P2P budget")
 
-        canonical = raw_tx()
-        canonical["inputs"][0].update(
-            {
-                "scheme": "hybrid",
-                "ed_signature": "ed-sig",
-                "ed_public_key": "ed-pub",
-                "ml_signature": "ml-sig",
-                "ml_public_key": "ml-pub",
-            }
-        )
+        canonical = hybrid_tx()
         expect_accept(session, canonical, deserialize_calls, mempool)
         checks += 1
-        print("[GREEN] canonical short scheme/auth strings remain compatible")
+        print("[GREEN] canonical hybrid scheme/auth strings remain compatible")
     finally:
         p2p.axven.Transaction.from_dict = original_from_dict
 
