@@ -1,0 +1,43 @@
+name: SEC-129 valid ML-DSA daemon fixture repair
+
+on:
+  push:
+    branches:
+      - security-sec129-wallet-inner-material-canonicality
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Apply fixture repair and refresh manifest
+        run: python .github/sec129_fixture_repair.py
+      - name: Daemon lifecycle
+        run: python daemon_lifecycle_test.py
+      - name: SEC-128 regression
+        run: python security_sec128_wallet_backup_json_preparse_depth_spec.py
+      - name: SEC-129 focused validation
+        run: python security_sec129_wallet_inner_material_canonicality_spec.py
+      - name: Release packaging
+        run: python release_packaging_test.py
+      - name: Commit clean repaired tree
+        shell: pwsh
+        run: |
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "security-automation@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "SEC-129: Use a valid ML-DSA daemon wallet fixture"
+          git push origin HEAD:security-sec129-wallet-inner-material-canonicality
