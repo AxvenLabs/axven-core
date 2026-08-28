@@ -1,0 +1,51 @@
+name: SEC-113 Compatibility Fix
+
+on:
+  push:
+    branches:
+      - security-sec113-p2p-status-envelope-clean
+    paths:
+      - .github/workflows/sec113-compat-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: security-sec113-p2p-status-envelope-clean
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Install
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Patch and validate compatibility
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          python .github/sec113_compat_fix.py
+          python security_sec071_p2p_message_type_bounds_spec.py
+          python security_sec113_p2p_status_envelope_spec.py
+          python release_packaging_test.py
+      - name: Commit clean compatibility refresh
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          Remove-Item .github/sec113_compat_fix.py
+          Remove-Item .github/workflows/sec113-compat-fix.yml
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "SEC-113: Refresh status compatibility regression"
+          git push origin HEAD:security-sec113-p2p-status-envelope-clean
