@@ -1,0 +1,68 @@
+name: SEC-119 Apply
+
+on:
+  push:
+    branches:
+      - security-sec119-inbound-tx-crypto-work
+
+permissions:
+  contents: write
+
+env:
+  PYTHONUTF8: '1'
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  apply:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: security-sec119-inbound-tx-crypto-work
+          persist-credentials: true
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Enable UTF-8
+        shell: pwsh
+        run: chcp 65001
+      - name: Install
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Apply and validate SEC-119
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          python .github/sec119_apply.py
+          python security_sec025_mempool_bounds_spec.py
+          python security_sec026_mempool_byte_bounds_spec.py
+          python security_sec067_p2p_tx_numeric_types_spec.py
+          python security_sec068_p2p_tx_string_types_spec.py
+          python security_sec069_p2p_tx_id_address_bounds_spec.py
+          python security_sec070_p2p_tx_auth_bounds_spec.py
+          python security_sec081_mempool_block_conflict_cleanup_spec.py
+          python security_sec090_mempool_atomicity_spec.py
+          python security_sec118_p2p_inbound_block_work_budget_spec.py
+          python security_sec119_p2p_inbound_tx_crypto_work_spec.py
+          python p2p_tcp_lifecycle_test.py
+          python devnet_rehearsal.py
+          python consensus_rebuild_test.py
+          python release_packaging_test.py
+      - name: Commit clean SEC-119 patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          Remove-Item .github/sec119_apply.py
+          Remove-Item .github/workflows/sec119-apply.yml
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "SEC-119: Bound inbound transaction crypto work"
+          git push origin HEAD:security-sec119-inbound-tx-crypto-work
