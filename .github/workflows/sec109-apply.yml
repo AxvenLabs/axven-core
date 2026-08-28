@@ -17,6 +17,8 @@ jobs:
           ref: security-sec109-wallet-backup-atomic-file-clean
           fetch-depth: 1
           persist-credentials: true
+      - name: Install project
+        run: python -m pip install -e .
       - name: Apply SEC-109 patch
         run: python .github/sec109_apply.py
       - name: Validate and commit clean tree
