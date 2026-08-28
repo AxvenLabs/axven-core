@@ -816,6 +816,10 @@
       "bytes": 6036,
       "sha256": "66e32391b1c1621cd9a2faa101fffb529e8be4809e0e76ac5eee600e89ad4a67"
     },
+    "security_sec131_wallet_backup_envelope_canonicality_spec.py": {
+      "bytes": 8069,
+      "sha256": "80889346d0c0f98a675f0388b0684ed70c31a41bbc331809d68fd1c3d0b3e083"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -865,8 +869,8 @@
       "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
     },
     "wallet.py": {
-      "bytes": 15147,
-      "sha256": "36ee8b06b57fafb5dea28bc8a9d59a05b2f3d4a7ab76352445821e070754b47e"
+      "bytes": 15745,
+      "sha256": "2cf290918335b3af8c21d5ed9646767ebd42459843810dbd621343c4a57095eb"
     },
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
