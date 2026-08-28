@@ -261,8 +261,8 @@
       "sha256": "790ad6aca935d89042f2f284e5717642997e12ed1e0bfe48e6d977fb01961d8a"
     },
     "daemon_lifecycle_test.py": {
-      "bytes": 5583,
-      "sha256": "73f4aa368d9341cc708f2396bedd139ccf14138e4fe8e37aa81de463bc589344"
+      "bytes": 5613,
+      "sha256": "6224b23624c26801d032224ca8d28fcb615351402498dd3964f25d650d6429a8"
     },
     "datadir.py": {
       "bytes": 4547,

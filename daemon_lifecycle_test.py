@@ -57,9 +57,10 @@ def main():
     try:
         dd=DataDir(d)
         ed=axven.Wallet()
+        ml=axven.MLDSAWallet()
         ident=wallet.WalletIdentity(
             ed_keypair=(ed.public_key,ed.private_key),
-            ml_keypair=(b"\x71"*1312,b"\x72"*2560)
+            ml_keypair=(ml.public_key,ml._secret)
         )
         wallet.save_backup_file(ident,dd.wallet_file,pw)
 
