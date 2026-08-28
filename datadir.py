@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 import os
+import tempfile
 from pathlib import Path
 import axven, wallet
 from core import AxvenCore
@@ -59,12 +60,35 @@ class DataDir:
         for peer in peers:
             host,port=AxvenCore._parse_peer(peer)
             normalized.append({"host":host,"port":port})
-        tmp=self.peer_file.with_suffix(".json.tmp")
-        tmp.write_text(
-            json.dumps(normalized,indent=2,sort_keys=True)+"\n",
-            encoding="utf-8"
-        )
-        os.replace(tmp,self.peer_file)
+        fd=None
+        tmp_path=None
+        try:
+            fd,tmp_name=tempfile.mkstemp(
+                prefix=f".{self.peer_file.name}.",
+                suffix=".tmp",
+                dir=str(self.peer_file.parent),
+                text=True,
+            )
+            tmp_path=Path(tmp_name)
+            if os.name=="posix":
+                os.fchmod(fd,0o600)
+            with os.fdopen(fd,"w",encoding="utf-8") as f:
+                fd=None
+                f.write(json.dumps(normalized,indent=2,sort_keys=True)+"\n")
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path,self.peer_file)
+            tmp_path=None
+            if os.name=="posix":
+                os.chmod(self.peer_file,0o600)
+        finally:
+            if fd is not None:
+                os.close(fd)
+            if tmp_path is not None:
+                try:
+                    tmp_path.unlink()
+                except FileNotFoundError:
+                    pass
 
     def load_core(self,passphrase=None):
         chain=self.load_chain()
