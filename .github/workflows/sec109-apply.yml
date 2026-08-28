@@ -1,0 +1,33 @@
+name: SEC-109 Apply
+
+on:
+  push:
+    branches:
+      - security-sec109-wallet-backup-atomic-write-clean
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: security-sec109-wallet-backup-atomic-write-clean
+          fetch-depth: 1
+
+      - name: Apply SEC-109 hardening
+        run: python .github/sec109_apply.py
+
+      - name: Validate and commit clean SEC-109 tree
+        shell: bash
+        run: |
+          python security_sec109_wallet_backup_atomic_write_spec.py
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/sec109-apply.yml .github/sec109_apply.py
+          git add wallet.py security_sec109_wallet_backup_atomic_write_spec.py release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-109: Harden wallet backup atomic writes"
+          git push origin HEAD:security-sec109-wallet-backup-atomic-write-clean
