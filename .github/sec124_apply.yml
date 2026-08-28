@@ -60,3 +60,5 @@ jobs:
           git rm .github/sec124_apply.yml .github/sec124_patch.py
           git commit -m "SEC-124: remove temporary apply workflow"
           git push origin HEAD:security-sec124-p2p-message-rate-budget
+
+# trigger: 1
