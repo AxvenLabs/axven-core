@@ -265,8 +265,8 @@
       "sha256": "73f4aa368d9341cc708f2396bedd139ccf14138e4fe8e37aa81de463bc589344"
     },
     "datadir.py": {
-      "bytes": 2795,
-      "sha256": "368a5ee29ba757f3be93179714d3328ee02f79d9d06203d23844a83a5fb505b2"
+      "bytes": 3577,
+      "sha256": "309df2cfecc587ffea05a0a2bd4a948e57725a4e4dc7c54ebba6e02c942d1269"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -731,6 +731,10 @@
     "security_sec109_wallet_backup_atomic_file_spec.py": {
       "bytes": 2134,
       "sha256": "cf1dae823083aea319bc5dcb3550078fb20998fb457415ae159b6bf0b815d038"
+    },
+    "security_sec110_peer_config_atomic_file_spec.py": {
+      "bytes": 2103,
+      "sha256": "170e69033d490f9a6961a1271c4f0c60b1e7d1da7489e581c76306533ecab3d4"
     },
     "setup.cmd": {
       "bytes": 172,
