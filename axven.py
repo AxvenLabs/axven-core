@@ -1171,14 +1171,16 @@ class Mempool:
         self.total_bytes = 0
         chain.mempool = self
 
-    def add(self, tx: Transaction) -> str:
+    def add(self, tx: Transaction, work_gate=None) -> str:
         # UTXO/tip validation and mempool conflict publication are one atomic
         # operation.  Keep the global lock order chain -> mempool.
         with self.chain._state_lock:
             with self._lock:
-                return self._add_locked(tx)
+                if work_gate is None:
+                    return self._add_locked(tx)
+                return self._add_locked(tx, work_gate=work_gate)
 
-    def _add_locked(self, tx: Transaction) -> str:
+    def _add_locked(self, tx: Transaction, work_gate=None) -> str:
         if tx.is_coinbase:
             raise ValueError("Coinbase cannot enter the mempool")
         tid = tx.txid()
@@ -1189,29 +1191,60 @@ class Mempool:
         tx_bytes = serialized_transaction_size(tx)
         if self.total_bytes + tx_bytes > MAX_MEMPOOL_BYTES:
             raise ValueError("Mempool byte budget full")
-        ops = [outpoint(i.prev_txid, i.index) for i in tx._in()]
+        inputs = tx._in()
+        ops = [outpoint(i.prev_txid, i.index) for i in inputs]
         if len(ops) != len(set(ops)) or any(op in self.spent for op in ops):
             raise ValueError("Double spend")
+
+        # Resolve every UTXO and all cheap semantic failures before reserving
+        # scarce crypto-validation work.  This prevents malformed junk from
+        # burning the public ingress budget while keeping acceptance semantics.
+        resolved = []
         in_sum = 0
-        sh = tx.sighash()
-        for i, op in zip(tx._in(), ops):
+        auth_work_units = 0
+        next_height = self.chain.tip.height + 1
+        auth_cost = {
+            SCHEME_ED25519: 1,
+            SCHEME_ML_DSA: 4,
+            SCHEME_HYBRID: 5,
+        }
+        for i, op in zip(inputs, ops):
             u = self.chain.utxo.get(op)
             if u is None:
                 raise ValueError("Input not found / unconfirmed")
             if u["coinbase"] and self.chain.tip.height - u["height"] < COINBASE_MATURITY:
                 raise ValueError("Coinbase not mature")
-            if not verify_input(i, u, sh, self.chain.tip.height + 1):
+            if not canonical_input_valid(i):
                 raise ValueError("Bad signature")
+            try:
+                required_scheme = scheme_of_address(u["recipient"])
+            except ValueError as exc:
+                raise ValueError("Bad signature") from exc
+            supplied_scheme = _input_get(i, "scheme", "") or SCHEME_ED25519
+            if supplied_scheme != required_scheme:
+                raise ValueError("Bad signature")
+            auth_work_units += auth_cost[required_scheme]
+            resolved.append((i, u))
             in_sum += u["amount"]
+
         out_sum = 0
         for o in tx.outputs:
             if o.amount < DUST:
                 raise ValueError("Dust / non-positive output")
-            if not output_scheme_allowed(o.recipient, self.chain.tip.height + 1):
+            if not output_scheme_allowed(o.recipient, next_height):
                 raise ValueError("Forbidden output scheme")
             out_sum += o.amount
         if out_sum > in_sum:
             raise ValueError("Outputs exceed inputs")
+
+        if work_gate is not None and not work_gate(auth_work_units):
+            raise ValueError("transaction validation work budget exceeded")
+
+        sh = tx.sighash()
+        for i, u in resolved:
+            if not verify_input(i, u, sh, next_height):
+                raise ValueError("Bad signature")
+
         self.txs[tid] = tx
         self.fees[tid] = in_sum - out_sum
         self.tx_sizes[tid] = tx_bytes
