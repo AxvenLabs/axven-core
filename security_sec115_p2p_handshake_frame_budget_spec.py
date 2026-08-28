@@ -1,57 +1,4 @@
 #!/usr/bin/env python3
-from pathlib import Path
-import hashlib
-import json
-
-ROOT = Path(__file__).resolve().parents[1]
-p2p_path = ROOT / "p2p.py"
-text = p2p_path.read_text(encoding="utf-8")
-
-old = "PROTOCOL_VERSION = 2\nMAX_MESSAGE_BYTES = 16 * 1024 * 1024\nINBOUND_PEER_TIMEOUT = 5.0\n"
-new = "PROTOCOL_VERSION = 2\nMAX_MESSAGE_BYTES = 16 * 1024 * 1024\nMAX_HANDSHAKE_MESSAGE_BYTES = 4 * 1024\nINBOUND_PEER_TIMEOUT = 5.0\n"
-if old not in text:
-    raise SystemExit("SEC-115 constant anchor not found")
-text = text.replace(old, new, 1)
-
-old = '''def recv_message(sock: socket.socket,deadline=None) -> Dict[str, Any]:
-    n=struct.unpack(">I",_recv_exact(sock,4,deadline))[0]
-    if n<=0 or n>MAX_MESSAGE_BYTES: raise ProtocolError("invalid message length")
-    try:
-        msg=json.loads(_recv_exact(sock,n,deadline),object_pairs_hook=_reject_duplicate_json_keys)
-'''
-new = '''def recv_message(sock: socket.socket,deadline=None,max_bytes=None) -> Dict[str, Any]:
-    frame_limit=MAX_MESSAGE_BYTES if max_bytes is None else max_bytes
-    if type(frame_limit) is not int or frame_limit <= 0:
-        raise ProtocolError("invalid message byte limit")
-    n=struct.unpack(">I",_recv_exact(sock,4,deadline))[0]
-    if n<=0 or n>frame_limit: raise ProtocolError("invalid message length")
-    try:
-        msg=json.loads(_recv_exact(sock,n,deadline),object_pairs_hook=_reject_duplicate_json_keys)
-'''
-if old not in text:
-    raise SystemExit("SEC-115 recv_message anchor not found")
-text = text.replace(old, new, 1)
-
-old = '''def handshake(sock: socket.socket,deadline=None) -> Dict[str, Any]:
-    send_message(sock,hello_message())
-    peer=recv_message(sock,deadline=deadline)
-    validate_handshake(peer)
-'''
-new = '''def handshake(sock: socket.socket,deadline=None) -> Dict[str, Any]:
-    send_message(sock,hello_message())
-    peer=recv_message(
-        sock,
-        deadline=deadline,
-        max_bytes=MAX_HANDSHAKE_MESSAGE_BYTES,
-    )
-    validate_handshake(peer)
-'''
-if old not in text:
-    raise SystemExit("SEC-115 handshake anchor not found")
-text = text.replace(old, new, 1)
-p2p_path.write_text(text, encoding="utf-8", newline="\n")
-
-spec = r'''#!/usr/bin/env python3
 """SEC-115 bounds pre-handshake P2P frames independently of block-sync frames."""
 
 import socket
@@ -225,27 +172,9 @@ def main():
         "max_bytes=MAX_HANDSHAKE_MESSAGE_BYTES" in source,
     )
 
-    assert len(checks) == 7
-    print("SEC-115 P2P handshake frame budget: 7/7 GREEN")
+    assert len(checks) == 8
+    print("SEC-115 P2P handshake frame budget: 8/8 GREEN")
 
 
 if __name__ == "__main__":
     main()
-'''
-spec_path = ROOT / "security_sec115_p2p_handshake_frame_budget_spec.py"
-spec_path.write_text(spec, encoding="utf-8", newline="\n")
-
-manifest_path = ROOT / "release_manifest.json"
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-for name in ("p2p.py", spec_path.name):
-    path = ROOT / name
-    data = path.read_bytes()
-    manifest["files"][name] = {
-        "bytes": len(data),
-        "sha256": hashlib.sha256(data).hexdigest(),
-    }
-manifest_path.write_text(
-    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-    encoding="utf-8",
-    newline="\n",
-)
