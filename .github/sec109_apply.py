@@ -4,7 +4,7 @@ from pathlib import Path
 
 wallet_path=Path('wallet.py')
 s=wallet_path.read_text(encoding='utf-8')
-s=s.replace('import os\n','import os\nimport tempfile\n',1)
+s=s.replace('import os\n','import os\nimport tempfile\nfrom pathlib import Path\n',1)
 old='''def save_backup_file(identity, path, passphrase: str):
     data = export_backup(identity, passphrase)
     path = os.fspath(path)
