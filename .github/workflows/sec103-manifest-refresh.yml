@@ -1,0 +1,58 @@
+name: SEC-103 Manifest Refresh
+
+on:
+  push:
+    branches:
+      - security-sec103-peer-retry-snapshot-atomicity-clean
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.repository == 'AxvenLabs/axven-core' && github.ref == 'refs/heads/security-sec103-peer-retry-snapshot-atomicity-clean'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security-sec103-peer-retry-snapshot-atomicity-clean
+          fetch-depth: 1
+
+      - name: Refresh SEC-103 manifest pins
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest_path = Path('release_manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          for name in (
+              'axven_core.py',
+              'security_sec103_peer_retry_snapshot_atomicity_spec.py',
+          ):
+              data = Path(name).read_bytes()
+              manifest['files'][name] = {
+                  'bytes': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              }
+          manifest['files'] = dict(sorted(manifest['files'].items()))
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False) + '\n',
+              encoding='utf-8',
+              newline='\n',
+          )
+          PY
+
+      - name: Commit manifest and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/sec103-manifest-refresh.yml
+          git add release_manifest.json
+          git diff --cached --check
+          git diff --cached --exit-code && exit 1 || true
+          git commit -m "SEC-103: Refresh canonical manifest pins"
+          git push origin HEAD:security-sec103-peer-retry-snapshot-atomicity-clean
