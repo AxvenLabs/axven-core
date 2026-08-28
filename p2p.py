@@ -76,6 +76,15 @@ OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_GLOBAL_BURST = MAX_VALID_BLOCK_SIGNATURE_WORK
 OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_PER_HOST_RATE = 1024.0
 OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_PER_HOST_BURST = MAX_VALID_BLOCK_SIGNATURE_WORK
 MAX_OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_HOSTS = 1024
+# Public get_blocks can otherwise make a peer repeatedly build and send
+# near-16 MiB responses at attacker-selected rates. Reserve one maximum
+# response before serialization and refund the unused portion after the
+# exact response size is known. This is local serving policy only.
+INBOUND_SYNC_RESPONSE_BYTE_GLOBAL_RATE = 64 * 1024 * 1024
+INBOUND_SYNC_RESPONSE_BYTE_GLOBAL_BURST = 128 * 1024 * 1024
+INBOUND_SYNC_RESPONSE_BYTE_PER_HOST_RATE = 16 * 1024 * 1024
+INBOUND_SYNC_RESPONSE_BYTE_PER_HOST_BURST = 64 * 1024 * 1024
+MAX_INBOUND_SYNC_RESPONSE_BYTE_HOSTS = 1024
 MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
@@ -346,6 +355,90 @@ class _OutboundSyncBlockSignatureWorkLimiter(_InboundBlockSignatureWorkLimiter):
         )
 
 
+class _SyncResponseByteLease:
+    """Reservation that leaves only actual serialized bytes charged."""
+    def __init__(self,budget,host,reserved):
+        self._budget=budget
+        self._host=host
+        self._reserved=reserved
+        self._finished=False
+
+    def settle(self,actual_bytes):
+        if self._finished:
+            return
+        if (
+            type(actual_bytes) is not int
+            or actual_bytes <= 0
+            or actual_bytes > self._reserved
+        ):
+            raise ValueError("invalid sync response byte settlement")
+        self._finished=True
+        unused=self._reserved-actual_bytes
+        if unused:
+            self._budget._refund(self._host,unused)
+
+    def cancel(self):
+        if self._finished:
+            return
+        self._finished=True
+        self._budget._refund(self._host,self._reserved)
+
+
+class _InboundSyncResponseByteLimiter(_InboundTxWorkLimiter):
+    """Persistent global + source byte budget for public sync responses."""
+    def __init__(
+        self,
+        clock=time.monotonic,
+        global_rate=INBOUND_SYNC_RESPONSE_BYTE_GLOBAL_RATE,
+        global_burst=INBOUND_SYNC_RESPONSE_BYTE_GLOBAL_BURST,
+        per_host_rate=INBOUND_SYNC_RESPONSE_BYTE_PER_HOST_RATE,
+        per_host_burst=INBOUND_SYNC_RESPONSE_BYTE_PER_HOST_BURST,
+        max_hosts=MAX_INBOUND_SYNC_RESPONSE_BYTE_HOSTS,
+    ):
+        super().__init__(
+            clock=clock, global_rate=global_rate, global_burst=global_burst,
+            per_host_rate=per_host_rate, per_host_burst=per_host_burst,
+            max_hosts=max_hosts,
+        )
+
+    def reserve(self,host,size=MAX_MESSAGE_BYTES):
+        if type(size) is not int or size <= 0 or size > MAX_MESSAGE_BYTES:
+            return None
+        if not self.consume(host,size):
+            return None
+        return _SyncResponseByteLease(self,host,size)
+
+    def _refund(self,host,cost):
+        if type(cost) is not int or cost < 0:
+            raise ValueError("invalid sync response byte refund")
+        if cost == 0:
+            return
+        now=float(self._clock())
+        with self._lock:
+            global_tokens=self._refill(
+                self._global_tokens,self._global_last,now,
+                self._global_rate,self._global_burst,
+            )
+            self._global_tokens=min(self._global_burst,global_tokens+cost)
+            self._global_last=now
+
+            entry=self._hosts.get(host)
+            if entry is None:
+                # A live reservation normally keeps its source entry hot. If
+                # an adversarial source churn evicted it, do not recreate a
+                # fresh per-host bucket while refunding; global accounting is
+                # still restored without minting source capacity.
+                return
+            host_tokens,host_last=entry
+            host_tokens=self._refill(
+                host_tokens,host_last,now,
+                self._per_host_rate,self._per_host_burst,
+            )
+            host_tokens=min(self._per_host_burst,host_tokens+cost)
+            self._hosts[host]=(host_tokens,now)
+            self._hosts.move_to_end(host)
+
+
 def _reject_duplicate_json_keys(pairs):
     obj={}
     for key,value in pairs:
@@ -592,6 +685,7 @@ class PeerSession:
     def handle(
         self, msg, block_work_gate=None, tx_work_gate=None,
         block_signature_work_gate=None, stop_on_work_budget=False,
+        sync_response_byte_reserve=None,
     ):
         typ=_validate_message_type(msg)
         if typ=="status":
@@ -698,44 +792,58 @@ class PeerSession:
             if limit<1 or limit>MAX_SYNC_BLOCKS:
                 raise ProtocolError("invalid block limit")
 
-            with self.chain._state_lock:
-                start=0
-                for h in locator:
-                    node=self.chain.index.get(h)
-                    if node is None:
-                        continue
-                    height=node.height
-                    if (
-                        0 <= height < len(self.chain.blocks)
-                        and self.chain.blocks[height].hash() == h
-                    ):
-                        start=height+1
+            response_lease=None
+            if sync_response_byte_reserve is not None:
+                response_lease=sync_response_byte_reserve(MAX_MESSAGE_BYTES)
+                if response_lease is None:
+                    raise ProtocolError("sync response byte budget exceeded")
+
+            try:
+                with self.chain._state_lock:
+                    start=0
+                    for h in locator:
+                        node=self.chain.index.get(h)
+                        if node is None:
+                            continue
+                        height=node.height
+                        if (
+                            0 <= height < len(self.chain.blocks)
+                            and self.chain.blocks[height].hash() == h
+                        ):
+                            start=height+1
+                            break
+                    blocks=list(
+                        self.chain.blocks[
+                            start:start+limit
+                        ]
+                    )
+
+                raw_blocks=[]
+                reply_size=len(_json_bytes({"type":"blocks","blocks":[]}))
+                for block in blocks:
+                    raw_block=block.to_dict()
+                    raw_block_size=len(_json_bytes(raw_block))
+                    candidate_size=(
+                        reply_size
+                        + raw_block_size
+                        + (1 if raw_blocks else 0)
+                    )
+                    if candidate_size>MAX_MESSAGE_BYTES:
                         break
-                blocks=list(
-                    self.chain.blocks[
-                        start:start+limit
-                    ]
-                )
+                    raw_blocks.append(raw_block)
+                    reply_size=candidate_size
 
-            raw_blocks=[]
-            reply_size=len(_json_bytes({"type":"blocks","blocks":[]}))
-            for block in blocks:
-                raw_block=block.to_dict()
-                raw_block_size=len(_json_bytes(raw_block))
-                candidate_size=(
-                    reply_size
-                    + raw_block_size
-                    + (1 if raw_blocks else 0)
-                )
-                if candidate_size>MAX_MESSAGE_BYTES:
-                    break
-                raw_blocks.append(raw_block)
-                reply_size=candidate_size
-
-            return {
-                "type":"blocks",
-                "blocks":raw_blocks,
-            }
+                reply={
+                    "type":"blocks",
+                    "blocks":raw_blocks,
+                }
+                if response_lease is not None:
+                    response_lease.settle(reply_size)
+                return reply
+            except Exception:
+                if response_lease is not None:
+                    response_lease.cancel()
+                raise
         if typ=="blocks":
             if any(key not in ("type","blocks") for key in msg):
                 raise ProtocolError("unknown blocks message field")
@@ -802,6 +910,7 @@ class PeerSession:
 def serve_connection(
     sock, session:PeerSession, block_work_gate=None, tx_work_gate=None,
     block_signature_work_gate=None, frame_byte_budget=None,
+    sync_response_byte_reserve=None,
 ):
     try:
         handshake(sock,deadline=time.monotonic()+INBOUND_PEER_TIMEOUT)
@@ -821,12 +930,17 @@ def serve_connection(
                         frame_byte_budget=frame_byte_budget,
                     )
                 sock.settimeout(INBOUND_PEER_TIMEOUT)
-                if tx_work_gate is not None or block_signature_work_gate is not None:
+                if (
+                    tx_work_gate is not None
+                    or block_signature_work_gate is not None
+                    or sync_response_byte_reserve is not None
+                ):
                     reply=session.handle(
                         msg,
                         block_work_gate=block_work_gate,
                         tx_work_gate=tx_work_gate,
                         block_signature_work_gate=block_signature_work_gate,
+                        sync_response_byte_reserve=sync_response_byte_reserve,
                     )
                 elif block_work_gate is not None:
                     reply=session.handle(msg,block_work_gate=block_work_gate)
@@ -865,6 +979,7 @@ class NodeServer:
         self._tx_work_limiter=_InboundTxWorkLimiter()
         self._block_signature_work_limiter=_InboundBlockSignatureWorkLimiter()
         self._frame_byte_budget=_InboundFrameByteBudget()
+        self._sync_response_byte_limiter=_InboundSyncResponseByteLimiter()
 
     @property
     def address(self):
@@ -912,6 +1027,9 @@ class NodeServer:
                     block_signature_gate=lambda cost: (
                         self._block_signature_work_limiter.consume(source_host,cost)
                     )
+                    sync_response_byte_reserve=lambda cost: (
+                        self._sync_response_byte_limiter.reserve(source_host,cost)
+                    )
                     try:
                         serve_connection(
                             client,self.session,
@@ -919,6 +1037,7 @@ class NodeServer:
                             tx_work_gate=tx_gate,
                             block_signature_work_gate=block_signature_gate,
                             frame_byte_budget=self._frame_byte_budget,
+                            sync_response_byte_reserve=sync_response_byte_reserve,
                         )
                     finally:
                         with self._lock:
