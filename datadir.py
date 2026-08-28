@@ -6,6 +6,11 @@ from pathlib import Path
 import axven, wallet
 from core import AxvenCore
 
+# Persisted peer configuration is small operator metadata, not chain state.
+# Keep enough room for MAX_CONFIGURED_PEERS entries even when 255-character
+# Unicode hosts expand under json.dumps(ensure_ascii=True).
+MAX_PEER_CONFIG_BYTES = 1024 * 1024
+
 class DataDir:
     def __init__(self,path):
         self.path=Path(path).expanduser().resolve()
@@ -42,9 +47,18 @@ class DataDir:
         if not self.peer_file.exists():
             return []
         import json
-        raw=json.loads(self.peer_file.read_text(encoding="utf-8"))
+        with open(self.peer_file,"rb") as f:
+            encoded=f.read(MAX_PEER_CONFIG_BYTES + 1)
+        if len(encoded) > MAX_PEER_CONFIG_BYTES:
+            raise ValueError("peer config too large")
+        try:
+            raw=json.loads(encoded.decode("utf-8"))
+        except (UnicodeError,json.JSONDecodeError) as exc:
+            raise ValueError("invalid peer config") from exc
         if not isinstance(raw,list):
             raise ValueError("peer config must be a list")
+        if len(raw) > AxvenCore.MAX_CONFIGURED_PEERS:
+            raise ValueError("too many configured peers")
         peers=[]
         for peer in raw:
             if isinstance(peer,dict):
@@ -58,8 +72,13 @@ class DataDir:
         import json
         normalized=[]
         for peer in peers:
+            if len(normalized) >= AxvenCore.MAX_CONFIGURED_PEERS:
+                raise ValueError("too many configured peers")
             host,port=AxvenCore._parse_peer(peer)
             normalized.append({"host":host,"port":port})
+        payload=(json.dumps(normalized,indent=2,sort_keys=True)+"\n").encode("utf-8")
+        if len(payload) > MAX_PEER_CONFIG_BYTES:
+            raise ValueError("peer config too large")
         fd=None
         tmp_path=None
         try:
@@ -74,7 +93,7 @@ class DataDir:
                 os.fchmod(fd,0o600)
             with os.fdopen(fd,"w",encoding="utf-8") as f:
                 fd=None
-                f.write(json.dumps(normalized,indent=2,sort_keys=True)+"\n")
+                f.write(payload.decode("utf-8"))
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(tmp_path,self.peer_file)

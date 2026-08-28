@@ -257,16 +257,16 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 30390,
-      "sha256": "b11a6243525bd23cced49c3b169cee9e91535e061d29bf240e9282de1b199b18"
+      "bytes": 30774,
+      "sha256": "790ad6aca935d89042f2f284e5717642997e12ed1e0bfe48e6d977fb01961d8a"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
       "sha256": "73f4aa368d9341cc708f2396bedd139ccf14138e4fe8e37aa81de463bc589344"
     },
     "datadir.py": {
-      "bytes": 3577,
-      "sha256": "309df2cfecc587ffea05a0a2bd4a948e57725a4e4dc7c54ebba6e02c942d1269"
+      "bytes": 4547,
+      "sha256": "5084454b5559ec038c5d21732cfc3cb4b63ade3a7b1dac93a08d52963a313eb4"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -795,6 +795,10 @@
     "security_sec125_p2p_json_preparse_depth_spec.py": {
       "bytes": 5913,
       "sha256": "65b5ade89a39a43ed11ca60814fb5346984c36fb914b65ad719663c90ddf7b3e"
+    },
+    "security_sec126_peer_config_resource_bounds_spec.py": {
+      "bytes": 6499,
+      "sha256": "d68deaec1244fff438bac32613e203c4210be42a032fed37f275f6b402b6927a"
     },
     "setup.cmd": {
       "bytes": 172,

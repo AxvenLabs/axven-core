@@ -32,6 +32,10 @@ def _peer_locked(method):
 
 
 class AxvenCore:
+    # Configured outbound peers drive retry/health metadata and persisted
+    # configuration. Bound operator-controlled cardinality so local RPC or
+    # a corrupt config cannot grow those structures without limit.
+    MAX_CONFIGURED_PEERS = 256
     PEER_HEALTH_INCIDENT_HISTORY_LIMIT = 64
     PEER_HEALTH_HISTORY_LIMIT = 64
 
@@ -367,6 +371,8 @@ class AxvenCore:
     def add_outbound_peer(self, peer):
         addr=self._parse_peer(peer)
         if addr not in self.outbound_peers:
+            if len(self.outbound_peers) >= self.MAX_CONFIGURED_PEERS:
+                raise ValueError("configured peer limit exceeded")
             self.outbound_peers.append(addr)
             self.peer_health_current_state[addr]=self.peer_health_state(addr)
             if self.peer_persist_callback is not None:
