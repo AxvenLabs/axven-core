@@ -36,6 +36,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
+          python .github/sec120_prepatch.py
           python .github/sec120_apply.py
           python security_sec064_p2p_block_tx_count_bounds_spec.py
           python security_sec090_mempool_atomicity_spec.py
@@ -54,6 +55,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
+          Remove-Item .github/sec120_prepatch.py
           Remove-Item .github/sec120_apply.py
           Remove-Item .github/workflows/sec120-apply.yml
           git config user.name "AxvenLabs Security Automation"
