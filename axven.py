@@ -617,6 +617,31 @@ def _apply_forward(block, utxo, height, issued):
     return True, "OK", undo, reward, fees
 
 
+class _IndexedBlockPath:
+    """Lazy ancestry sequence backed by active blocks plus retained side nodes."""
+    def __init__(self, active_blocks, fork_height, side_nodes):
+        self._active_blocks = active_blocks
+        self.fork_height = fork_height
+        self.side_nodes = tuple(side_nodes)
+        self._length = fork_height + 1 + len(self.side_nodes)
+
+    def __len__(self):
+        return self._length
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            return [self[i] for i in range(*key.indices(self._length))]
+        if type(key) is not int:
+            raise TypeError("block path index must be int or slice")
+        if key < 0:
+            key += self._length
+        if key < 0 or key >= self._length:
+            raise IndexError("block path index out of range")
+        if key <= self.fork_height:
+            return self._active_blocks[key]
+        return self.side_nodes[key - self.fork_height - 1].block
+
+
 class Blockchain:
     def __init__(self):
         self.blocks = []
@@ -625,6 +650,7 @@ class Blockchain:
         self.chainwork = 0
         self.index = {}
         self.undo = {}
+        self.side_sizes = {}
         self.orphans = {}
         self.orphan_sizes = {}
         self.orphan_bytes = 0
@@ -654,22 +680,42 @@ class Blockchain:
         out.reverse()
         return out
 
+    def _is_active_index_node(self, block_hash, node):
+        height = node.height
+        return (
+            0 <= height < len(self.blocks)
+            and self.blocks[height].hash() == block_hash
+        )
+
+    def _indexed_path_view(self, node):
+        """Return exact ancestry semantics without materializing the active chain."""
+        side_rev = []
+        seen = set()
+        cur = node
+        while True:
+            block_hash = cur.block.hash()
+            if self._is_active_index_node(block_hash, cur):
+                side_rev.reverse()
+                return _IndexedBlockPath(self.blocks, cur.height, side_rev)
+            if block_hash in seen:
+                raise RuntimeError("side-chain ancestry cycle")
+            seen.add(block_hash)
+            side_rev.append(cur)
+            cur = self.index.get(cur.parent_hash)
+            if cur is None:
+                raise RuntimeError("side-chain ancestry is not indexed")
+
     def _state_for_index_node(self, node):
         """Build an isolated validated state snapshot at an indexed node."""
-        active_hashes = {b.hash() for b in self.blocks}
-        branch = []
-        cur = node
-        while cur.block.hash() not in active_hashes:
-            branch.append(cur)
-            cur = self.index[cur.parent_hash]
-        fork_hash = cur.block.hash()
-        branch.reverse()
+        path = self._indexed_path_view(node)
+        branch = list(path.side_nodes)
+        fork_height = path.fork_height
 
         trial_utxo = copy.deepcopy(self.utxo)
         trial_blocks = list(self.blocks)
         trial_issued = self.total_issued
 
-        while trial_blocks[-1].hash() != fork_hash:
+        while len(trial_blocks) - 1 > fork_height:
             blk = trial_blocks.pop()
             undo = self.undo.get(blk.hash())
             if undo is None:
@@ -700,31 +746,32 @@ class Blockchain:
         return ok, reason
 
     def _side_index_snapshot(self):
-        active_hashes = {b.hash() for b in self.blocks}
-        side_nodes = {
-            block_hash: node
-            for block_hash, node in self.index.items()
-            if block_hash not in active_hashes
-        }
-        side_sizes = {
-            block_hash: serialized_block_size(node.block)
-            for block_hash, node in side_nodes.items()
-        }
-        return active_hashes, side_nodes, side_sizes
+        side_nodes = {}
+        side_sizes = {}
+        for block_hash, block_bytes in self.side_sizes.items():
+            node = self.index.get(block_hash)
+            if node is None:
+                raise RuntimeError("side-chain tracking/index mismatch")
+            side_nodes[block_hash] = node
+            side_sizes[block_hash] = block_bytes
+        return side_nodes, side_sizes
 
-    def _protected_side_ancestry(self, parent_hash, active_hashes):
+    def _protected_side_ancestry(self, parent_hash):
         protected = set()
         current_hash = parent_hash
-        while current_hash in self.index and current_hash not in active_hashes:
+        while current_hash in self.side_sizes:
             if current_hash in protected:
                 raise RuntimeError("side-chain ancestry cycle")
+            node = self.index.get(current_hash)
+            if node is None:
+                raise RuntimeError("side-chain tracking/index mismatch")
             protected.add(current_hash)
-            current_hash = self.index[current_hash].parent_hash
+            current_hash = node.parent_hash
         return protected
 
     def _prune_side_index_for_budget(self, extra_count=0, extra_bytes=0, protected=None):
         protected = set(protected or ())
-        _active_hashes, side_nodes, side_sizes = self._side_index_snapshot()
+        side_nodes, side_sizes = self._side_index_snapshot()
         side_count = len(side_nodes)
         side_bytes = sum(side_sizes.values())
 
@@ -774,6 +821,7 @@ class Blockchain:
 
         for block_hash in removed:
             self.index.pop(block_hash, None)
+            self.side_sizes.pop(block_hash, None)
         return within_budget()
 
     def balance(self, address):
@@ -867,7 +915,7 @@ class Blockchain:
             return False, "orphan"
         parent_node = self.index[parent]
         height = parent_node.height + 1
-        path = self._ancestry(parent)
+        path = self._indexed_path_view(parent_node)
         err = _check_context(block, path, height)
         if err:
             return False, err
@@ -886,8 +934,8 @@ class Blockchain:
                 return False, reason
 
             block_bytes = serialized_block_size(block)
-            active_hashes, _side_nodes, side_sizes = self._side_index_snapshot()
-            protected = self._protected_side_ancestry(parent, active_hashes)
+            _side_nodes, side_sizes = self._side_index_snapshot()
+            protected = self._protected_side_ancestry(parent)
             protected_bytes = sum(side_sizes[h] for h in protected)
             if (
                 len(protected) + 1 > MAX_SIDECHAIN_BLOCKS
@@ -925,6 +973,7 @@ class Blockchain:
             self._prune_side_index_for_budget()
             status = "reorg"
         else:
+            self.side_sizes[h] = block_bytes
             status = "side-chain"
         self._connect_orphans(h)
         return True, status
@@ -934,16 +983,11 @@ class Blockchain:
         tblocks = list(self.blocks)
         tissued, tcw = self.total_issued, self.chainwork
         tundo = dict(self.undo)
-        active_hashes = {b.hash() for b in self.blocks}
-        branch = []
-        cur = node
-        while cur.block.hash() not in active_hashes:
-            branch.append(cur)
-            cur = self.index[cur.parent_hash]
-        fork_hash = cur.block.hash()
-        branch.reverse()
+        path = self._indexed_path_view(node)
+        branch = list(path.side_nodes)
+        fork_height = path.fork_height
         disconnected = []
-        while tblocks[-1].hash() != fork_hash:
+        while len(tblocks) - 1 > fork_height:
             blk = tblocks[-1]
             undo = tundo.pop(blk.hash())
             _undo_forward(undo, tu)
@@ -961,8 +1005,16 @@ class Blockchain:
             tundo[blk.hash()] = undo
             tissued += reward
             tcw += work_of(blk.target)
+
+        new_side_sizes = dict(self.side_sizes)
+        for bn in branch:
+            new_side_sizes.pop(bn.block.hash(), None)
+        for blk in disconnected:
+            new_side_sizes[blk.hash()] = serialized_block_size(blk)
+
         self.utxo, self.blocks = tu, tblocks
         self.total_issued, self.chainwork, self.undo = tissued, tcw, tundo
+        self.side_sizes = new_side_sizes
         self._reevaluate_mempool(disconnected)
         return True, "OK"
 
