@@ -1,0 +1,55 @@
+name: SEC-118 Compatibility Fix
+
+on:
+  push:
+    branches:
+      - security-sec118-inbound-block-work-budget
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: security-sec118-inbound-block-work-budget
+          persist-credentials: true
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Install
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Apply compatibility fix and validate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          python .github/sec118_compat_fix.py
+          python security_sec064_p2p_block_tx_count_bounds_spec.py
+          python security_sec118_p2p_inbound_block_work_budget_spec.py
+          python p2p_spec_test.py
+          python p2p_tcp_lifecycle_test.py
+          python devnet_rehearsal.py
+          python release_packaging_test.py
+          python run_full_validation.py
+          python security_tail_runner.py
+      - name: Commit clean SEC-118 compatibility fix
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          Remove-Item .github/sec118_compat_fix.py
+          Remove-Item .github/workflows/sec118-compat-fix.yml
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "SEC-118: Preserve unmetered block API compatibility"
+          git push origin HEAD:security-sec118-inbound-block-work-budget
