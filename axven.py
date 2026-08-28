@@ -163,6 +163,8 @@ DUST = 1
 MAX_BLOCK_TXS = 1_000
 MAX_ORPHAN_BLOCKS = 256
 MAX_ORPHAN_BYTES = 64 * 1024 * 1024
+MAX_SIDECHAIN_BLOCKS = 64
+MAX_SIDECHAIN_BYTES = 64 * 1024 * 1024
 MAX_MEMPOOL_TXS = 4096
 MAX_MEMPOOL_BYTES = 64 * 1024 * 1024
 
@@ -697,6 +699,83 @@ class Blockchain:
         )
         return ok, reason
 
+    def _side_index_snapshot(self):
+        active_hashes = {b.hash() for b in self.blocks}
+        side_nodes = {
+            block_hash: node
+            for block_hash, node in self.index.items()
+            if block_hash not in active_hashes
+        }
+        side_sizes = {
+            block_hash: serialized_block_size(node.block)
+            for block_hash, node in side_nodes.items()
+        }
+        return active_hashes, side_nodes, side_sizes
+
+    def _protected_side_ancestry(self, parent_hash, active_hashes):
+        protected = set()
+        current_hash = parent_hash
+        while current_hash in self.index and current_hash not in active_hashes:
+            if current_hash in protected:
+                raise RuntimeError("side-chain ancestry cycle")
+            protected.add(current_hash)
+            current_hash = self.index[current_hash].parent_hash
+        return protected
+
+    def _prune_side_index_for_budget(self, extra_count=0, extra_bytes=0, protected=None):
+        protected = set(protected or ())
+        _active_hashes, side_nodes, side_sizes = self._side_index_snapshot()
+        side_count = len(side_nodes)
+        side_bytes = sum(side_sizes.values())
+
+        def within_budget():
+            return (
+                side_count + extra_count <= MAX_SIDECHAIN_BLOCKS
+                and side_bytes + extra_bytes <= MAX_SIDECHAIN_BYTES
+            )
+
+        if within_budget():
+            return True
+
+        children = {block_hash: set() for block_hash in side_nodes}
+        for block_hash, node in side_nodes.items():
+            if node.parent_hash in children:
+                children[node.parent_hash].add(block_hash)
+
+        def leaf_key(block_hash):
+            node = side_nodes[block_hash]
+            return (node.height, block_hash)
+
+        leaves = [
+            block_hash for block_hash in side_nodes
+            if not children[block_hash] and block_hash not in protected
+        ]
+        leaves.sort(key=leaf_key)
+        removed = []
+
+        while not within_budget() and leaves:
+            block_hash = leaves.pop(0)
+            if block_hash not in side_nodes or block_hash in protected:
+                continue
+            node = side_nodes.pop(block_hash)
+            side_count -= 1
+            side_bytes -= side_sizes.pop(block_hash)
+            removed.append(block_hash)
+            parent_hash = node.parent_hash
+            if parent_hash in children:
+                children[parent_hash].discard(block_hash)
+                if (
+                    parent_hash in side_nodes
+                    and not children[parent_hash]
+                    and parent_hash not in protected
+                ):
+                    leaves.append(parent_hash)
+                    leaves.sort(key=leaf_key)
+
+        for block_hash in removed:
+            self.index.pop(block_hash, None)
+        return within_budget()
+
     def balance(self, address):
         with self._state_lock:
             return sum(
@@ -798,12 +877,29 @@ class Blockchain:
         # checks only. Validate its transaction transition and committed state
         # root now, so invalid branch state never becomes trusted index state.
         # Winning branches are validated atomically by _reorg_to below.
-        if parent != self.tip.hash() and cw <= self.chainwork:
+        is_nonwinning_side = parent != self.tip.hash() and cw <= self.chainwork
+        if is_nonwinning_side:
             ok, reason = self._validate_side_block_state(
                 block, parent_node, height
             )
             if not ok:
                 return False, reason
+
+            block_bytes = serialized_block_size(block)
+            active_hashes, _side_nodes, side_sizes = self._side_index_snapshot()
+            protected = self._protected_side_ancestry(parent, active_hashes)
+            protected_bytes = sum(side_sizes[h] for h in protected)
+            if (
+                len(protected) + 1 > MAX_SIDECHAIN_BLOCKS
+                or protected_bytes + block_bytes > MAX_SIDECHAIN_BYTES
+            ):
+                return False, "side-chain retention budget exceeded"
+            if not self._prune_side_index_for_budget(
+                extra_count=1,
+                extra_bytes=block_bytes,
+                protected=protected,
+            ):
+                return False, "side-chain retention budget full"
 
         node = BlockNode(block, height, cw, parent)
         self.index[h] = node
@@ -826,6 +922,7 @@ class Blockchain:
             if not ok:
                 del self.index[h]
                 return False, f"reorg aborted: {reason}"
+            self._prune_side_index_for_budget()
             status = "reorg"
         else:
             status = "side-chain"
