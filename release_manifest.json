@@ -863,6 +863,10 @@
     "wallet.py": {
       "bytes": 15147,
       "sha256": "36ee8b06b57fafb5dea28bc8a9d59a05b2f3d4a7ab76352445821e070754b47e"
+    },
+    "wallet_persistence_cli_test.py": {
+      "bytes": 3243,
+      "sha256": "0826cd7f03dca3bfa679c0052ae749d2adb0195eea8c065fa8ebb197b9a54804"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
