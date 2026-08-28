@@ -20,6 +20,11 @@ def main():
     ok("manifest release",m["release"]=="axven-core-v0.9.0-devnet-github-ready-checkpoint26")
     ok("activation explicitly executed",m["activation"]=="EXECUTED")
 
+    # SEC-103 temporary diagnostic: print canonical bytes/hash before strict verification.
+    for diag_name in ("axven_core.py", "security_sec103_peer_retry_snapshot_atomicity_spec.py"):
+        diag_data=(root/diag_name).read_bytes()
+        print("SEC103_MANIFEST_DIAG",diag_name,len(diag_data),hashlib.sha256(diag_data).hexdigest())
+
     # Manifest hashes verify exact packaged sources.
     for name,meta in m["files"].items():
         data=(root/name).read_bytes()
