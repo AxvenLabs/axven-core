@@ -1,35 +1,4 @@
-from pathlib import Path
-import hashlib
-import json
-
-p2p_path = Path("p2p.py")
-source = p2p_path.read_text(encoding="utf-8")
-old = '        if typ=="status": return None\n'
-new = '''        if typ=="status":
-            expected_fields={"type","height","tip_hash","chainwork"}
-            if set(msg) != expected_fields:
-                raise ProtocolError("invalid status message fields")
-            raw_height=msg.get("height")
-            if type(raw_height) is not int or raw_height < 0:
-                raise ProtocolError("invalid status height")
-            raw_tip_hash=msg.get("tip_hash")
-            if (
-                not isinstance(raw_tip_hash,str)
-                or len(raw_tip_hash) != 64
-                or any(c not in "0123456789abcdef" for c in raw_tip_hash)
-            ):
-                raise ProtocolError("invalid status tip hash")
-            raw_chainwork=msg.get("chainwork")
-            if type(raw_chainwork) is not int or raw_chainwork < 0:
-                raise ProtocolError("invalid status chainwork")
-            return None
-'''
-if source.count(old) != 1:
-    raise SystemExit("SEC-113 status anchor mismatch")
-source = source.replace(old, new, 1).replace("\r\n", "\n")
-p2p_path.write_text(source, encoding="utf-8", newline="\n")
-
-spec = '''#!/usr/bin/env python3
+#!/usr/bin/env python3
 """SEC-113 canonical P2P status envelope and field domains."""
 
 import axven
@@ -94,21 +63,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-spec_path = Path("security_sec113_p2p_status_envelope_spec.py")
-spec_path.write_text(spec, encoding="utf-8", newline="\n")
-
-manifest_path = Path("release_manifest.json")
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-for name in ("p2p.py", spec_path.name):
-    data = Path(name).read_bytes().replace(b"\r\n", b"\n")
-    Path(name).write_bytes(data)
-    manifest["files"][name] = {
-        "bytes": len(data),
-        "sha256": hashlib.sha256(data).hexdigest(),
-    }
-manifest_path.write_text(
-    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-    encoding="utf-8",
-    newline="\n",
-)
