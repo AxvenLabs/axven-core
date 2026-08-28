@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 29562,
-      "sha256": "0d00c4adc1aaedef045b00d9bfc1c4ba4dac1322bd76ae4ddcd07a8088d15499"
+      "bytes": 30390,
+      "sha256": "b11a6243525bd23cced49c3b169cee9e91535e061d29bf240e9282de1b199b18"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 34721,
-      "sha256": "ff32e3fa6a082815812e742a340f1ba0f71b379eee12b43a5e3ba97afab5da7d"
+      "bytes": 38336,
+      "sha256": "405dd3efe1148c1bf2082e846fa6be5135d35a515d21e974496122a78cb44614"
     },
     "p2p_tx_bounds.py": {
       "bytes": 2261,
@@ -775,6 +775,10 @@
     "security_sec120_block_signature_work_spec.py": {
       "bytes": 11368,
       "sha256": "d533ec8b43916573370a0d88a3436b0de2e416e2a7226cfa548b3c163a339e4f"
+    },
+    "security_sec121_outbound_sync_work_budget_spec.py": {
+      "bytes": 9270,
+      "sha256": "9e672197566e8013cdd368f457515321450033bb745c651476238a479a4adf0c"
     },
     "setup.cmd": {
       "bytes": 172,
