@@ -237,7 +237,24 @@ class PeerSession:
 
     def handle(self,msg):
         typ=_validate_message_type(msg)
-        if typ=="status": return None
+        if typ=="status":
+            expected_fields={"type","height","tip_hash","chainwork"}
+            if set(msg) != expected_fields:
+                raise ProtocolError("invalid status message fields")
+            raw_height=msg.get("height")
+            if type(raw_height) is not int or raw_height < 0:
+                raise ProtocolError("invalid status height")
+            raw_tip_hash=msg.get("tip_hash")
+            if (
+                not isinstance(raw_tip_hash,str)
+                or len(raw_tip_hash) != 64
+                or any(c not in "0123456789abcdef" for c in raw_tip_hash)
+            ):
+                raise ProtocolError("invalid status tip hash")
+            raw_chainwork=msg.get("chainwork")
+            if type(raw_chainwork) is not int or raw_chainwork < 0:
+                raise ProtocolError("invalid status chainwork")
+            return None
         if typ=="get_status":
             if any(key != "type" for key in msg):
                 raise ProtocolError("unknown get_status message field")
