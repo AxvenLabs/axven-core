@@ -6,6 +6,26 @@ from datadir import DataDir
 from rpc import RPCServer
 from explorer import ExplorerServer
 
+def _schedule_peer_retry_if_configured(core, peer, delay, base_interval):
+    """Atomically publish retry metadata only for a configured peer."""
+    addr=core._parse_peer(peer)
+    with core._peer_lock:
+        if addr not in core.outbound_peers:
+            return False
+        core.set_peer_retry_schedule(addr,delay,base_interval)
+        return True
+
+def _reschedule_peer_after_sync(core, peer, base_interval, cap=60.0):
+    """Atomically compute/publish retry state after an outbound sync."""
+    addr=core._parse_peer(peer)
+    with core._peer_lock:
+        if addr not in core.outbound_peers:
+            return None
+        retry_delay=core.peer_retry_delay(addr,base_interval,cap)
+        core.set_peer_retry_schedule(addr,retry_delay,base_interval)
+        core.record_peer_health_transition(addr)
+        return retry_delay
+
 def _passphrase(confirm=False):
     env=os.environ.get("AXVEN_WALLET_PASSPHRASE")
     if env:return env
@@ -74,11 +94,13 @@ def main():
                 for addr in core.outbound_peer_addresses()
             }
             for addr in core.outbound_peer_addresses():
-                core.set_peer_retry_schedule(
+                if not _schedule_peer_retry_if_configured(
+                    core,
                     addr,
                     base_sync_interval,
                     base_sync_interval,
-                )
+                ):
+                    peer_next_sync.pop(addr,None)
 
             while not stop and not core.shutdown_requested:
                 time.sleep(.2)
@@ -93,12 +115,13 @@ def main():
                 # Runtime-added peers start on the normal base interval.
                 for addr in configured:
                     if addr not in peer_next_sync:
-                        peer_next_sync[addr]=now+base_sync_interval
-                        core.set_peer_retry_schedule(
+                        if _schedule_peer_retry_if_configured(
+                            core,
                             addr,
                             base_sync_interval,
                             base_sync_interval,
-                        )
+                        ):
+                            peer_next_sync[addr]=now+base_sync_interval
 
                 # Each peer is scheduled independently. A failing peer's
                 # backoff must never slow healthy peers.
@@ -108,22 +131,16 @@ def main():
 
                     core.sync_outbound_peer(addr)
 
-                    if addr not in set(core.outbound_peer_addresses()):
+                    retry_delay=_reschedule_peer_after_sync(
+                        core,addr,base_sync_interval,60.0
+                    )
+                    if retry_delay is None:
                         peer_next_sync.pop(addr,None)
                         continue
 
-                    retry_delay=core.peer_retry_delay(
-                        addr,base_sync_interval,60.0
-                    )
                     peer_next_sync[addr]=(
                         time.monotonic()+retry_delay
                     )
-                    core.set_peer_retry_schedule(
-                        addr,
-                        retry_delay,
-                        base_sync_interval,
-                    )
-                    core.record_peer_health_transition(addr)
         finally:
             dd.save_chain(core.chain)
             explorer.stop(); rpc.stop(); core.stop_p2p()
