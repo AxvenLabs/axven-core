@@ -16,6 +16,7 @@ INBOUND_PEER_TIMEOUT = 5.0
 INBOUND_MESSAGE_DEADLINE = 30.0
 OUTBOUND_MESSAGE_DEADLINE = 30.0
 MAX_INBOUND_PEERS = 32
+MAX_INBOUND_PEERS_PER_HOST = 4
 MAX_SYNC_BLOCKS = 128
 MAX_LOCATOR_HASHES = 64
 MAX_P2P_TX_INPUTS = 1024
@@ -429,7 +430,7 @@ class NodeServer:
         self.session=PeerSession(self.chain,self.mempool)
         self.host=host; self.port=port
         self._sock=None; self._thread=None; self._stop=threading.Event()
-        self._clients=set(); self._lock=threading.Lock()
+        self._clients=set(); self._client_hosts={}; self._lock=threading.Lock()
 
     @property
     def address(self):
@@ -444,15 +445,24 @@ class NodeServer:
         self._sock=sock
         def loop():
             while not self._stop.is_set():
-                try: c,_=sock.accept()
+                try: c,remote=sock.accept()
                 except socket.timeout: continue
                 except OSError: break
                 c.settimeout(INBOUND_PEER_TIMEOUT)
+                remote_host=remote[0]
                 with self._lock:
-                    if len(self._clients) >= MAX_INBOUND_PEERS:
+                    host_count=sum(
+                        1 for host in self._client_hosts.values()
+                        if host == remote_host
+                    )
+                    if (
+                        len(self._clients) >= MAX_INBOUND_PEERS
+                        or host_count >= MAX_INBOUND_PEERS_PER_HOST
+                    ):
                         reject = True
                     else:
                         self._clients.add(c)
+                        self._client_hosts[c]=remote_host
                         reject = False
                 if reject:
                     try:
@@ -463,7 +473,9 @@ class NodeServer:
                 def worker(client=c):
                     try: serve_connection(client,self.session)
                     finally:
-                        with self._lock:self._clients.discard(client)
+                        with self._lock:
+                            self._clients.discard(client)
+                            self._client_hosts.pop(client,None)
                 threading.Thread(target=worker,daemon=True).start()
         self._thread=threading.Thread(target=loop,daemon=True); self._thread.start()
         return self

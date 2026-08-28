@@ -301,8 +301,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 22440,
-      "sha256": "320d3d91b3969f25a0287aa499279c3580eec1c88c59fada420a4112a53d638c"
+      "bytes": 22975,
+      "sha256": "f73be4f2a85467b1fe6b087ed29dd765b2840eda1d2ca54141442a2a8c7fdc06"
     },
     "p2p_tx_bounds.py": {
       "bytes": 2261,
@@ -707,6 +707,10 @@
     "security_sec104_peer_retry_delay_domain_spec.py": {
       "bytes": 2575,
       "sha256": "db99111097e2744c4b30d808069106f494196d40f6892e79c2e3cb48943a57c4"
+    },
+    "security_sec105_p2p_inbound_per_host_bounds_spec.py": {
+      "bytes": 2842,
+      "sha256": "80f75c50fbf31b05e92f9720c64201130935df05397c18336f89d32da6f320f1"
     },
     "setup.cmd": {
       "bytes": 172,
