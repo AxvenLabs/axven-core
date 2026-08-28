@@ -617,6 +617,89 @@ def _apply_forward(block, utxo, height, issued):
     return True, "OK", undo, reward, fees
 
 
+class _UTXOOverlay:
+    """Copy-on-write UTXO view for tentative validation/reorg state.
+
+    Reads fall through to the live base mapping while writes/deletes are kept
+    in a small delta.  The live base is never mutated.  Full materialization
+    is reserved for a successfully validated reorg publication.
+    """
+    _MISSING = object()
+
+    def __init__(self, base):
+        self._base = base
+        self._writes = {}
+        self._deleted = set()
+
+    @property
+    def delta_size(self):
+        return len(self._writes) + len(self._deleted)
+
+    def __contains__(self, key):
+        return key in self._writes or (
+            key not in self._deleted and key in self._base
+        )
+
+    def __getitem__(self, key):
+        if key in self._writes:
+            return self._writes[key]
+        if key in self._deleted:
+            raise KeyError(key)
+        return self._base[key]
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
+    def __setitem__(self, key, value):
+        self._writes[key] = value
+        self._deleted.discard(key)
+
+    def __delitem__(self, key):
+        if key in self._writes:
+            self._writes.pop(key)
+            if key in self._base:
+                self._deleted.add(key)
+            else:
+                self._deleted.discard(key)
+            return
+        if key in self._deleted or key not in self._base:
+            raise KeyError(key)
+        self._deleted.add(key)
+
+    def pop(self, key, default=_MISSING):
+        try:
+            value = self[key]
+        except KeyError:
+            if default is self._MISSING:
+                raise
+            return default
+        del self[key]
+        return value
+
+    def __iter__(self):
+        for key in self._base:
+            if key not in self._deleted:
+                yield key
+        for key in self._writes:
+            if key not in self._base:
+                yield key
+
+    def __len__(self):
+        removed = sum(1 for key in self._deleted if key in self._base)
+        added = sum(1 for key in self._writes if key not in self._base)
+        return len(self._base) - removed + added
+
+    def items(self):
+        for key in self:
+            yield key, self[key]
+
+    def materialize(self):
+        return {key: dict(value) for key, value in self.items()}
+
+
 class _IndexedBlockPath:
     """Lazy ancestry sequence backed by active blocks plus retained side nodes."""
     def __init__(self, active_blocks, fork_height, side_nodes):
@@ -711,7 +794,7 @@ class Blockchain:
         branch = list(path.side_nodes)
         fork_height = path.fork_height
 
-        trial_utxo = copy.deepcopy(self.utxo)
+        trial_utxo = _UTXOOverlay(self.utxo)
         trial_blocks = list(self.blocks)
         trial_issued = self.total_issued
 
@@ -979,7 +1062,7 @@ class Blockchain:
         return True, status
 
     def _reorg_to(self, node):
-        tu = copy.deepcopy(self.utxo)
+        tu = _UTXOOverlay(self.utxo)
         tblocks = list(self.blocks)
         tissued, tcw = self.total_issued, self.chainwork
         tundo = dict(self.undo)
@@ -1012,7 +1095,8 @@ class Blockchain:
         for blk in disconnected:
             new_side_sizes[blk.hash()] = serialized_block_size(blk)
 
-        self.utxo, self.blocks = tu, tblocks
+        materialized_utxo = tu.materialize()
+        self.utxo, self.blocks = materialized_utxo, tblocks
         self.total_issued, self.chainwork, self.undo = tissued, tcw, tundo
         self.side_sizes = new_side_sizes
         self._reevaluate_mempool(disconnected)
