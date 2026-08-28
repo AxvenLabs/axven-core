@@ -1,0 +1,56 @@
+name: SEC-117 Apply
+
+on:
+  push:
+    branches:
+      - security-sec117-sidefork-cow-utxo
+    paths:
+      - .github/sec117_apply.py
+      - .github/workflows/sec117-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: security-sec117-sidefork-cow-utxo
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Install
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Apply and validate SEC-117
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          python .github/sec117_apply.py
+          python consensus_rebuild_test.py
+          python security_sec106_sidechain_state_validation_spec.py
+          python security_sec112_sidechain_retention_bounds_spec.py
+          python security_sec116_sidefork_path_work_spec.py
+          python security_sec117_sidefork_cow_utxo_spec.py
+          python devnet_rehearsal.py
+          python release_packaging_test.py
+      - name: Commit clean SEC-117 patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          Remove-Item .github/sec117_apply.py
+          Remove-Item .github/workflows/sec117-apply.yml
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "SEC-117: Bound tentative fork UTXO copies"
+          git push origin HEAD:security-sec117-sidefork-cow-utxo
