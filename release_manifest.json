@@ -21,8 +21,8 @@
   "explorer_node2_port": 18455,
   "files": {
     ".github/workflows/validation.yml": {
-      "bytes": 822,
-      "sha256": "0233cb6858eebe67e08c8a4f659db91267d0393df1a2bc4fbe4e39d41eee7820"
+      "bytes": 904,
+      "sha256": "3b45bfb2650274ae65a2e3ddc6c585a3624445f5e82a0f2e08c15212330ab342"
     },
     "CANONICAL_OPERATIONS.md": {
       "bytes": 1434,
@@ -723,6 +723,10 @@
     "security_sec107_github_actions_immutable_pins_spec.py": {
       "bytes": 1546,
       "sha256": "e20213ad3c6a4b0ab9614dc835bb6128c1dfdb4c67e4f8f15af3b76b9103ba7d"
+    },
+    "security_sec108_github_actions_least_privilege_spec.py": {
+      "bytes": 2183,
+      "sha256": "1c4020c834c99c87bf41642ebe6022b5c93352777363c4dc88c157f1888336d8"
     },
     "setup.cmd": {
       "bytes": 172,
