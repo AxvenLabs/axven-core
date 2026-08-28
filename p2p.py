@@ -94,6 +94,11 @@ INBOUND_MESSAGE_GLOBAL_BURST = 2048
 INBOUND_MESSAGE_PER_HOST_RATE = 128.0
 INBOUND_MESSAGE_PER_HOST_BURST = 256
 MAX_INBOUND_MESSAGE_HOSTS = 1024
+# Canonical P2P envelopes are shallow, but Python's JSON parser otherwise
+# sees attacker-selected nesting before any message-specific validation or
+# post-handshake rate gate.  Reject pathological nesting in one linear raw
+# byte scan before json.loads.  This is transport parsing policy only.
+MAX_P2P_JSON_NESTING_DEPTH = 32
 MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
@@ -628,6 +633,46 @@ def _recv_exact(sock,n,deadline=None):
         out.extend(chunk)
     return bytes(out)
 
+def _preflight_json_nesting(raw,max_depth=MAX_P2P_JSON_NESTING_DEPTH):
+    """Bound JSON container nesting before allocating a decoded object graph."""
+    if not isinstance(raw,(bytes,bytearray,memoryview)):
+        raise ProtocolError("invalid json bytes")
+    if type(max_depth) is not int or max_depth <= 0:
+        raise ProtocolError("invalid json nesting limit")
+
+    # Keep only opener bytes; the stack can never exceed max_depth because the
+    # function fails immediately on the next opener.  JSON syntax itself is
+    # still left to json.loads, including malformed/mismatched delimiters.
+    stack=[]
+    in_string=False
+    escaped=False
+    for value in raw:
+        if in_string:
+            if escaped:
+                escaped=False
+            elif value == 0x5C:  # backslash
+                escaped=True
+            elif value == 0x22:  # quote
+                in_string=False
+            continue
+
+        if value == 0x22:  # quote
+            in_string=True
+            continue
+        if value == 0x7B or value == 0x5B:  # { or [
+            stack.append(value)
+            if len(stack) > max_depth:
+                raise ProtocolError("json nesting depth exceeded")
+            continue
+        if value == 0x7D:  # }
+            if stack and stack[-1] == 0x7B:
+                stack.pop()
+            continue
+        if value == 0x5D:  # ]
+            if stack and stack[-1] == 0x5B:
+                stack.pop()
+
+
 def _recv_message_with_lease(
     sock: socket.socket, deadline=None, max_bytes=None, frame_byte_budget=None,
 ):
@@ -646,6 +691,7 @@ def _recv_message_with_lease(
 
     try:
         raw=_recv_exact(sock,n,deadline)
+        _preflight_json_nesting(raw)
         try:
             msg=json.loads(raw,object_pairs_hook=_reject_duplicate_json_keys)
         except ProtocolError:
