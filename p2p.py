@@ -12,6 +12,7 @@ from p2p_tx_bounds import validate_tx_string_bounds
 
 PROTOCOL_VERSION = 2
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
+MAX_HANDSHAKE_MESSAGE_BYTES = 4 * 1024
 INBOUND_PEER_TIMEOUT = 5.0
 INBOUND_MESSAGE_DEADLINE = 30.0
 OUTBOUND_MESSAGE_DEADLINE = 30.0
@@ -187,9 +188,12 @@ def _recv_exact(sock,n,deadline=None):
         out.extend(chunk)
     return bytes(out)
 
-def recv_message(sock: socket.socket,deadline=None) -> Dict[str, Any]:
+def recv_message(sock: socket.socket,deadline=None,max_bytes=None) -> Dict[str, Any]:
+    frame_limit=MAX_MESSAGE_BYTES if max_bytes is None else max_bytes
+    if type(frame_limit) is not int or frame_limit <= 0:
+        raise ProtocolError("invalid message byte limit")
     n=struct.unpack(">I",_recv_exact(sock,4,deadline))[0]
-    if n<=0 or n>MAX_MESSAGE_BYTES: raise ProtocolError("invalid message length")
+    if n<=0 or n>frame_limit: raise ProtocolError("invalid message length")
     try:
         msg=json.loads(_recv_exact(sock,n,deadline),object_pairs_hook=_reject_duplicate_json_keys)
     except ProtocolError:
@@ -204,7 +208,11 @@ def hello_message():
 
 def handshake(sock: socket.socket,deadline=None) -> Dict[str, Any]:
     send_message(sock,hello_message())
-    peer=recv_message(sock,deadline=deadline)
+    peer=recv_message(
+        sock,
+        deadline=deadline,
+        max_bytes=MAX_HANDSHAKE_MESSAGE_BYTES,
+    )
     validate_handshake(peer)
     return peer
 
