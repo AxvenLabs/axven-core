@@ -38,6 +38,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
           python .github/sec122_patch.py
+          python .github/sec122_tune.py
       - name: Targeted security validation
         shell: pwsh
         run: |
@@ -75,6 +76,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
-          git rm .github/sec122_patch.py .github/workflows/sec122_apply.yml
+          git rm .github/sec122_patch.py .github/sec122_tune.py .github/workflows/sec122_apply.yml
           git commit -m "SEC-122: remove temporary apply workflow"
           git push origin HEAD:security-sec122-get-blocks-egress-budget
