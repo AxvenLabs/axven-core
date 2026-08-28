@@ -971,11 +971,11 @@ class Blockchain:
             raise RuntimeError(f"Self-mined block rejected: {status}")
         return block
 
-    def add_block(self, block):
+    def add_block(self, block, work_gate=None):
         with self._state_lock:
-            return self._add_block_locked(block)
+            return self._add_block_locked(block, work_gate=work_gate)
 
-    def _add_block_locked(self, block):
+    def _add_block_locked(self, block, work_gate=None):
         h = block.hash()
         if h in self.index:
             return False, "duplicate"
@@ -1002,6 +1002,12 @@ class Blockchain:
         err = _check_context(block, path, height)
         if err:
             return False, err
+        # Optional local resource policy for untrusted ingress.  The gate is
+        # deliberately after duplicate/orphan/context checks but before any
+        # transaction/state-root/reorg validation work.  Normal consensus and
+        # local/outbound callers pass no gate and retain identical semantics.
+        if work_gate is not None and not work_gate():
+            return False, "validation work budget exceeded"
         cw = parent_node.chainwork + work_of(block.target)
 
         # A non-winning side branch used to be indexed after header/context
@@ -1058,7 +1064,7 @@ class Blockchain:
         else:
             self.side_sizes[h] = block_bytes
             status = "side-chain"
-        self._connect_orphans(h)
+        self._connect_orphans(h, work_gate=work_gate)
         return True, status
 
     def _reorg_to(self, node):
@@ -1120,7 +1126,7 @@ class Blockchain:
                     except ValueError:
                         pass
 
-    def _connect_orphans(self, h):
+    def _connect_orphans(self, h, work_gate=None):
         queue = [h]
         while queue:
             parent = queue.pop()
@@ -1128,7 +1134,7 @@ class Blockchain:
                 child_hash = child.hash()
                 child_bytes = self.orphan_sizes.pop(child_hash, 0)
                 self.orphan_bytes = max(0, self.orphan_bytes - child_bytes)
-                ok, _ = self.add_block(child)
+                ok, _ = self.add_block(child, work_gate=work_gate)
                 if ok:
                     queue.append(child_hash)
 
