@@ -618,12 +618,12 @@ class AxvenCore:
     def _validate_peer_retry_seconds(value):
         if isinstance(value,bool) or not isinstance(value,(int,float)):
             raise ValueError("invalid peer retry timing")
+        # Compare in the original numeric domain before float conversion so
+        # arbitrarily large Python integers fail closed without OverflowError.
+        if value < 0 or value > 3600:
+            raise ValueError("invalid peer retry timing")
         raw=float(value)
-        if (
-            not math.isfinite(raw)
-            or raw < 0.0
-            or raw > 3600.0
-        ):
+        if not math.isfinite(raw):
             raise ValueError("invalid peer retry timing")
         return raw
 

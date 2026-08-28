@@ -46,6 +46,9 @@ def main():
         (lambda: core.peer_retry_delay(peer,5.0,-1.0), "negative retry cap rejected"),
         (lambda: core.peer_retry_delay(peer,True,60.0), "boolean retry timing rejected"),
         (lambda: core.peer_retry_delay(peer,"5",60.0), "string retry timing rejected"),
+        (lambda: core.set_peer_retry_schedule(peer,10**1000,5.0), "extreme integer retry delay rejected"),
+        (lambda: core.peer_retry_delay(peer,10**1000,60.0), "extreme integer retry base rejected"),
+        (lambda: core.peer_retry_delay(peer,5.0,10**1000), "extreme integer retry cap rejected"),
     )
     for fn,label in cases:
         expect_value_error(fn,label)
