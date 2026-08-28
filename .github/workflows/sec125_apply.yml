@@ -1,0 +1,62 @@
+name: SEC-125 Apply
+
+on:
+  push:
+    branches:
+      - security-sec125-p2p-json-preparse-depth
+    paths:
+      - .github/workflows/sec125_apply.yml
+      - .github/sec125_patch.py
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: windows-2025
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - name: Apply and validate SEC-125
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          chcp 65001
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python .github/sec125_patch.py
+          python security_sec125_p2p_json_preparse_depth_spec.py
+          python security_sec122_p2p_inflight_frame_budget_spec.py
+          python security_sec124_p2p_message_rate_budget_spec.py
+          python p2p_tcp_lifecycle_test.py
+          python release_packaging_test.py
+          python run_full_validation.py
+          python security_tail_runner.py
+      - name: Commit production patch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          git config user.name "AxvenLabs"
+          git config user.email "dogacan432@gmail.com"
+          git add p2p.py release_manifest.json security_sec125_p2p_json_preparse_depth_spec.py
+          git diff --cached --check
+          git commit -m "SEC-125: Bound P2P JSON pre-parse nesting"
+          git push origin HEAD:security-sec125-p2p-json-preparse-depth
+      - name: Remove temporary apply files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          git rm .github/workflows/sec125_apply.yml .github/sec125_patch.py
+          git commit -m "SEC-125: remove temporary apply workflow"
+          git push origin HEAD:security-sec125-p2p-json-preparse-depth
