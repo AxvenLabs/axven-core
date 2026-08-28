@@ -1,0 +1,32 @@
+name: SEC-105 Apply
+
+on:
+  push:
+    branches:
+      - security-sec105-p2p-inbound-per-host-bound-clean
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security-sec105-p2p-inbound-per-host-bound-clean
+          fetch-depth: 1
+      - name: Apply SEC-105 hardening
+        run: python .github/sec105_apply.py
+      - name: Validate and commit clean tree
+        shell: bash
+        run: |
+          python security_sec105_p2p_inbound_per_host_bounds_spec.py
+          python security_sec028_p2p_inbound_peer_bounds_spec.py
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/sec105-apply.yml .github/sec105_apply.py
+          git add p2p.py security_sec105_p2p_inbound_per_host_bounds_spec.py release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-105: Bound inbound P2P slots per source"
+          git push origin HEAD:security-sec105-p2p-inbound-per-host-bound-clean
