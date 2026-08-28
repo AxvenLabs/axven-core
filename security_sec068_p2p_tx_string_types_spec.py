@@ -40,6 +40,26 @@ def raw_tx():
     }
 
 
+def hybrid_tx():
+    raw = raw_tx()
+    raw["inputs"][0] = {
+        "prev_txid": "0" * 64,
+        "index": 0,
+        "scheme": "hybrid-ed25519+ml-dsa-44",
+        "ed_signature": "ed-sig",
+        "ed_public_key": "ed-pub",
+        "ml_signature": "ml-sig",
+        "ml_public_key": "ml-pub",
+    }
+    return raw
+
+
+def raw_tx_for_field(field):
+    if field in ("ed_signature", "ed_public_key", "ml_signature", "ml_public_key"):
+        return hybrid_tx()
+    return raw_tx()
+
+
 def expect_reject(session, raw, expected_error, deserialize_calls, mempool):
     before_deserialize = deserialize_calls[0]
     before_add = mempool.add_calls
@@ -108,7 +128,7 @@ def main():
             "ml_public_key",
         )
         for field in optional_fields:
-            raw = raw_tx()
+            raw = raw_tx_for_field(field)
             raw["inputs"][0][field] = 123
             expect_reject(
                 session,
@@ -132,9 +152,7 @@ def main():
         checks += 1
         print("[GREEN] canonical transaction string fields reach mempool")
 
-        all_string_fields = raw_tx()
-        for field in optional_fields:
-            all_string_fields["inputs"][0][field] = "x"
+        all_string_fields = hybrid_tx()
         reply = session.handle({"type": "tx", "tx": all_string_fields})
         assert reply == {
             "type": "accepted",
@@ -144,7 +162,7 @@ def main():
         assert deserialize_calls[0] == 2
         assert mempool.add_calls == 2
         checks += 1
-        print("[GREEN] optional transaction auth fields accept canonical strings")
+        print("[GREEN] canonical hybrid auth fields accept canonical strings")
 
     finally:
         p2p.axven.Transaction.from_dict = original_from_dict
