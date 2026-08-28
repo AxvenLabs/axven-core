@@ -51,7 +51,6 @@ def validate_tx_string_bounds(raw_tx):
     if "outputs" not in raw_tx:
         raise ValueError("tx outputs required")
     for raw_input in raw_tx.get("inputs", []):
-        _validate_tx_input_fields(raw_input)
         if len(raw_input["prev_txid"]) > MAX_P2P_TXID_CHARS:
             raise ValueError("tx input prev_txid too long")
         if "scheme" in raw_input and len(raw_input["scheme"]) > MAX_P2P_TX_SCHEME_CHARS:
@@ -59,6 +58,7 @@ def validate_tx_string_bounds(raw_tx):
         for field in _TX_AUTH_FIELDS:
             if field in raw_input and len(raw_input[field]) > MAX_P2P_TX_AUTH_CHARS:
                 raise ValueError(f"tx input {field} too long")
+        _validate_tx_input_fields(raw_input)
     for raw_output in raw_tx.get("outputs", []):
         if len(raw_output["recipient"]) > MAX_P2P_RECIPIENT_CHARS:
             raise ValueError("tx output recipient too long")
