@@ -253,8 +253,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 28606,
-      "sha256": "3d90dcec84e5fdb998da2bc13b4f060648b10514d7585edf613ed120a7f1a173"
+      "bytes": 29562,
+      "sha256": "0d00c4adc1aaedef045b00d9bfc1c4ba4dac1322bd76ae4ddcd07a8088d15499"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5583,
@@ -703,6 +703,10 @@
     "security_sec103_peer_retry_snapshot_atomicity_spec.py": {
       "bytes": 3778,
       "sha256": "af6d03919b5c23aaa20feaa3da08cea75f94841a48a2055157bf91fa5ea2175f"
+    },
+    "security_sec104_peer_retry_delay_domain_spec.py": {
+      "bytes": 2575,
+      "sha256": "db99111097e2744c4b30d808069106f494196d40f6892e79c2e3cb48943a57c4"
     },
     "setup.cmd": {
       "bytes": 172,
