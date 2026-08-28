@@ -19,6 +19,11 @@ INBOUND_MESSAGE_DEADLINE = 30.0
 OUTBOUND_MESSAGE_DEADLINE = 30.0
 MAX_INBOUND_PEERS = 32
 MAX_INBOUND_PEERS_PER_HOST = 4
+# A per-frame 16 MiB cap still permits 32 workers to retain roughly
+# 512 MiB of attacker-selected wire payload concurrently, before decoded
+# JSON object overhead.  Bound post-handshake in-flight frame bytes across
+# the whole listener.  This is transport resource policy only.
+MAX_INBOUND_INFLIGHT_FRAME_BYTES = 64 * 1024 * 1024
 # Public inbound block validation can otherwise drive full state-root work at
 # attacker-selected rates.  These are local ingress budgets, not consensus.
 INBOUND_BLOCK_WORK_GLOBAL_RATE = 2.0
@@ -74,6 +79,54 @@ MAX_OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_HOSTS = 1024
 MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
+
+class _InboundFrameLease:
+    def __init__(self,budget,size):
+        self._budget=budget
+        self._size=size
+        self._released=False
+
+    def release(self):
+        if self._released:
+            return
+        self._released=True
+        self._budget._release(self._size)
+
+
+class _InboundFrameByteBudget:
+    """Non-blocking listener-wide reservation for decoded frame lifetime."""
+    def __init__(self,max_bytes=MAX_INBOUND_INFLIGHT_FRAME_BYTES):
+        if type(max_bytes) is not int or max_bytes < MAX_MESSAGE_BYTES:
+            raise ValueError("invalid inbound frame byte budget")
+        self._max_bytes=max_bytes
+        self._inflight_bytes=0
+        self._peak_bytes=0
+        self._lock=threading.Lock()
+
+    def reserve(self,size):
+        if type(size) is not int or size <= 0 or size > MAX_MESSAGE_BYTES:
+            return None
+        with self._lock:
+            if self._inflight_bytes + size > self._max_bytes:
+                return None
+            self._inflight_bytes += size
+            self._peak_bytes=max(self._peak_bytes,self._inflight_bytes)
+        return _InboundFrameLease(self,size)
+
+    def _release(self,size):
+        with self._lock:
+            self._inflight_bytes -= size
+            if self._inflight_bytes < 0:
+                raise RuntimeError("inbound frame byte accounting underflow")
+
+    def snapshot(self):
+        with self._lock:
+            return {
+                "max_bytes":self._max_bytes,
+                "inflight_bytes":self._inflight_bytes,
+                "peak_bytes":self._peak_bytes,
+            }
+
 
 def _work_budget_status(status):
     if not isinstance(status,str):
@@ -455,19 +508,45 @@ def _recv_exact(sock,n,deadline=None):
         out.extend(chunk)
     return bytes(out)
 
-def recv_message(sock: socket.socket,deadline=None,max_bytes=None) -> Dict[str, Any]:
+def _recv_message_with_lease(
+    sock: socket.socket, deadline=None, max_bytes=None, frame_byte_budget=None,
+):
     frame_limit=MAX_MESSAGE_BYTES if max_bytes is None else max_bytes
     if type(frame_limit) is not int or frame_limit <= 0:
         raise ProtocolError("invalid message byte limit")
     n=struct.unpack(">I",_recv_exact(sock,4,deadline))[0]
-    if n<=0 or n>frame_limit: raise ProtocolError("invalid message length")
+    if n<=0 or n>frame_limit:
+        raise ProtocolError("invalid message length")
+
+    lease=None
+    if frame_byte_budget is not None:
+        lease=frame_byte_budget.reserve(n)
+        if lease is None:
+            raise ProtocolError("inbound frame byte budget exceeded")
+
     try:
-        msg=json.loads(_recv_exact(sock,n,deadline),object_pairs_hook=_reject_duplicate_json_keys)
-    except ProtocolError:
+        raw=_recv_exact(sock,n,deadline)
+        try:
+            msg=json.loads(raw,object_pairs_hook=_reject_duplicate_json_keys)
+        except ProtocolError:
+            raise
+        except Exception as e:
+            raise ProtocolError("invalid json") from e
+        if not isinstance(msg,dict):
+            raise ProtocolError("message must be object")
+        return msg,lease
+    except Exception:
+        if lease is not None:
+            lease.release()
         raise
-    except Exception as e:
-        raise ProtocolError("invalid json") from e
-    if not isinstance(msg,dict): raise ProtocolError("message must be object")
+
+
+def recv_message(sock: socket.socket,deadline=None,max_bytes=None) -> Dict[str, Any]:
+    msg,lease=_recv_message_with_lease(
+        sock,deadline=deadline,max_bytes=max_bytes,frame_byte_budget=None,
+    )
+    if lease is not None:
+        lease.release()
     return msg
 
 def hello_message():
@@ -722,29 +801,42 @@ class PeerSession:
 
 def serve_connection(
     sock, session:PeerSession, block_work_gate=None, tx_work_gate=None,
-    block_signature_work_gate=None,
+    block_signature_work_gate=None, frame_byte_budget=None,
 ):
     try:
         handshake(sock,deadline=time.monotonic()+INBOUND_PEER_TIMEOUT)
         sock.settimeout(INBOUND_PEER_TIMEOUT)
         while True:
-            msg=recv_message(
-                sock,
-                deadline=time.monotonic()+INBOUND_MESSAGE_DEADLINE,
-            )
-            sock.settimeout(INBOUND_PEER_TIMEOUT)
-            if tx_work_gate is not None or block_signature_work_gate is not None:
-                reply=session.handle(
-                    msg,
-                    block_work_gate=block_work_gate,
-                    tx_work_gate=tx_work_gate,
-                    block_signature_work_gate=block_signature_work_gate,
-                )
-            elif block_work_gate is not None:
-                reply=session.handle(msg,block_work_gate=block_work_gate)
-            else:
-                reply=session.handle(msg)
-            if reply is not None: send_message(sock,reply)
+            lease=None
+            try:
+                if frame_byte_budget is None:
+                    msg=recv_message(
+                        sock,
+                        deadline=time.monotonic()+INBOUND_MESSAGE_DEADLINE,
+                    )
+                else:
+                    msg,lease=_recv_message_with_lease(
+                        sock,
+                        deadline=time.monotonic()+INBOUND_MESSAGE_DEADLINE,
+                        frame_byte_budget=frame_byte_budget,
+                    )
+                sock.settimeout(INBOUND_PEER_TIMEOUT)
+                if tx_work_gate is not None or block_signature_work_gate is not None:
+                    reply=session.handle(
+                        msg,
+                        block_work_gate=block_work_gate,
+                        tx_work_gate=tx_work_gate,
+                        block_signature_work_gate=block_signature_work_gate,
+                    )
+                elif block_work_gate is not None:
+                    reply=session.handle(msg,block_work_gate=block_work_gate)
+                else:
+                    reply=session.handle(msg)
+                if reply is not None:
+                    send_message(sock,reply)
+            finally:
+                if lease is not None:
+                    lease.release()
     except (EOFError,OSError,ProtocolError,KeyError,TypeError,ValueError):
         return
     finally:
@@ -772,6 +864,7 @@ class NodeServer:
         self._block_work_limiter=_InboundBlockWorkLimiter()
         self._tx_work_limiter=_InboundTxWorkLimiter()
         self._block_signature_work_limiter=_InboundBlockSignatureWorkLimiter()
+        self._frame_byte_budget=_InboundFrameByteBudget()
 
     @property
     def address(self):
@@ -825,6 +918,7 @@ class NodeServer:
                             block_work_gate=block_gate,
                             tx_work_gate=tx_gate,
                             block_signature_work_gate=block_signature_gate,
+                            frame_byte_budget=self._frame_byte_budget,
                         )
                     finally:
                         with self._lock:
