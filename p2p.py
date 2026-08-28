@@ -55,9 +55,34 @@ INBOUND_BLOCK_SIGNATURE_WORK_GLOBAL_BURST = MAX_VALID_BLOCK_SIGNATURE_WORK * 4
 INBOUND_BLOCK_SIGNATURE_WORK_PER_HOST_RATE = 1024.0
 INBOUND_BLOCK_SIGNATURE_WORK_PER_HOST_BURST = MAX_VALID_BLOCK_SIGNATURE_WORK
 MAX_INBOUND_BLOCK_SIGNATURE_WORK_HOSTS = 1024
+# Configured outbound peers are still untrusted network sources.  Give a
+# healthy peer one full sync batch of fresh block-validation work, then
+# refill above normal chain production without allowing the legacy
+# max_rounds reconnect loop to become an unbounded CPU amplifier.
+OUTBOUND_SYNC_BLOCK_WORK_GLOBAL_RATE = 8.0
+OUTBOUND_SYNC_BLOCK_WORK_GLOBAL_BURST = MAX_SYNC_BLOCKS * 2
+OUTBOUND_SYNC_BLOCK_WORK_PER_HOST_RATE = 2.0
+OUTBOUND_SYNC_BLOCK_WORK_PER_HOST_BURST = MAX_SYNC_BLOCKS
+MAX_OUTBOUND_SYNC_BLOCK_WORK_HOSTS = 1024
+# One consensus-max valid signed block must always fit a fresh peer burst;
+# repeated expensive blocks are then rate-limited across reconnects.
+OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_GLOBAL_RATE = 4096.0
+OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_GLOBAL_BURST = MAX_VALID_BLOCK_SIGNATURE_WORK * 2
+OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_PER_HOST_RATE = 1024.0
+OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_PER_HOST_BURST = MAX_VALID_BLOCK_SIGNATURE_WORK
+MAX_OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_HOSTS = 1024
 MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
+
+def _work_budget_status(status):
+    if not isinstance(status,str):
+        return False
+    return (
+        status == "validation work budget exceeded"
+        or status.startswith("Signature work budget exceeded at " )
+        or status.startswith("reorg aborted: Signature work budget exceeded at " )
+    )
 
 class _InboundBlockWorkLimiter:
     """Thread-safe global + source-host token buckets for expensive blocks."""
@@ -228,6 +253,42 @@ class _InboundBlockSignatureWorkLimiter(_InboundTxWorkLimiter):
             global_burst=global_burst,
             per_host_rate=per_host_rate,
             per_host_burst=per_host_burst,
+            max_hosts=max_hosts,
+        )
+
+
+class _OutboundSyncBlockWorkLimiter(_InboundBlockWorkLimiter):
+    """Persistent configured-peer block-validation work budget."""
+    def __init__(
+        self,
+        clock=time.monotonic,
+        global_rate=OUTBOUND_SYNC_BLOCK_WORK_GLOBAL_RATE,
+        global_burst=OUTBOUND_SYNC_BLOCK_WORK_GLOBAL_BURST,
+        per_host_rate=OUTBOUND_SYNC_BLOCK_WORK_PER_HOST_RATE,
+        per_host_burst=OUTBOUND_SYNC_BLOCK_WORK_PER_HOST_BURST,
+        max_hosts=MAX_OUTBOUND_SYNC_BLOCK_WORK_HOSTS,
+    ):
+        super().__init__(
+            clock=clock, global_rate=global_rate, global_burst=global_burst,
+            per_host_rate=per_host_rate, per_host_burst=per_host_burst,
+            max_hosts=max_hosts,
+        )
+
+
+class _OutboundSyncBlockSignatureWorkLimiter(_InboundBlockSignatureWorkLimiter):
+    """Persistent configured-peer weighted block-signature budget."""
+    def __init__(
+        self,
+        clock=time.monotonic,
+        global_rate=OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_GLOBAL_RATE,
+        global_burst=OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_GLOBAL_BURST,
+        per_host_rate=OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_PER_HOST_RATE,
+        per_host_burst=OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_PER_HOST_BURST,
+        max_hosts=MAX_OUTBOUND_SYNC_BLOCK_SIGNATURE_WORK_HOSTS,
+    ):
+        super().__init__(
+            clock=clock, global_rate=global_rate, global_burst=global_burst,
+            per_host_rate=per_host_rate, per_host_burst=per_host_burst,
             max_hosts=max_hosts,
         )
 
@@ -451,7 +512,7 @@ class PeerSession:
 
     def handle(
         self, msg, block_work_gate=None, tx_work_gate=None,
-        block_signature_work_gate=None,
+        block_signature_work_gate=None, stop_on_work_budget=False,
     ):
         typ=_validate_message_type(msg)
         if typ=="status":
@@ -650,6 +711,11 @@ class PeerSession:
                     ok,status=self.chain.add_block(b,**kwargs)
                 if ok or status=="duplicate": accepted+=1
                 elif status=="orphan": continue
+                elif stop_on_work_budget and _work_budget_status(status):
+                    return {
+                        "type":"accepted", "kind":"blocks",
+                        "count":accepted, "work_budget_exhausted":True,
+                    }
                 else: raise ProtocolError(f"sync block rejected: {status}")
             return {"type":"accepted","kind":"blocks","count":accepted}
         raise ProtocolError("unknown message type")
@@ -804,8 +870,11 @@ def request(sock,msg,deadline=None):
         try:sock.settimeout(original_timeout)
         except OSError:pass
 
-def sync_to_peer(address,session,limit=128,max_rounds=100):
-    """Reconnect-friendly catch-up until the peer returns no more blocks."""
+def sync_to_peer(
+    address, session, limit=128, max_rounds=100,
+    block_work_gate=None, block_signature_work_gate=None,
+):
+    """Reconnect-friendly catch-up until empty reply or local work budget."""
     total=0
     sock=connect(address)
     try:
@@ -815,7 +884,18 @@ def sync_to_peer(address,session,limit=128,max_rounds=100):
             blocks=reply.get("blocks")
             if not isinstance(blocks,list):raise ProtocolError("blocks must be list")
             if not blocks:break
-            result=session.handle(reply); total+=result["count"]
+            if block_work_gate is None and block_signature_work_gate is None:
+                result=session.handle(reply)
+            else:
+                result=session.handle(
+                    reply,
+                    block_work_gate=block_work_gate,
+                    block_signature_work_gate=block_signature_work_gate,
+                    stop_on_work_budget=True,
+                )
+            total+=result["count"]
+            if result.get("work_budget_exhausted"):
+                break
         return total
     finally:
         try:sock.close()

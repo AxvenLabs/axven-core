@@ -44,6 +44,14 @@ class AxvenCore:
         self.pending = wallet.PendingTracker()
         self.p2p_server = None
         self._peer_lock = threading.RLock()
+        # Persist automatic configured-peer work budgets on the core, not
+        # on a socket.  Reconnecting therefore cannot mint a fresh burst.
+        self._outbound_sync_block_work_limiter = (
+            p2p._OutboundSyncBlockWorkLimiter()
+        )
+        self._outbound_sync_block_signature_work_limiter = (
+            p2p._OutboundSyncBlockSignatureWorkLimiter()
+        )
         self.outbound_peers = []
         self.peer_last_error = {}
         self.peer_sync_successes = {}
@@ -696,8 +704,19 @@ class AxvenCore:
         """Synchronize one configured outbound peer and update its health."""
         addr=self._parse_peer(peer)
         try:
+            source_host=addr[0]
+            block_gate=lambda: (
+                self._outbound_sync_block_work_limiter.consume(source_host)
+            )
+            signature_gate=lambda cost: (
+                self._outbound_sync_block_signature_work_limiter.consume(
+                    source_host,cost
+                )
+            )
             accepted=p2p.sync_to_peer(
-                addr,p2p.PeerSession(self.chain,self.mempool),limit=128
+                addr,p2p.PeerSession(self.chain,self.mempool),limit=128,
+                block_work_gate=block_gate,
+                block_signature_work_gate=signature_gate,
             )
         except Exception as e:
             error=f"{type(e).__name__}: {e}"
