@@ -1,47 +1,4 @@
-from pathlib import Path
-import hashlib
-import json
-
-p2p_path = Path("p2p.py")
-source = p2p_path.read_text(encoding="utf-8")
-old = '''            with self.chain._state_lock:
-                active={b.hash():i for i,b in enumerate(self.chain.blocks)}
-                start=0
-                for h in locator:
-                    if h in active:
-                        start=active[h]+1
-                        break
-                blocks=list(
-                    self.chain.blocks[
-                        start:start+limit
-                    ]
-                )
-'''
-new = '''            with self.chain._state_lock:
-                start=0
-                for h in locator:
-                    node=self.chain.index.get(h)
-                    if node is None:
-                        continue
-                    height=node.height
-                    if (
-                        0 <= height < len(self.chain.blocks)
-                        and self.chain.blocks[height].hash() == h
-                    ):
-                        start=height+1
-                        break
-                blocks=list(
-                    self.chain.blocks[
-                        start:start+limit
-                    ]
-                )
-'''
-if source.count(old) != 1:
-    raise SystemExit("SEC-114 get_blocks locator anchor mismatch")
-source = source.replace(old, new, 1).replace("\r\n", "\n")
-p2p_path.write_text(source, encoding="utf-8", newline="\n")
-
-spec = '''#!/usr/bin/env python3
+#!/usr/bin/env python3
 """SEC-114 bound public get_blocks locator work to locator size, not chain size."""
 
 import threading
@@ -147,22 +104,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-spec_path = Path("security_sec114_p2p_get_blocks_locator_work_spec.py")
-spec_path.write_text(spec, encoding="utf-8", newline="\n")
-
-manifest_path = Path("release_manifest.json")
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-for name in ("p2p.py", spec_path.name):
-    path = Path(name)
-    data = path.read_bytes().replace(b"\r\n", b"\n")
-    path.write_bytes(data)
-    manifest["files"][name] = {
-        "bytes": len(data),
-        "sha256": hashlib.sha256(data).hexdigest(),
-    }
-manifest_path.write_text(
-    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-    encoding="utf-8",
-    newline="\n",
-)
