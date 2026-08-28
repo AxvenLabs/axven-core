@@ -331,11 +331,17 @@ class PeerSession:
                 raise ProtocolError("invalid block limit")
 
             with self.chain._state_lock:
-                active={b.hash():i for i,b in enumerate(self.chain.blocks)}
                 start=0
                 for h in locator:
-                    if h in active:
-                        start=active[h]+1
+                    node=self.chain.index.get(h)
+                    if node is None:
+                        continue
+                    height=node.height
+                    if (
+                        0 <= height < len(self.chain.blocks)
+                        and self.chain.blocks[height].hash() == h
+                    ):
+                        start=height+1
                         break
                 blocks=list(
                     self.chain.blocks[

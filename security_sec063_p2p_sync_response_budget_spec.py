@@ -3,6 +3,7 @@
 
 import json
 import threading
+from types import SimpleNamespace
 
 import p2p
 
@@ -38,6 +39,10 @@ class FakeBlock:
 class FakeChain:
     def __init__(self, blocks):
         self.blocks = list(blocks)
+        self.index = {
+            block.hash(): SimpleNamespace(height=i)
+            for i, block in enumerate(self.blocks)
+        }
         self._state_lock = threading.RLock()
 
 
