@@ -398,7 +398,10 @@ class PeerSession:
             elif not axven.canonical_miner_address_valid(raw_miner):
                 raise ProtocolError("block miner invalid")
             block=axven.Block.from_dict(raw_block)
-            ok,status=self.chain.add_block(block,work_gate=block_work_gate)
+            if block_work_gate is None:
+                ok,status=self.chain.add_block(block)
+            else:
+                ok,status=self.chain.add_block(block,work_gate=block_work_gate)
             if not ok and status not in ("duplicate","orphan"):
                 raise ProtocolError(f"block rejected: {status}")
             return {"type":"accepted","kind":"block","id":block.hash(),"status":status}
@@ -504,7 +507,10 @@ class PeerSession:
                 elif not axven.canonical_miner_address_valid(raw_miner):
                     raise ProtocolError("block miner invalid")
                 b=axven.Block.from_dict(raw)
-                ok,status=self.chain.add_block(b,work_gate=block_work_gate)
+                if block_work_gate is None:
+                    ok,status=self.chain.add_block(b)
+                else:
+                    ok,status=self.chain.add_block(b,work_gate=block_work_gate)
                 if ok or status=="duplicate": accepted+=1
                 elif status=="orphan": continue
                 else: raise ProtocolError(f"sync block rejected: {status}")

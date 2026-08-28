@@ -167,6 +167,32 @@ def main():
         and outbound_session.chain.validate(),
     )
 
+    class LegacyCompatibleChain:
+        def __init__(self):
+            self.seen = []
+        def add_block(self, block):
+            self.seen.append(block)
+            return True, "extended"
+
+    legacy_single = LegacyCompatibleChain()
+    legacy_reply = p2p.PeerSession(legacy_single, None).handle(msg)
+    green(
+        "unmetered single-block session preserves legacy add_block call shape",
+        legacy_reply["type"] == "accepted"
+        and legacy_reply["status"] == "extended"
+        and len(legacy_single.seen) == 1,
+    )
+
+    legacy_batch = LegacyCompatibleChain()
+    legacy_batch_reply = p2p.PeerSession(legacy_batch, None).handle(
+        {"type": "blocks", "blocks": [block4.to_dict()]}
+    )
+    green(
+        "unmetered block-batch session preserves legacy add_block call shape",
+        legacy_batch_reply == {"type": "accepted", "kind": "blocks", "count": 1}
+        and len(legacy_batch.seen) == 1,
+    )
+
     add_src = inspect.getsource(axven.Blockchain._add_block_locked)
     orphan_src = inspect.getsource(axven.Blockchain._connect_orphans)
     serve_src = inspect.getsource(p2p.serve_connection)
