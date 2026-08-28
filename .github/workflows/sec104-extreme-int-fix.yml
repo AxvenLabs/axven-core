@@ -1,0 +1,31 @@
+name: SEC-104 Extreme Integer Fix
+
+on:
+  push:
+    branches:
+      - security-sec104-peer-retry-delay-domain-clean
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security-sec104-peer-retry-delay-domain-clean
+          fetch-depth: 1
+      - name: Apply extreme-integer fix
+        run: python .github/sec104_extreme_int_fix.py
+      - name: Validate and commit clean tree
+        shell: bash
+        run: |
+          python security_sec104_peer_retry_delay_domain_spec.py
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/sec104-extreme-int-fix.yml .github/sec104_extreme_int_fix.py
+          git add core.py security_sec104_peer_retry_delay_domain_spec.py release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-104: Fail closed on extreme retry integers"
+          git push origin HEAD:security-sec104-peer-retry-delay-domain-clean
