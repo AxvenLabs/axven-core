@@ -125,8 +125,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 53178,
-      "sha256": "e42f8a71be9a81e0e31ce5e93f0f564ea3e2e6b0e0622f967158635dd6c1349c"
+      "bytes": 54494,
+      "sha256": "50fc716761acbb4acb26e926ae8f0e67dd8a3310ef0569d7822c0d07d3af9492"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 28035,
-      "sha256": "5862c3c90175582405fbccfae32b06b8a9e8ade0e172c94eff511cdefa4823be"
+      "bytes": 32059,
+      "sha256": "0172e95fe40b468038e0987c7c214251e29a61fcc0c8c4c4966ada5ccbaed9f1"
     },
     "p2p_tx_bounds.py": {
       "bytes": 2261,
@@ -767,6 +767,10 @@
     "security_sec118_p2p_inbound_block_work_budget_spec.py": {
       "bytes": 7179,
       "sha256": "04060879f15e75457f4f8143c3bd2e85f96808d0ac16615d74ac28e6560ab448"
+    },
+    "security_sec119_p2p_inbound_tx_crypto_work_spec.py": {
+      "bytes": 8993,
+      "sha256": "2ce1c4b80061e40ef462e929f331d2c35177f45a869a519ad40772a9f14ccd9e"
     },
     "setup.cmd": {
       "bytes": 172,

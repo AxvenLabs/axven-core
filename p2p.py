@@ -30,6 +30,17 @@ MAX_SYNC_BLOCKS = 128
 MAX_LOCATOR_HASHES = 64
 MAX_P2P_TX_INPUTS = 1024
 MAX_P2P_TX_OUTPUTS = 1024
+# Public standalone TX relay can otherwise trigger unbounded Ed25519/ML-DSA
+# verification under the chain+mempool locks.  Work units are local ingress
+# policy only: Ed25519=1, ML-DSA=4, hybrid=5.
+INBOUND_TX_WORK_ED25519 = 1
+INBOUND_TX_WORK_ML_DSA = 4
+INBOUND_TX_WORK_HYBRID = 5
+INBOUND_TX_WORK_GLOBAL_RATE = 256.0
+INBOUND_TX_WORK_GLOBAL_BURST = MAX_P2P_TX_INPUTS * INBOUND_TX_WORK_HYBRID
+INBOUND_TX_WORK_PER_HOST_RATE = 64.0
+INBOUND_TX_WORK_PER_HOST_BURST = MAX_P2P_TX_INPUTS * INBOUND_TX_WORK_HYBRID
+MAX_INBOUND_TX_WORK_HOSTS = 1024
 MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
@@ -95,6 +106,81 @@ class _InboundBlockWorkLimiter:
                 global_tokens-=1.0
                 host_tokens-=1.0
 
+            self._global_tokens=global_tokens
+            self._global_last=now
+            if entry is None and len(self._hosts) >= self._max_hosts:
+                self._hosts.popitem(last=False)
+            self._hosts[host]=(host_tokens,now)
+            self._hosts.move_to_end(host)
+            return allowed
+
+    def snapshot(self):
+        with self._lock:
+            return {
+                "global_tokens": self._global_tokens,
+                "hosts": len(self._hosts),
+            }
+
+
+class _InboundTxWorkLimiter:
+    """Thread-safe weighted global + source-host TX crypto budget."""
+    def __init__(
+        self,
+        clock=time.monotonic,
+        global_rate=INBOUND_TX_WORK_GLOBAL_RATE,
+        global_burst=INBOUND_TX_WORK_GLOBAL_BURST,
+        per_host_rate=INBOUND_TX_WORK_PER_HOST_RATE,
+        per_host_burst=INBOUND_TX_WORK_PER_HOST_BURST,
+        max_hosts=MAX_INBOUND_TX_WORK_HOSTS,
+    ):
+        self._clock=clock
+        self._global_rate=float(global_rate)
+        self._global_burst=float(global_burst)
+        self._per_host_rate=float(per_host_rate)
+        self._per_host_burst=float(per_host_burst)
+        self._max_hosts=int(max_hosts)
+        if (
+            self._global_rate <= 0
+            or self._global_burst < 1
+            or self._per_host_rate <= 0
+            or self._per_host_burst < 1
+            or self._max_hosts < 1
+        ):
+            raise ValueError("invalid inbound transaction work budget")
+        now=float(self._clock())
+        self._global_tokens=self._global_burst
+        self._global_last=now
+        self._hosts=OrderedDict()
+        self._lock=threading.Lock()
+
+    @staticmethod
+    def _refill(tokens, last, now, rate, burst):
+        elapsed=max(0.0, now-last)
+        return min(burst, tokens + elapsed*rate)
+
+    def consume(self, host, cost):
+        if not isinstance(host,str) or not host or type(cost) is not int or cost < 1:
+            return False
+        now=float(self._clock())
+        with self._lock:
+            global_tokens=self._refill(
+                self._global_tokens, self._global_last, now,
+                self._global_rate, self._global_burst,
+            )
+            entry=self._hosts.get(host)
+            if entry is None:
+                host_tokens=self._per_host_burst
+                host_last=now
+            else:
+                host_tokens,host_last=entry
+                host_tokens=self._refill(
+                    host_tokens,host_last,now,
+                    self._per_host_rate,self._per_host_burst,
+                )
+            allowed=(global_tokens >= cost and host_tokens >= cost)
+            if allowed:
+                global_tokens-=cost
+                host_tokens-=cost
             self._global_tokens=global_tokens
             self._global_last=now
             if entry is None and len(self._hosts) >= self._max_hosts:
@@ -328,7 +414,7 @@ class PeerSession:
                 hs.append(self.chain.blocks[0].hash())
             return hs
 
-    def handle(self,msg,block_work_gate=None):
+    def handle(self,msg,block_work_gate=None,tx_work_gate=None):
         typ=_validate_message_type(msg)
         if typ=="status":
             expected_fields={"type","height","tip_hash","chainwork"}
@@ -359,7 +445,10 @@ class PeerSession:
             raw_tx=msg.get("tx")
             _validate_wire_transaction(raw_tx)
             tx=axven.Transaction.from_dict(raw_tx)
-            tid=self.mempool.add(tx)
+            if tx_work_gate is None:
+                tid=self.mempool.add(tx)
+            else:
+                tid=self.mempool.add(tx,work_gate=tx_work_gate)
             return {"type":"accepted","kind":"tx","id":tid}
         if typ=="block":
             if any(key not in ("type","block") for key in msg):
@@ -517,7 +606,9 @@ class PeerSession:
             return {"type":"accepted","kind":"blocks","count":accepted}
         raise ProtocolError("unknown message type")
 
-def serve_connection(sock,session:PeerSession,block_work_gate=None):
+def serve_connection(
+    sock,session:PeerSession,block_work_gate=None,tx_work_gate=None
+):
     try:
         handshake(sock,deadline=time.monotonic()+INBOUND_PEER_TIMEOUT)
         sock.settimeout(INBOUND_PEER_TIMEOUT)
@@ -527,7 +618,16 @@ def serve_connection(sock,session:PeerSession,block_work_gate=None):
                 deadline=time.monotonic()+INBOUND_MESSAGE_DEADLINE,
             )
             sock.settimeout(INBOUND_PEER_TIMEOUT)
-            reply=session.handle(msg,block_work_gate=block_work_gate)
+            if tx_work_gate is not None:
+                reply=session.handle(
+                    msg,
+                    block_work_gate=block_work_gate,
+                    tx_work_gate=tx_work_gate,
+                )
+            elif block_work_gate is not None:
+                reply=session.handle(msg,block_work_gate=block_work_gate)
+            else:
+                reply=session.handle(msg)
             if reply is not None: send_message(sock,reply)
     except (EOFError,OSError,ProtocolError,KeyError,TypeError,ValueError):
         return
@@ -554,6 +654,7 @@ class NodeServer:
         self._sock=None; self._thread=None; self._stop=threading.Event()
         self._clients=set(); self._client_hosts={}; self._lock=threading.Lock()
         self._block_work_limiter=_InboundBlockWorkLimiter()
+        self._tx_work_limiter=_InboundTxWorkLimiter()
 
     @property
     def address(self):
@@ -594,10 +695,15 @@ class NodeServer:
                         pass
                     continue
                 def worker(client=c,source_host=remote_host):
-                    gate=lambda: self._block_work_limiter.consume(source_host)
+                    block_gate=lambda: self._block_work_limiter.consume(source_host)
+                    tx_gate=lambda cost: self._tx_work_limiter.consume(
+                        source_host,cost
+                    )
                     try:
                         serve_connection(
-                            client,self.session,block_work_gate=gate
+                            client,self.session,
+                            block_work_gate=block_gate,
+                            tx_work_gate=tx_gate,
                         )
                     finally:
                         with self._lock:
