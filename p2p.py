@@ -41,6 +41,20 @@ INBOUND_TX_WORK_GLOBAL_BURST = MAX_P2P_TX_INPUTS * INBOUND_TX_WORK_HYBRID
 INBOUND_TX_WORK_PER_HOST_RATE = 64.0
 INBOUND_TX_WORK_PER_HOST_BURST = MAX_P2P_TX_INPUTS * INBOUND_TX_WORK_HYBRID
 MAX_INBOUND_TX_WORK_HOSTS = 1024
+# A valid Ed25519 input needs at least 88 base64 signature chars plus 44
+# base64 public-key chars.  Ed25519 is the densest supported scheme per work
+# unit, so this derives a conservative fresh-burst upper bound from the
+# consensus block byte cap without changing block validity.
+MIN_VALID_ED25519_AUTH_TEXT_BYTES = 132
+MAX_VALID_BLOCK_SIGNATURE_WORK = (
+    int(axven.CHAIN_CONFIG["max_block_bytes"]) // MIN_VALID_ED25519_AUTH_TEXT_BYTES
+    + 1
+)
+INBOUND_BLOCK_SIGNATURE_WORK_GLOBAL_RATE = 4096.0
+INBOUND_BLOCK_SIGNATURE_WORK_GLOBAL_BURST = MAX_VALID_BLOCK_SIGNATURE_WORK * 4
+INBOUND_BLOCK_SIGNATURE_WORK_PER_HOST_RATE = 1024.0
+INBOUND_BLOCK_SIGNATURE_WORK_PER_HOST_BURST = MAX_VALID_BLOCK_SIGNATURE_WORK
+MAX_INBOUND_BLOCK_SIGNATURE_WORK_HOSTS = 1024
 MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
@@ -195,6 +209,27 @@ class _InboundTxWorkLimiter:
                 "global_tokens": self._global_tokens,
                 "hosts": len(self._hosts),
             }
+
+
+class _InboundBlockSignatureWorkLimiter(_InboundTxWorkLimiter):
+    """Weighted public block signature budget with a full-block fresh burst."""
+    def __init__(
+        self,
+        clock=time.monotonic,
+        global_rate=INBOUND_BLOCK_SIGNATURE_WORK_GLOBAL_RATE,
+        global_burst=INBOUND_BLOCK_SIGNATURE_WORK_GLOBAL_BURST,
+        per_host_rate=INBOUND_BLOCK_SIGNATURE_WORK_PER_HOST_RATE,
+        per_host_burst=INBOUND_BLOCK_SIGNATURE_WORK_PER_HOST_BURST,
+        max_hosts=MAX_INBOUND_BLOCK_SIGNATURE_WORK_HOSTS,
+    ):
+        super().__init__(
+            clock=clock,
+            global_rate=global_rate,
+            global_burst=global_burst,
+            per_host_rate=per_host_rate,
+            per_host_burst=per_host_burst,
+            max_hosts=max_hosts,
+        )
 
 
 def _reject_duplicate_json_keys(pairs):
@@ -414,7 +449,10 @@ class PeerSession:
                 hs.append(self.chain.blocks[0].hash())
             return hs
 
-    def handle(self,msg,block_work_gate=None,tx_work_gate=None):
+    def handle(
+        self, msg, block_work_gate=None, tx_work_gate=None,
+        block_signature_work_gate=None,
+    ):
         typ=_validate_message_type(msg)
         if typ=="status":
             expected_fields={"type","height","tip_hash","chainwork"}
@@ -487,10 +525,15 @@ class PeerSession:
             elif not axven.canonical_miner_address_valid(raw_miner):
                 raise ProtocolError("block miner invalid")
             block=axven.Block.from_dict(raw_block)
-            if block_work_gate is None:
+            if block_work_gate is None and block_signature_work_gate is None:
                 ok,status=self.chain.add_block(block)
             else:
-                ok,status=self.chain.add_block(block,work_gate=block_work_gate)
+                kwargs={}
+                if block_work_gate is not None:
+                    kwargs["work_gate"]=block_work_gate
+                if block_signature_work_gate is not None:
+                    kwargs["signature_work_gate"]=block_signature_work_gate
+                ok,status=self.chain.add_block(block,**kwargs)
             if not ok and status not in ("duplicate","orphan"):
                 raise ProtocolError(f"block rejected: {status}")
             return {"type":"accepted","kind":"block","id":block.hash(),"status":status}
@@ -596,10 +639,15 @@ class PeerSession:
                 elif not axven.canonical_miner_address_valid(raw_miner):
                     raise ProtocolError("block miner invalid")
                 b=axven.Block.from_dict(raw)
-                if block_work_gate is None:
+                if block_work_gate is None and block_signature_work_gate is None:
                     ok,status=self.chain.add_block(b)
                 else:
-                    ok,status=self.chain.add_block(b,work_gate=block_work_gate)
+                    kwargs={}
+                    if block_work_gate is not None:
+                        kwargs["work_gate"]=block_work_gate
+                    if block_signature_work_gate is not None:
+                        kwargs["signature_work_gate"]=block_signature_work_gate
+                    ok,status=self.chain.add_block(b,**kwargs)
                 if ok or status=="duplicate": accepted+=1
                 elif status=="orphan": continue
                 else: raise ProtocolError(f"sync block rejected: {status}")
@@ -607,7 +655,8 @@ class PeerSession:
         raise ProtocolError("unknown message type")
 
 def serve_connection(
-    sock,session:PeerSession,block_work_gate=None,tx_work_gate=None
+    sock, session:PeerSession, block_work_gate=None, tx_work_gate=None,
+    block_signature_work_gate=None,
 ):
     try:
         handshake(sock,deadline=time.monotonic()+INBOUND_PEER_TIMEOUT)
@@ -618,11 +667,12 @@ def serve_connection(
                 deadline=time.monotonic()+INBOUND_MESSAGE_DEADLINE,
             )
             sock.settimeout(INBOUND_PEER_TIMEOUT)
-            if tx_work_gate is not None:
+            if tx_work_gate is not None or block_signature_work_gate is not None:
                 reply=session.handle(
                     msg,
                     block_work_gate=block_work_gate,
                     tx_work_gate=tx_work_gate,
+                    block_signature_work_gate=block_signature_work_gate,
                 )
             elif block_work_gate is not None:
                 reply=session.handle(msg,block_work_gate=block_work_gate)
@@ -655,6 +705,7 @@ class NodeServer:
         self._clients=set(); self._client_hosts={}; self._lock=threading.Lock()
         self._block_work_limiter=_InboundBlockWorkLimiter()
         self._tx_work_limiter=_InboundTxWorkLimiter()
+        self._block_signature_work_limiter=_InboundBlockSignatureWorkLimiter()
 
     @property
     def address(self):
@@ -699,11 +750,15 @@ class NodeServer:
                     tx_gate=lambda cost: self._tx_work_limiter.consume(
                         source_host,cost
                     )
+                    block_signature_gate=lambda cost: (
+                        self._block_signature_work_limiter.consume(source_host,cost)
+                    )
                     try:
                         serve_connection(
                             client,self.session,
                             block_work_gate=block_gate,
                             tx_work_gate=tx_gate,
+                            block_signature_work_gate=block_signature_gate,
                         )
                     finally:
                         with self._lock:
