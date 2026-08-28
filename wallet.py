@@ -136,6 +136,9 @@ _SCRYPT_PARAMS = {"n": _SCRYPT_N, "r": _SCRYPT_R, "p": _SCRYPT_P, "dklen": _SCRY
 MAX_BACKUP_FILE_BYTES = 64 * 1024
 MAX_BACKUP_CIPHERTEXT_BYTES = 16 * 1024
 MAX_BACKUP_JSON_NESTING_DEPTH = 32
+ED25519_PRIVATE_KEY_BYTES = 32
+ML_DSA_PUBLIC_KEY_BYTES = 1312
+ML_DSA_SECRET_KEY_BYTES = 2560
 _MAX_CIPHERTEXT_B64_CHARS = 4 * ((MAX_BACKUP_CIPHERTEXT_BYTES + 2) // 3)
 
 def _preflight_backup_json_nesting(raw):
@@ -201,6 +204,54 @@ def _validated_backup_envelope(backup, passphrase):
         raise BackupError("invalid backup checksum")
     return kp, salt_text, nonce_text, cipher_text, checksum
 
+def _reject_duplicate_backup_material_keys(pairs):
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise BackupError("duplicate backup material field")
+        out[key] = value
+    return out
+
+
+def _validated_backup_material(material):
+    expected = {"ed_private", "ml_public", "ml_secret"}
+    if type(material) is not dict or set(material) != expected:
+        raise BackupError("invalid backup material fields")
+
+    values = []
+    for name in ("ed_private", "ml_public", "ml_secret"):
+        text = material[name]
+        if type(text) is not str:
+            raise BackupError("invalid backup material value")
+        try:
+            values.append(base64.b64decode(text, validate=True))
+        except Exception as exc:
+            raise BackupError("invalid backup material encoding") from exc
+
+    ed_raw, ml_pub, ml_sec = values
+    if len(ed_raw) != ED25519_PRIVATE_KEY_BYTES:
+        raise BackupError("invalid Ed25519 private key length")
+    if len(ml_pub) != ML_DSA_PUBLIC_KEY_BYTES:
+        raise BackupError("invalid ML-DSA public key length")
+    if len(ml_sec) != ML_DSA_SECRET_KEY_BYTES:
+        raise BackupError("invalid ML-DSA secret key length")
+    return ed_raw, ml_pub, ml_sec
+
+
+def _validate_mldsa_keypair(ml_pub, ml_sec):
+    message = hashlib.sha256(
+        b"axven-wallet-backup-mldsa-keypair-v1|" + ml_pub
+    ).digest()
+    try:
+        scheme = axven._mldsa()
+        signature = scheme.sign(ml_sec, message)
+        valid = bool(scheme.verify(ml_pub, message, signature))
+    except Exception as exc:
+        raise BackupError("invalid ML-DSA keypair") from exc
+    if not valid:
+        raise BackupError("invalid ML-DSA keypair")
+
+
 def _raw_ed_private(identity):
     return identity.ed_private_key.private_bytes(
         serialization.Encoding.Raw,
@@ -252,10 +303,17 @@ def restore_backup(backup, passphrase: str):
                              r=kp["r"], p=kp["p"], dklen=kp["dklen"])
         plain = AESGCM(key).decrypt(nonce, cipher, b"axven-wallet-backup-v1")
         _preflight_backup_json_nesting(plain)
-        material = json.loads(plain)
-        ed_raw = base64.b64decode(material["ed_private"], validate=True)
-        ml_pub = base64.b64decode(material["ml_public"], validate=True)
-        ml_sec = base64.b64decode(material["ml_secret"], validate=True)
+        try:
+            material = json.loads(
+                plain,
+                object_pairs_hook=_reject_duplicate_backup_material_keys,
+            )
+        except BackupError:
+            raise
+        except (UnicodeError, json.JSONDecodeError) as exc:
+            raise BackupError("invalid backup material JSON") from exc
+        ed_raw, ml_pub, ml_sec = _validated_backup_material(material)
+        _validate_mldsa_keypair(ml_pub, ml_sec)
         ed_priv = Ed25519PrivateKey.from_private_bytes(ed_raw)
         ed_pub = ed_priv.public_key().public_bytes(
             serialization.Encoding.Raw, serialization.PublicFormat.Raw)

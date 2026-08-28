@@ -183,7 +183,7 @@ def main():
         "decrypted material production order is authenticated decrypt then preflight then json.loads",
         restore_src.index("AESGCM(key).decrypt")
         < restore_src.index("_preflight_backup_json_nesting(plain)")
-        < restore_src.index("json.loads(plain)"),
+        < restore_src.index("json.loads("),
     )
 
     green(
