@@ -6,6 +6,7 @@ orphan-safe block acceptance, and locator-based active-chain sync.
 """
 from __future__ import annotations
 import json, socket, struct, threading, time
+from collections import OrderedDict
 from typing import Any, Dict, Optional
 import axven
 from p2p_tx_bounds import validate_tx_string_bounds
@@ -18,6 +19,13 @@ INBOUND_MESSAGE_DEADLINE = 30.0
 OUTBOUND_MESSAGE_DEADLINE = 30.0
 MAX_INBOUND_PEERS = 32
 MAX_INBOUND_PEERS_PER_HOST = 4
+# Public inbound block validation can otherwise drive full state-root work at
+# attacker-selected rates.  These are local ingress budgets, not consensus.
+INBOUND_BLOCK_WORK_GLOBAL_RATE = 2.0
+INBOUND_BLOCK_WORK_GLOBAL_BURST = 16
+INBOUND_BLOCK_WORK_PER_HOST_RATE = 1.0
+INBOUND_BLOCK_WORK_PER_HOST_BURST = 8
+MAX_INBOUND_BLOCK_WORK_HOSTS = 1024
 MAX_SYNC_BLOCKS = 128
 MAX_LOCATOR_HASHES = 64
 MAX_P2P_TX_INPUTS = 1024
@@ -25,6 +33,83 @@ MAX_P2P_TX_OUTPUTS = 1024
 MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
+
+class _InboundBlockWorkLimiter:
+    """Thread-safe global + source-host token buckets for expensive blocks."""
+    def __init__(
+        self,
+        clock=time.monotonic,
+        global_rate=INBOUND_BLOCK_WORK_GLOBAL_RATE,
+        global_burst=INBOUND_BLOCK_WORK_GLOBAL_BURST,
+        per_host_rate=INBOUND_BLOCK_WORK_PER_HOST_RATE,
+        per_host_burst=INBOUND_BLOCK_WORK_PER_HOST_BURST,
+        max_hosts=MAX_INBOUND_BLOCK_WORK_HOSTS,
+    ):
+        self._clock=clock
+        self._global_rate=float(global_rate)
+        self._global_burst=float(global_burst)
+        self._per_host_rate=float(per_host_rate)
+        self._per_host_burst=float(per_host_burst)
+        self._max_hosts=int(max_hosts)
+        if (
+            self._global_rate <= 0
+            or self._global_burst < 1
+            or self._per_host_rate <= 0
+            or self._per_host_burst < 1
+            or self._max_hosts < 1
+        ):
+            raise ValueError("invalid inbound block work budget")
+        now=float(self._clock())
+        self._global_tokens=self._global_burst
+        self._global_last=now
+        self._hosts=OrderedDict()
+        self._lock=threading.Lock()
+
+    @staticmethod
+    def _refill(tokens, last, now, rate, burst):
+        elapsed=max(0.0, now-last)
+        return min(burst, tokens + elapsed*rate)
+
+    def consume(self, host):
+        if not isinstance(host,str) or not host:
+            return False
+        now=float(self._clock())
+        with self._lock:
+            global_tokens=self._refill(
+                self._global_tokens, self._global_last, now,
+                self._global_rate, self._global_burst,
+            )
+            entry=self._hosts.get(host)
+            if entry is None:
+                host_tokens=self._per_host_burst
+                host_last=now
+            else:
+                host_tokens, host_last=entry
+                host_tokens=self._refill(
+                    host_tokens, host_last, now,
+                    self._per_host_rate, self._per_host_burst,
+                )
+
+            allowed=(global_tokens >= 1.0 and host_tokens >= 1.0)
+            if allowed:
+                global_tokens-=1.0
+                host_tokens-=1.0
+
+            self._global_tokens=global_tokens
+            self._global_last=now
+            if entry is None and len(self._hosts) >= self._max_hosts:
+                self._hosts.popitem(last=False)
+            self._hosts[host]=(host_tokens,now)
+            self._hosts.move_to_end(host)
+            return allowed
+
+    def snapshot(self):
+        with self._lock:
+            return {
+                "global_tokens": self._global_tokens,
+                "hosts": len(self._hosts),
+            }
+
 
 def _reject_duplicate_json_keys(pairs):
     obj={}
@@ -243,7 +328,7 @@ class PeerSession:
                 hs.append(self.chain.blocks[0].hash())
             return hs
 
-    def handle(self,msg):
+    def handle(self,msg,block_work_gate=None):
         typ=_validate_message_type(msg)
         if typ=="status":
             expected_fields={"type","height","tip_hash","chainwork"}
@@ -313,7 +398,10 @@ class PeerSession:
             elif not axven.canonical_miner_address_valid(raw_miner):
                 raise ProtocolError("block miner invalid")
             block=axven.Block.from_dict(raw_block)
-            ok,status=self.chain.add_block(block)
+            if block_work_gate is None:
+                ok,status=self.chain.add_block(block)
+            else:
+                ok,status=self.chain.add_block(block,work_gate=block_work_gate)
             if not ok and status not in ("duplicate","orphan"):
                 raise ProtocolError(f"block rejected: {status}")
             return {"type":"accepted","kind":"block","id":block.hash(),"status":status}
@@ -419,14 +507,17 @@ class PeerSession:
                 elif not axven.canonical_miner_address_valid(raw_miner):
                     raise ProtocolError("block miner invalid")
                 b=axven.Block.from_dict(raw)
-                ok,status=self.chain.add_block(b)
+                if block_work_gate is None:
+                    ok,status=self.chain.add_block(b)
+                else:
+                    ok,status=self.chain.add_block(b,work_gate=block_work_gate)
                 if ok or status=="duplicate": accepted+=1
                 elif status=="orphan": continue
                 else: raise ProtocolError(f"sync block rejected: {status}")
             return {"type":"accepted","kind":"blocks","count":accepted}
         raise ProtocolError("unknown message type")
 
-def serve_connection(sock,session:PeerSession):
+def serve_connection(sock,session:PeerSession,block_work_gate=None):
     try:
         handshake(sock,deadline=time.monotonic()+INBOUND_PEER_TIMEOUT)
         sock.settimeout(INBOUND_PEER_TIMEOUT)
@@ -436,7 +527,7 @@ def serve_connection(sock,session:PeerSession):
                 deadline=time.monotonic()+INBOUND_MESSAGE_DEADLINE,
             )
             sock.settimeout(INBOUND_PEER_TIMEOUT)
-            reply=session.handle(msg)
+            reply=session.handle(msg,block_work_gate=block_work_gate)
             if reply is not None: send_message(sock,reply)
     except (EOFError,OSError,ProtocolError,KeyError,TypeError,ValueError):
         return
@@ -462,6 +553,7 @@ class NodeServer:
         self.host=host; self.port=port
         self._sock=None; self._thread=None; self._stop=threading.Event()
         self._clients=set(); self._client_hosts={}; self._lock=threading.Lock()
+        self._block_work_limiter=_InboundBlockWorkLimiter()
 
     @property
     def address(self):
@@ -501,8 +593,12 @@ class NodeServer:
                     except OSError:
                         pass
                     continue
-                def worker(client=c):
-                    try: serve_connection(client,self.session)
+                def worker(client=c,source_host=remote_host):
+                    gate=lambda: self._block_work_limiter.consume(source_host)
+                    try:
+                        serve_connection(
+                            client,self.session,block_work_gate=gate
+                        )
                     finally:
                         with self._lock:
                             self._clients.discard(client)

@@ -12,7 +12,7 @@
   "chain_id": "axven-devnet-2",
   "clean_package_build_smoke": "READY",
   "config_fingerprint": "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae",
-  "consensus_code_sha256": "58a1463ab5880671439dbb3d5f8fa8f6c58b2aaa08369bfa15f3415c36b66f53",
+  "consensus_code_sha256": "e42f8a71be9a81e0e31ce5e93f0f564ea3e2e6b0e0622f967158635dd6c1349c",
   "devnet_rehearsal": "RETRY_REQUIRED_AFTER_TEST_API_FIX",
   "devnet_rehearsal_windows": "21_OF_21_GREEN",
   "explorer_api": "READY",
@@ -125,8 +125,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 52644,
-      "sha256": "58a1463ab5880671439dbb3d5f8fa8f6c58b2aaa08369bfa15f3415c36b66f53"
+      "bytes": 53178,
+      "sha256": "e42f8a71be9a81e0e31ce5e93f0f564ea3e2e6b0e0622f967158635dd6c1349c"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 24340,
-      "sha256": "5de62f6f384bd534f829f1a77db4a4166801c4b764a52a7b859fba68a682856f"
+      "bytes": 28035,
+      "sha256": "5862c3c90175582405fbccfae32b06b8a9e8ade0e172c94eff511cdefa4823be"
     },
     "p2p_tx_bounds.py": {
       "bytes": 2261,
@@ -763,6 +763,10 @@
     "security_sec117_sidefork_cow_utxo_spec.py": {
       "bytes": 5710,
       "sha256": "0dfa8784a6d3704af7e290dbef39e024b42abe55fbc2ef75046c0c4801597187"
+    },
+    "security_sec118_p2p_inbound_block_work_budget_spec.py": {
+      "bytes": 7179,
+      "sha256": "04060879f15e75457f4f8143c3bd2e85f96808d0ac16615d74ac28e6560ab448"
     },
     "setup.cmd": {
       "bytes": 172,
