@@ -1,56 +1,4 @@
 #!/usr/bin/env python3
-import hashlib
-import json
-from pathlib import Path
-
-core_path=Path("core.py")
-source=core_path.read_text(encoding="utf-8")
-
-old='''    def get_transaction(self, txid):
-        with self.chain._state_lock:
-            return self._get_transaction_locked(txid)
-
-    def _refresh_confirmed_tx_index_locked(self):
-'''
-new='''    @staticmethod
-    def _validate_transaction_id(txid):
-        # Transaction ids are SHA-256 hexdigests. Reject aliases and malformed
-        # values before they can acquire the chain state lock or touch caches.
-        if not isinstance(txid,str):
-            raise ValueError("invalid transaction id")
-        if len(txid) > 64:
-            raise ValueError("transaction id too long")
-        if len(txid) != 64 or any(ch not in "0123456789abcdef" for ch in txid):
-            raise ValueError("invalid transaction id")
-        return txid
-
-    def get_transaction(self, txid):
-        txid=self._validate_transaction_id(txid)
-        with self.chain._state_lock:
-            return self._get_transaction_locked(txid)
-
-    def _refresh_confirmed_tx_index_locked(self):
-'''
-if source.count(old)!=1:
-    raise SystemExit("SEC-137 public lookup anchor mismatch")
-source=source.replace(old,new,1)
-
-old_locked='''    def _get_transaction_locked(self, txid):
-        txid=str(txid)
-        if len(txid) > 64:
-            raise ValueError("transaction id too long")
-        with _mempool_guard(self.mempool):
-'''
-new_locked='''    def _get_transaction_locked(self, txid):
-        txid=self._validate_transaction_id(txid)
-        with _mempool_guard(self.mempool):
-'''
-if source.count(old_locked)!=1:
-    raise SystemExit("SEC-137 locked lookup anchor mismatch")
-source=source.replace(old_locked,new_locked,1)
-core_path.write_text(source,encoding="utf-8")
-
-spec=r'''#!/usr/bin/env python3
 """SEC-137 requires canonical transaction ids before chain-lock acquisition."""
 
 import inspect
@@ -174,20 +122,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-spec_path=Path("security_sec137_canonical_txid_prelock_spec.py")
-spec_path.write_text(spec,encoding="utf-8")
-
-# Hash the LF-normalized bytes Git stores in canonical blobs, not the CRLF
-# checkout representation used by Windows runners.
-def git_blob_bytes(path):
-    text=Path(path).read_text(encoding="utf-8")
-    return text.replace("\r\n","\n").encode("utf-8")
-
-manifest_path=Path("release_manifest.json")
-manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
-for name in ("core.py",spec_path.name):
-    raw=git_blob_bytes(name)
-    manifest["files"][name]={"bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest()}
-manifest_text=json.dumps(manifest,indent=2,sort_keys=True,ensure_ascii=False)+"\n"
-manifest_path.write_text(manifest_text,encoding="utf-8",newline="\n")
