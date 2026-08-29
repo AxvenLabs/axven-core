@@ -3,16 +3,33 @@
 from __future__ import annotations
 import argparse, json, sys, urllib.request, urllib.error
 
+MAX_RPC_RESPONSE_BYTES=16*1024*1024
+
+class RPCClientError(ValueError): pass
+
+def read_rpc_json_response(stream):
+    raw=stream.read(MAX_RPC_RESPONSE_BYTES+1)
+    if len(raw)>MAX_RPC_RESPONSE_BYTES:
+        raise RPCClientError("RPC response too large")
+    try:
+        data=json.loads(raw)
+    except (UnicodeError,json.JSONDecodeError,RecursionError) as exc:
+        raise RPCClientError("invalid RPC response") from exc
+    if type(data) is not dict:
+        raise RPCClientError("RPC response must be object")
+    return data
+
 def call(host,port,method,params=None):
     raw=json.dumps({"method":method,"params":params or {}}).encode()
     req=urllib.request.Request(f"http://{host}:{port}/",data=raw,
         headers={"Content-Type":"application/json"},method="POST")
     try:
         with urllib.request.urlopen(req,timeout=10) as r:
-            return json.loads(r.read())
+            try:return read_rpc_json_response(r)
+            except RPCClientError as e:return {"ok":False,"error":str(e)}
     except urllib.error.HTTPError as e:
-        try:return json.loads(e.read())
-        except Exception:return {"ok":False,"error":f"HTTP {e.code}"}
+        try:return read_rpc_json_response(e)
+        except RPCClientError as exc:return {"ok":False,"error":str(exc)}
     except urllib.error.URLError as e:
         return {"ok":False,"error":f"Node unavailable at {host}:{port}: {e.reason}"}
     except TimeoutError:

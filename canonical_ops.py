@@ -7,6 +7,7 @@ Axven Core using persistent datadirs and loopback RPC/P2P.
 from __future__ import annotations
 import argparse, json, os, subprocess, sys, time, urllib.request, urllib.error
 from pathlib import Path
+from axven_cli import RPCClientError, read_rpc_json_response
 
 ROOT=Path(__file__).resolve().parent
 
@@ -16,9 +17,11 @@ def rpc(port, method, params=None):
         headers={"Content-Type":"application/json"},method="POST")
     try:
         with urllib.request.urlopen(req,timeout=15) as r:
-            return json.loads(r.read())
+            try:return read_rpc_json_response(r)
+            except RPCClientError as exc:return {"ok":False,"error":str(exc)}
     except urllib.error.HTTPError as e:
-        return json.loads(e.read())
+        try:return read_rpc_json_response(e)
+        except RPCClientError as exc:return {"ok":False,"error":str(exc)}
 
 def main():
     ap=argparse.ArgumentParser(prog="canonical-ops")

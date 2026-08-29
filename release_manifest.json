@@ -129,8 +129,8 @@
       "sha256": "fb2fe5865cac542d783e545a3354293675a526435615495a459c3d1107b61df2"
     },
     "axven_cli.py": {
-      "bytes": 2654,
-      "sha256": "97119d6950714747a900352cbdcd3237f17913b547f5c921e576b0f8e11b4b9e"
+      "bytes": 3278,
+      "sha256": "28c24cb16a1338f3003a5b379eeca46c105f6b0800424426e61837c797f0aed0"
     },
     "axven_console.py": {
       "bytes": 3417,
@@ -165,8 +165,8 @@
       "sha256": "68bcd822d6fbcaa5a5f90a1c46e4bc1887ebedb275734763ba0d75174eefb2a5"
     },
     "canonical_ops.py": {
-      "bytes": 5802,
-      "sha256": "72b27ed1fdcc2b4a3007d5e2cab0e27d4ff0deea9c04298d3a49b5adf91c84d3"
+      "bytes": 6033,
+      "sha256": "11a41dc80167e4c6b3bd6c72c98983abb233af94948684870db8479b2556d763"
     },
     "canonical_ops_audit.py": {
       "bytes": 960,
@@ -947,6 +947,10 @@
     "security_sec163_peer_config_directory_fsync_spec.py": {
       "bytes": 3472,
       "sha256": "616f844d0f4646ec1af17bbdfdab45e57e11db894ee5344a361bd6f274627413"
+    },
+    "security_sec164_rpc_client_response_budget_spec.py": {
+      "bytes": 3079,
+      "sha256": "7b14a14bba885eb747f42a0e56ddf9517269e5bd9bbbc9a998e08d9b8019ac54"
     },
     "setup.cmd": {
       "bytes": 172,
