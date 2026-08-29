@@ -26,6 +26,18 @@ def _reschedule_peer_after_sync(core, peer, base_interval, cap=60.0):
         core.record_peer_health_transition(addr)
         return retry_delay
 
+def _shutdown_services_and_persist(dd,core,rpc,explorer):
+    """Quiesce every runtime service before writing the final chain snapshot."""
+    # RPC and P2P can mutate chain state.  SEC-159 and SEC-158 make their
+    # stop() calls quiescence barriers, so final persistence must happen only
+    # after both have returned.  Explorer is read-only but is also stopped
+    # before the final snapshot to leave no live service at persistence time.
+    rpc.stop()
+    core.stop_p2p()
+    explorer.stop()
+    dd.save_chain(core.chain)
+
+
 def _passphrase(confirm=False):
     env=os.environ.get("AXVEN_WALLET_PASSPHRASE")
     if env:return env
@@ -143,7 +155,6 @@ def main():
                         time.monotonic()+retry_delay
                     )
         finally:
-            dd.save_chain(core.chain)
-            explorer.stop(); rpc.stop(); core.stop_p2p()
+            _shutdown_services_and_persist(dd,core,rpc,explorer)
 
 if __name__=="__main__": main()
