@@ -1,49 +1,4 @@
-from pathlib import Path
-import hashlib
-import json
-
-EXPLORER = Path("explorer.py")
-text = EXPLORER.read_text(encoding="utf-8")
-
-old = "from urllib.parse import urlparse, parse_qs\n"
-new = "from urllib.parse import urlparse\n"
-if old not in text:
-    raise SystemExit("import anchor missing")
-text = text.replace(old, new, 1)
-
-old = '_ALLOWED_EXPLORER_HOSTS={"127.0.0.1","localhost","::1"}\n'
-new = old + 'MAX_EXPLORER_QUERY_CHARS=1024\n'
-if old not in text:
-    raise SystemExit("constant anchor missing")
-text = text.replace(old, new, 1)
-
-anchor = '''    if host not in _ALLOWED_EXPLORER_HOSTS:\n        raise ValueError("invalid host header")\n\n\ndef _json(handler,status,obj):\n'''
-replacement = '''    if host not in _ALLOWED_EXPLORER_HOSTS:\n        raise ValueError("invalid host header")\n\n\ndef _validate_explorer_query_budget(raw_query):\n    # Request targets are attacker-controlled browser/process input even on\n    # loopback. Keep query work bounded before any field parsing or core call.\n    if type(raw_query) is not str:\n        raise ValueError("invalid Explorer query")\n    if len(raw_query) > MAX_EXPLORER_QUERY_CHARS:\n        raise ValueError("Explorer query too long")\n    return raw_query\n\n\ndef _parse_explorer_limit_query(raw_query, default, maximum):\n    # Explorer currently exposes one optional query field: limit. Parse its\n    # wire form directly so percent-encoding, Unicode digits, signs, numeric\n    # separators, duplicate fields, and custom parser aliases cannot reach\n    # int() or the service layer as alternate numeric representations.\n    raw_query=_validate_explorer_query_budget(raw_query)\n    if not raw_query:\n        return default\n    prefix="limit="\n    if not raw_query.startswith(prefix) or raw_query.count("=") != 1:\n        raise ValueError("invalid Explorer query")\n    value_text=raw_query[len(prefix):]\n    if (\n        not value_text\n        or len(value_text) > 3\n        or not value_text.isascii()\n        or not value_text.isdigit()\n        or (len(value_text) > 1 and value_text.startswith("0"))\n    ):\n        raise ValueError("invalid Explorer limit")\n    value=int(value_text)\n    if value < 1 or value > maximum:\n        raise ValueError("invalid Explorer limit")\n    return value\n\n\ndef _json(handler,status,obj):\n'''
-if anchor not in text:
-    raise SystemExit("helper anchor missing")
-text = text.replace(anchor, replacement, 1)
-
-old = '''                u=urlparse(self.path)\n                path=u.path\n                q=parse_qs(u.query)\n'''
-new = '''                u=urlparse(self.path)\n                _validate_explorer_query_budget(u.query)\n                path=u.path\n'''
-if old not in text:
-    raise SystemExit("handler query anchor missing")
-text = text.replace(old, new, 1)
-
-old = '''                if path=="/api/blocks":\n                    limit=int((q.get("limit") or ["20"])[0])\n                    _json(self,200,{"ok":True,"result":core.recent_blocks(limit)}); return\n'''
-new = '''                if path=="/api/blocks":\n                    limit=_parse_explorer_limit_query(u.query,20,200)\n                    _json(self,200,{"ok":True,"result":core.recent_blocks(limit)}); return\n'''
-if old not in text:
-    raise SystemExit("blocks anchor missing")
-text = text.replace(old, new, 1)
-
-old = '''                if path=="/api/mempool":\n                    limit=int((q.get("limit") or ["100"])[0])\n                    _json(self,200,{"ok":True,"result":core.mempool_view(limit)}); return\n'''
-new = '''                if path=="/api/mempool":\n                    limit=_parse_explorer_limit_query(u.query,100,500)\n                    _json(self,200,{"ok":True,"result":core.mempool_view(limit)}); return\n'''
-if old not in text:
-    raise SystemExit("mempool anchor missing")
-text = text.replace(old, new, 1)
-
-EXPLORER.write_bytes(text.encode("utf-8"))
-
-spec = r'''#!/usr/bin/env python3
+#!/usr/bin/env python3
 """SEC-148: bound and canonicalize Explorer query parsing before core work."""
 import inspect
 import socket
@@ -221,18 +176,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-SPEC = Path("security_sec148_explorer_query_domain_spec.py")
-SPEC.write_bytes(spec.encode("utf-8"))
-
-manifest_path=Path("release_manifest.json")
-manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
-for path in (EXPLORER,SPEC):
-    data=path.read_bytes()
-    manifest["files"][path.as_posix()]={
-        "bytes":len(data),
-        "sha256":hashlib.sha256(data).hexdigest(),
-    }
-manifest_path.write_bytes((json.dumps(manifest,indent=2,sort_keys=True)+"\n").encode("utf-8"))
-
-print("SEC-148 patch staged")
