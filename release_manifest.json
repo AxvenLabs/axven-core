@@ -21,8 +21,8 @@
   "explorer_node2_port": 18455,
   "files": {
     ".github/workflows/validation.yml": {
-      "bytes": 907,
-      "sha256": "d90515ba5127c63a5249bf6e0fcd0da11bfdd18e348a2d6836414b26741c213a"
+      "bytes": 971,
+      "sha256": "bdc42298508a4d7218b2f6d89892ba3d338a0216d9a663465777ab2f146a6cd5"
     },
     "CANONICAL_OPERATIONS.md": {
       "bytes": 1434,
@@ -329,8 +329,8 @@
       "sha256": "4a4d485eedec4d982bb8abdf7505de483c07088c9e5a96bb254b39e6f0c084e6"
     },
     "pyproject.toml": {
-      "bytes": 636,
-      "sha256": "39706628b0e82d7c339038a8e82e98edf3d104f8b2034ecfd5c52d88c72725aa"
+      "bytes": 648,
+      "sha256": "6f640b65f7870168dd77be4ada0b6cec08f726791bebc072527457c3e55fefef"
     },
     "rc_audit.py": {
       "bytes": 1256,
@@ -979,6 +979,10 @@
     "security_sec171_rpc_method_param_canonicality_spec.py": {
       "bytes": 4166,
       "sha256": "6b7d89789b0f52357d9183c0d7916d9c72d571b4e0a6a1d4fecaf1c3084b125f"
+    },
+    "security_sec172_python_packaging_toolchain_pins_spec.py": {
+      "bytes": 2636,
+      "sha256": "285350980829a4d1fe9bb3f956624675ff2e5591e249ddb7f7ed264cdccd5fbb"
     },
     "setup.cmd": {
       "bytes": 172,
