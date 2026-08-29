@@ -65,6 +65,10 @@ class AxvenCore:
         self.peer_retry_delay_seconds = {}
         self.peer_next_retry_at = {}
         self.peer_retry_base_interval = {}
+        # Optional daemon retry policy. When configured, sync result health
+        # and retry metadata are published under one peer-lock snapshot.
+        self._peer_retry_publication_base_interval = None
+        self._peer_retry_publication_cap = 60.0
         self.peer_health_current_state = {}
         self.peer_previous_health_state = {}
         self.peer_health_transition_count = {}
@@ -747,6 +751,30 @@ class AxvenCore:
         return value
 
     @_peer_locked
+    def configure_peer_retry_publication(self, base_interval=None, cap=60.0):
+        """Configure atomic retry metadata publication for daemon syncs."""
+        if base_interval is None:
+            self._peer_retry_publication_base_interval=None
+            self._peer_retry_publication_cap=60.0
+            return
+        raw_base=self._validate_peer_retry_seconds(base_interval)
+        raw_cap=self._validate_peer_retry_seconds(cap)
+        base=max(0.5,raw_base)
+        self._peer_retry_publication_base_interval=base
+        self._peer_retry_publication_cap=max(base,raw_cap)
+
+    def _publish_peer_retry_schedule_locked(self, addr):
+        """Publish one retry schedule while the caller owns _peer_lock."""
+        base=self._peer_retry_publication_base_interval
+        if base is None:
+            return None
+        retry_delay=self.peer_retry_delay(
+            addr,base,self._peer_retry_publication_cap
+        )
+        self.set_peer_retry_schedule(addr,retry_delay,base)
+        return retry_delay
+
+    @_peer_locked
     def set_peer_retry_schedule(self, peer, delay_seconds, base_interval=5.0):
         """Record operator-visible retry scheduling state for one peer."""
         addr=self._parse_peer(peer)
@@ -825,6 +853,7 @@ class AxvenCore:
                     self.peer_last_error[addr]=error
                     self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1
                     self.peer_last_failure_at[addr]=self._peer_health_timestamp()
+                    self._publish_peer_retry_schedule_locked(addr)
                     self.record_peer_health_transition(addr)
             return {"peer":f"{addr[0]}:{addr[1]}","ok":False,
                     "error":error}
@@ -835,6 +864,7 @@ class AxvenCore:
                 self.peer_sync_successes[addr]=self.peer_sync_successes.get(addr,0)+1
                 self.peer_consecutive_failures[addr]=0
                 self.peer_last_success_at[addr]=self._peer_health_timestamp()
+                self._publish_peer_retry_schedule_locked(addr)
                 self.record_peer_health_transition(addr)
         return {"peer":f"{addr[0]}:{addr[1]}","ok":True,
                 "accepted":accepted}

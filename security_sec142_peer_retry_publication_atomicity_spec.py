@@ -1,50 +1,4 @@
-from pathlib import Path
-import hashlib
-import json
-
-CORE = Path("core.py")
-DAEMON = Path("axven_core.py")
-
-text = CORE.read_text(encoding="utf-8")
-old = '''        self.peer_retry_delay_seconds = {}\n        self.peer_next_retry_at = {}\n        self.peer_retry_base_interval = {}\n        self.peer_health_current_state = {}\n'''
-new = '''        self.peer_retry_delay_seconds = {}\n        self.peer_next_retry_at = {}\n        self.peer_retry_base_interval = {}\n        # Optional daemon retry policy. When configured, sync result health\n        # and retry metadata are published under one peer-lock snapshot.\n        self._peer_retry_publication_base_interval = None\n        self._peer_retry_publication_cap = 60.0\n        self.peer_health_current_state = {}\n'''
-if old not in text:
-    raise SystemExit("SEC-142 init anchor not found")
-text = text.replace(old, new, 1)
-
-old = '''    @_peer_locked\n    def set_peer_retry_schedule(self, peer, delay_seconds, base_interval=5.0):\n'''
-new = '''    @_peer_locked\n    def configure_peer_retry_publication(self, base_interval=None, cap=60.0):\n        \"\"\"Configure atomic retry metadata publication for daemon syncs.\"\"\"\n        if base_interval is None:\n            self._peer_retry_publication_base_interval=None\n            self._peer_retry_publication_cap=60.0\n            return\n        raw_base=self._validate_peer_retry_seconds(base_interval)\n        raw_cap=self._validate_peer_retry_seconds(cap)\n        base=max(0.5,raw_base)\n        self._peer_retry_publication_base_interval=base\n        self._peer_retry_publication_cap=max(base,raw_cap)\n\n    def _publish_peer_retry_schedule_locked(self, addr):\n        \"\"\"Publish one retry schedule while the caller owns _peer_lock.\"\"\"\n        base=self._peer_retry_publication_base_interval\n        if base is None:\n            return None\n        retry_delay=self.peer_retry_delay(\n            addr,base,self._peer_retry_publication_cap\n        )\n        self.set_peer_retry_schedule(addr,retry_delay,base)\n        return retry_delay\n\n    @_peer_locked\n    def set_peer_retry_schedule(self, peer, delay_seconds, base_interval=5.0):\n'''
-if old not in text:
-    raise SystemExit("SEC-142 retry helper anchor not found")
-text = text.replace(old, new, 1)
-
-old = '''                    self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1\n                    self.peer_last_failure_at[addr]=self._peer_health_timestamp()\n                    self.record_peer_health_transition(addr)\n'''
-new = '''                    self.peer_consecutive_failures[addr]=self.peer_consecutive_failures.get(addr,0)+1\n                    self.peer_last_failure_at[addr]=self._peer_health_timestamp()\n                    self._publish_peer_retry_schedule_locked(addr)\n                    self.record_peer_health_transition(addr)\n'''
-if old not in text:
-    raise SystemExit("SEC-142 failure publication anchor not found")
-text = text.replace(old, new, 1)
-
-old = '''                self.peer_consecutive_failures[addr]=0\n                self.peer_last_success_at[addr]=self._peer_health_timestamp()\n                self.record_peer_health_transition(addr)\n'''
-new = '''                self.peer_consecutive_failures[addr]=0\n                self.peer_last_success_at[addr]=self._peer_health_timestamp()\n                self._publish_peer_retry_schedule_locked(addr)\n                self.record_peer_health_transition(addr)\n'''
-if old not in text:
-    raise SystemExit("SEC-142 success publication anchor not found")
-text = text.replace(old, new, 1)
-CORE.write_text(text, encoding="utf-8", newline="\n")
-
-daemon = DAEMON.read_text(encoding="utf-8")
-old = '''        for raw_peer in args.peer:\n            core.add_outbound_peer(raw_peer)\n        initial_sync=core.sync_outbound_peers()\n'''
-new = '''        for raw_peer in args.peer:\n            core.add_outbound_peer(raw_peer)\n        base_sync_interval=max(.5,args.sync_interval)\n        core.configure_peer_retry_publication(base_sync_interval,60.0)\n        initial_sync=core.sync_outbound_peers()\n'''
-if old not in daemon:
-    raise SystemExit("SEC-142 daemon initial sync anchor not found")
-daemon = daemon.replace(old, new, 1)
-old = '''        try:\n            base_sync_interval=max(.5,args.sync_interval)\n            peer_next_sync={\n'''
-new = '''        try:\n            peer_next_sync={\n'''
-if old not in daemon:
-    raise SystemExit("SEC-142 daemon duplicate interval anchor not found")
-daemon = daemon.replace(old, new, 1)
-DAEMON.write_text(daemon, encoding="utf-8", newline="\n")
-
-spec = r'''#!/usr/bin/env python3
+#!/usr/bin/env python3
 """SEC-142 publishes peer failure/success health and retry metadata atomically."""
 
 import inspect
@@ -215,16 +169,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-SPEC = Path("security_sec142_peer_retry_publication_atomicity_spec.py")
-SPEC.write_text(spec, encoding="utf-8", newline="\n")
-
-manifest_path = Path("release_manifest.json")
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-for path in (CORE, DAEMON, SPEC):
-    raw = path.read_bytes()
-    manifest["files"][path.as_posix()] = {
-        "bytes": len(raw),
-        "sha256": hashlib.sha256(raw).hexdigest(),
-    }
-manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
