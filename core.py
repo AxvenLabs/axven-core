@@ -287,10 +287,10 @@ class AxvenCore:
             st=self.status()
             st["latest_blocks"]=self.recent_blocks(10)
             st["mempool"]=self.mempool_view(20)
-            st["state_root"]=axven.expected_state_root(
-                self.chain.utxo,
-                self.chain.tip.height,
-            )
+            # The active tip already commits the canonical post-block UTXO
+            # root. Recomputing it for every Explorer request is O(UTXO) and
+            # unnecessarily extends the chain-state lock hold time.
+            st["state_root"]=self.chain.tip.utxo_state_root
             return st
 
     def chain_config(self):

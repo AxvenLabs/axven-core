@@ -1,38 +1,4 @@
 #!/usr/bin/env python3
-import hashlib
-import json
-from pathlib import Path
-
-core_path=Path("core.py")
-source=core_path.read_text(encoding="utf-8")
-old='''    def explorer_summary(self):
-        with self.chain._state_lock:
-            st=self.status()
-            st["latest_blocks"]=self.recent_blocks(10)
-            st["mempool"]=self.mempool_view(20)
-            st["state_root"]=axven.expected_state_root(
-                self.chain.utxo,
-                self.chain.tip.height,
-            )
-            return st
-'''
-new='''    def explorer_summary(self):
-        with self.chain._state_lock:
-            st=self.status()
-            st["latest_blocks"]=self.recent_blocks(10)
-            st["mempool"]=self.mempool_view(20)
-            # The active tip already commits the canonical post-block UTXO
-            # root. Recomputing it for every Explorer request is O(UTXO) and
-            # unnecessarily extends the chain-state lock hold time.
-            st["state_root"]=self.chain.tip.utxo_state_root
-            return st
-'''
-if source.count(old)!=1:
-    raise SystemExit("SEC-139 explorer summary anchor mismatch")
-source=source.replace(old,new,1)
-core_path.write_text(source,encoding="utf-8")
-
-spec=r'''#!/usr/bin/env python3
 """SEC-139 removes redundant O(UTXO) Explorer summary root recomputation."""
 
 import inspect
@@ -129,20 +95,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-spec_path=Path("security_sec139_explorer_summary_root_work_spec.py")
-spec_path.write_text(spec,encoding="utf-8")
-
-def git_blob_bytes(path):
-    text=Path(path).read_text(encoding="utf-8")
-    return text.replace("\r\n","\n").encode("utf-8")
-
-manifest_path=Path("release_manifest.json")
-manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
-for name in ("core.py",spec_path.name):
-    raw=git_blob_bytes(name)
-    manifest["files"][name]={"bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest()}
-manifest_path.write_text(
-    json.dumps(manifest,indent=2,sort_keys=True,ensure_ascii=False)+"\n",
-    encoding="utf-8",newline="\n",
-)

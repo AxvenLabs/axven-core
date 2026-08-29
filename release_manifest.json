@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 34022,
-      "sha256": "29fab216420f14251b230cb268d25d7f84d4891fdd70b2c5d48df6deab8b6523"
+      "bytes": 34160,
+      "sha256": "a5bd69d36cfa674d75611aa96dc0bb9d59001da6c3d3cc74c2826ae02e88fed0"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5613,
@@ -847,6 +847,10 @@
     "security_sec138_block_id_prelock_domain_spec.py": {
       "bytes": 4081,
       "sha256": "a81eb275d26993f7ad0ddb4278f52eec58ff4938bd3acb9b7e43dac690483f83"
+    },
+    "security_sec139_explorer_summary_root_work_spec.py": {
+      "bytes": 3362,
+      "sha256": "ab7bdf878f192af7f77dd86fe0467e86282f46386e46ebd8a164ea06df2616ef"
     },
     "setup.cmd": {
       "bytes": 172,
