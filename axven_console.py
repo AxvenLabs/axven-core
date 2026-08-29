@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Interactive operator/wallet console for a running Axven Core node."""
 from __future__ import annotations
-import argparse, json, shlex
-from axven_cli import call
+import argparse, json, os, shlex
+from axven_cli import call, resolve_rpc_auth_token
 
 HELP="""
 Commands:
@@ -21,8 +21,10 @@ Commands:
 Amounts are raw Axven consensus units in this checkpoint.
 """.strip()
 
+_RPC_AUTH_TOKEN=None
+
 def request(port,method,params=None):
-    out=call("127.0.0.1",port,method,params)
+    out=call("127.0.0.1",port,method,params,auth_token=_RPC_AUTH_TOKEN)
     if not out.get("ok"):
         print("ERROR:",out.get("error","unknown error"))
         return None
@@ -32,9 +34,12 @@ def pretty(x):
     print(json.dumps(x,indent=2,sort_keys=True))
 
 def main():
+    global _RPC_AUTH_TOKEN
     ap=argparse.ArgumentParser(prog="axven-console")
     ap.add_argument("--rpc-port",type=int,default=18443)
+    ap.add_argument("--datadir",default=os.environ.get("AXVEN_DATADIR","./axven-data"))
     a=ap.parse_args()
+    _RPC_AUTH_TOKEN=resolve_rpc_auth_token(a.datadir)
     print("Axven Core Console — canonical axven-devnet-2")
     print("Type 'help' for commands.")
     while True:

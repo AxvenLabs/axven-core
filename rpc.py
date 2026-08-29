@@ -5,6 +5,7 @@ Default binding is loopback only.  This is intentionally not an Internet-facing
 API; public authentication/TLS belongs to a later hardening milestone.
 """
 from __future__ import annotations
+import hmac
 import json
 import socket
 import threading
@@ -54,9 +55,33 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
 
 
 class RPCError(ValueError): pass
+class RPCAuthError(RPCError): pass
 
 
 _ALLOWED_RPC_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _validate_rpc_auth_token(token):
+    if type(token) is not str or len(token)!=64:
+        raise ValueError("RPC auth token must be 64 lowercase hex characters")
+    if any(ch not in "0123456789abcdef" for ch in token):
+        raise ValueError("RPC auth token must be 64 lowercase hex characters")
+    return token
+
+
+def _require_rpc_authorization(headers, expected_token):
+    if expected_token is None:
+        return
+    values=headers.get_all("Authorization") or []
+    if len(values)!=1:
+        raise RPCAuthError("RPC authorization required")
+    value=values[0]
+    prefix="Bearer "
+    if not value.startswith(prefix):
+        raise RPCAuthError("RPC authorization failed")
+    provided=value[len(prefix):]
+    if len(provided)!=64 or not hmac.compare_digest(provided,expected_token):
+        raise RPCAuthError("RPC authorization failed")
 
 
 def _require_safe_rpc_host(headers):
@@ -314,7 +339,7 @@ class RPCDispatcher:
         raise RPCError("unknown method")
 
 
-def _handler(dispatcher):
+def _handler(dispatcher, auth_token=None):
     class Handler(BaseHTTPRequestHandler):
         def setup(self):
             super().setup()
@@ -352,6 +377,7 @@ def _handler(dispatcher):
             self.connection.settimeout(RPC_REQUEST_TIMEOUT)
             try:
                 _require_safe_rpc_host(self.headers)
+                _require_rpc_authorization(self.headers,auth_token)
                 n = _require_rpc_request_framing(self.headers)
                 raw_request = self.rfile.read(n)
                 if len(raw_request) != n:
@@ -397,11 +423,17 @@ def _validate_rpc_listener_endpoint(host, port):
 
 
 class RPCServer:
-    def __init__(self, core, host="127.0.0.1", port=0):
-        # v0: intentionally loopback only.
+    def __init__(self, core, host="127.0.0.1", port=0, auth_token=None):
+        # v0: intentionally loopback only.  Production daemon also supplies a
+        # per-datadir bearer token; None remains an explicit in-process/test mode.
         host, port = _validate_rpc_listener_endpoint(host, port)
+        self.auth_token=(
+            None if auth_token is None else _validate_rpc_auth_token(auth_token)
+        )
         self.dispatcher = RPCDispatcher(core)
-        self.httpd = BoundedThreadingHTTPServer((host, port), _handler(self.dispatcher))
+        self.httpd = BoundedThreadingHTTPServer(
+            (host, port), _handler(self.dispatcher,self.auth_token)
+        )
         self.thread = None
 
     @property

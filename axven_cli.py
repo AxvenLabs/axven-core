@@ -1,11 +1,41 @@
 #!/usr/bin/env python3
 """Axven CLI JSON-RPC client — canonical UX."""
 from __future__ import annotations
-import argparse, json, sys, urllib.request, urllib.error
+import argparse, json, os, sys, urllib.request, urllib.error
+from pathlib import Path
 
 MAX_RPC_RESPONSE_BYTES=16*1024*1024
+MAX_RPC_TOKEN_FILE_BYTES=65
 
 class RPCClientError(ValueError): pass
+
+
+def _validate_rpc_auth_token(token):
+    if type(token) is not str or len(token)!=64:
+        raise RPCClientError("invalid RPC auth token")
+    if any(ch not in "0123456789abcdef" for ch in token):
+        raise RPCClientError("invalid RPC auth token")
+    return token
+
+def resolve_rpc_auth_token(datadir=None):
+    env=os.environ.get("AXVEN_RPC_TOKEN")
+    if env is not None:
+        return _validate_rpc_auth_token(env)
+    root=Path(datadir or os.environ.get("AXVEN_DATADIR","./axven-data")).expanduser()
+    path=root/"rpc.token"
+    if not path.exists():
+        return None
+    with open(path,"rb") as f:
+        raw=f.read(MAX_RPC_TOKEN_FILE_BYTES+1)
+    if len(raw)>MAX_RPC_TOKEN_FILE_BYTES:
+        raise RPCClientError("invalid RPC auth token")
+    if raw.endswith(b"\n"):
+        raw=raw[:-1]
+    try:
+        token=raw.decode("ascii")
+    except UnicodeError as exc:
+        raise RPCClientError("invalid RPC auth token") from exc
+    return _validate_rpc_auth_token(token)
 
 def read_rpc_json_response(stream):
     raw=stream.read(MAX_RPC_RESPONSE_BYTES+1)
@@ -19,10 +49,14 @@ def read_rpc_json_response(stream):
         raise RPCClientError("RPC response must be object")
     return data
 
-def call(host,port,method,params=None):
+def call(host,port,method,params=None,auth_token=None):
     raw=json.dumps({"method":method,"params":params or {}}).encode()
-    req=urllib.request.Request(f"http://{host}:{port}/",data=raw,
-        headers={"Content-Type":"application/json"},method="POST")
+    headers={"Content-Type":"application/json"}
+    if auth_token is not None:
+        headers["Authorization"]="Bearer "+_validate_rpc_auth_token(auth_token)
+    req=urllib.request.Request(
+        f"http://{host}:{port}/",data=raw,headers=headers,method="POST"
+    )
     try:
         with urllib.request.urlopen(req,timeout=10) as r:
             try:return read_rpc_json_response(r)
@@ -39,6 +73,7 @@ def main():
     ap=argparse.ArgumentParser(prog="axven-cli")
     ap.add_argument("--rpc-host",default="127.0.0.1")
     ap.add_argument("--rpc-port",type=int,default=18443)
+    ap.add_argument("--datadir",default=os.environ.get("AXVEN_DATADIR","./axven-data"))
     sp=ap.add_subparsers(dest="cmd",required=True)
     sp.add_parser("status"); sp.add_parser("overview"); sp.add_parser("addresses"); sp.add_parser("stop")
     b=sp.add_parser("balance"); b.add_argument("--scheme")
@@ -56,7 +91,10 @@ def main():
       "sync-peer":("sync_peer",{"host":getattr(a,"host",None),"port":getattr(a,"port",None),"batch":getattr(a,"batch",128)}),
     }
     method,params=mp[a.cmd]
-    out=call(a.rpc_host,a.rpc_port,method,params)
+    out=call(
+        a.rpc_host,a.rpc_port,method,params,
+        auth_token=resolve_rpc_auth_token(a.datadir),
+    )
     print(json.dumps(out,indent=2,sort_keys=True))
     raise SystemExit(0 if out.get("ok") else 2)
 

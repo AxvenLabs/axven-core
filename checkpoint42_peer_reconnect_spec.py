@@ -19,6 +19,7 @@ from datadir import DataDir
 checks = []
 
 
+_rpc_tokens={}
 def ok(name, condition):
     assert condition, name
     checks.append(name)
@@ -39,10 +40,15 @@ def rpc(port, method, params=None, timeout=4):
         "params": params or {},
     }).encode()
 
+    headers={"Content-Type":"application/json"}
+    token=_rpc_tokens.get(port)
+    if token is not None:
+        headers["Authorization"]="Bearer "+token
+
     req = urllib.request.Request(
         f"http://127.0.0.1:{port}/",
         data=raw,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
 
@@ -83,6 +89,7 @@ def wait_until(fn, deadline=12, interval=0.1):
 
 
 def start_daemon(datadir, rpc_port, p2p_port):
+    _rpc_tokens[rpc_port]=DataDir(datadir).load_or_create_rpc_token()
     env = os.environ.copy()
 
     return subprocess.Popen(

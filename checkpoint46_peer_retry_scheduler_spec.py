@@ -15,6 +15,7 @@ from datadir import DataDir
 
 checks=[]
 
+_rpc_tokens={}
 def ok(name, condition):
     assert condition, name
     checks.append(name)
@@ -33,10 +34,15 @@ def rpc(port, method, params=None, timeout=4):
         "params":params or {},
     }).encode()
 
+    headers={"Content-Type":"application/json"}
+    token=_rpc_tokens.get(port)
+    if token is not None:
+        headers["Authorization"]="Bearer "+token
+
     req=urllib.request.Request(
         f"http://127.0.0.1:{port}/",
         data=raw,
-        headers={"Content-Type":"application/json"},
+        headers=headers,
         method="POST",
     )
 
@@ -99,6 +105,8 @@ try:
 
     rpc_port=free_port()
     local_p2p=free_port()
+
+    _rpc_tokens[rpc_port]=dd.load_or_create_rpc_token()
 
     proc=subprocess.Popen(
         [
