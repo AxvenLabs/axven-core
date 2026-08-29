@@ -30,10 +30,8 @@ jobs:
           from pathlib import Path
           path=Path(".github/sec134_apply.py")
           text=path.read_text(encoding="utf-8")
-          old='''        "BoundedThreadingHTTPServer" in server_src
-          and "ThreadingHTTPServer((host" not in server_src,'''
-          new='''        "self.httpd=BoundedThreadingHTTPServer(" in server_src
-          and "self.httpd=ThreadingHTTPServer(" not in server_src,'''
+          old='"BoundedThreadingHTTPServer" in server_src\n        and "ThreadingHTTPServer((host" not in server_src'
+          new='"self.httpd=BoundedThreadingHTTPServer(" in server_src\n        and "self.httpd=ThreadingHTTPServer(" not in server_src'
           if text.count(old) != 1:
               raise SystemExit("SEC-134 static anchor correction mismatch")
           path.write_text(text.replace(old,new,1),encoding="utf-8",newline="\n")
