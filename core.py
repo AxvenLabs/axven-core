@@ -399,10 +399,18 @@ class AxvenCore:
             self._propagate_block_outbound(block)
         return hashes
 
+    @staticmethod
+    def _validate_recipient_bound(recipient):
+        # RPC recipients are textual address values. Reject JSON containers
+        # and scalar coercion aliases before wallet or transaction work.
+        if type(recipient) is not str:
+            raise ValueError("recipient address must be string")
+        if len(recipient) > 256:
+            raise ValueError("recipient address too long")
+
     def send(self, input_scheme, recipient, amount, fee):
         self._validate_scheme_bound(input_scheme)
-        if len(str(recipient)) > 256:
-            raise ValueError("recipient address too long")
+        self._validate_recipient_bound(recipient)
         w = self.require_wallet()
         tx = wallet.build_transaction(
             self.chain, w, input_scheme, recipient, int(amount), int(fee),
