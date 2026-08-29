@@ -1109,7 +1109,8 @@ class NodeServer:
         self.session=PeerSession(self.chain,self.mempool)
         self.host=host; self.port=port
         self._sock=None; self._thread=None; self._stop=threading.Event()
-        self._clients=set(); self._client_hosts={}; self._lock=threading.Lock()
+        self._clients=set(); self._client_hosts={}; self._workers=set()
+        self._lock=threading.Lock()
         self._handshake_rate_limiter=_InboundHandshakeRateLimiter()
         self._block_work_limiter=_InboundBlockWorkLimiter()
         self._tx_work_limiter=_InboundTxWorkLimiter()
@@ -1186,24 +1187,66 @@ class NodeServer:
                             message_gate=message_gate,
                         )
                     finally:
+                        current=threading.current_thread()
                         with self._lock:
                             self._clients.discard(client)
                             self._client_hosts.pop(client,None)
-                threading.Thread(target=worker,daemon=True).start()
+                            self._workers.discard(current)
+
+                worker_thread=threading.Thread(target=worker,daemon=True)
+                # Admission and worker publication are atomic with shutdown.
+                # If stop won the race, this accepted socket must never gain a
+                # worker capable of mutating chain state after stop returns.
+                with self._lock:
+                    if self._stop.is_set():
+                        self._clients.discard(c)
+                        self._client_hosts.pop(c,None)
+                        start_worker=False
+                    else:
+                        self._workers.add(worker_thread)
+                        worker_thread.start()
+                        start_worker=True
+                if not start_worker:
+                    try:c.close()
+                    except OSError:pass
         self._thread=threading.Thread(target=loop,daemon=True); self._thread.start()
         return self
 
     def stop(self):
+        # Stop admission first, then drain every already-published worker.
+        # Closing a socket does not cancel a worker already inside validation,
+        # so stop must not return until those workers have actually exited.
         self._stop.set()
-        if self._sock:
-            try:self._sock.close()
+        sock=self._sock
+        if sock:
+            try:sock.close()
             except OSError:pass
+
+        listener=self._thread
+        current=threading.current_thread()
+        if listener is not None and listener is not current:
+            listener.join()
+
         with self._lock:
-            for c in list(self._clients):
-                try:c.close()
-                except OSError:pass
-        if self._thread:self._thread.join(1)
+            clients=list(self._clients)
+        for client in clients:
+            try:client.close()
+            except OSError:pass
+
+        with self._lock:
+            workers=list(self._workers)
+        for worker in workers:
+            if worker is current:
+                raise RuntimeError("P2P server cannot stop from an active worker")
+            worker.join()
+
+        with self._lock:
+            if self._workers:
+                raise RuntimeError("P2P workers failed to quiesce")
+            self._clients.clear()
+            self._client_hosts.clear()
         self._sock=None
+        self._thread=None
 
 def connect(address,timeout=3.0):
     s=socket.create_connection(address,timeout=timeout)
