@@ -10,11 +10,26 @@ def check_module(name):
     except Exception as e:
         return False,f"{type(e).__name__}: {e}"
 
+PYTHON_MIN = (3, 13, 15)
+PYTHON_MAX_EXCLUSIVE = (3, 14, 0)
+PYTHON_REQUIRED = ">=3.13.15,<3.14"
+
+
+def _python_runtime_supported(version_info=None):
+    if version_info is None:
+        version_info = sys.version_info
+    current = tuple(version_info[:3])
+    return PYTHON_MIN <= current < PYTHON_MAX_EXCLUSIVE
+
+
 def run():
     import axven
     checks={}
-    checks["python"]={"ok":sys.version_info >= (3,10),
-                      "value":platform.python_version(),"required":">=3.10"}
+    checks["python"]={
+        "ok":_python_runtime_supported(),
+        "value":platform.python_version(),
+        "required":PYTHON_REQUIRED,
+    }
 
     crypto_import,crypto_detail=check_module("cryptography")
     crypto_version=None
