@@ -16,8 +16,16 @@ def run():
     checks["python"]={"ok":sys.version_info >= (3,10),
                       "value":platform.python_version(),"required":">=3.10"}
 
-    ok,msg=check_module("cryptography")
-    checks["cryptography"]={"ok":ok,"detail":msg}
+    crypto_import,crypto_detail=check_module("cryptography")
+    crypto_version=None
+    if crypto_import:
+        try:crypto_version=importlib.metadata.version("cryptography")
+        except Exception as e:crypto_detail=f"metadata error: {e}"
+    crypto_ok=crypto_import and crypto_version=="50.0.1"
+    checks["cryptography"]={
+        "ok":crypto_ok,"import_ok":crypto_import,"version":crypto_version,
+        "required":"50.0.1","detail":crypto_detail if not crypto_ok else "ok"
+    }
 
     pq_import,pq_detail=check_module("dilithium_py")
     pq_version=None
