@@ -1502,6 +1502,100 @@ def _validate_chain_state_envelope(payload):
     return blocks
 
 
+_PERSISTED_BLOCK_FIELDS = frozenset({
+    "height",
+    "timestamp",
+    "previous_hash",
+    "merkle_root",
+    "target",
+    "transactions",
+    "nonce",
+    "miner",
+    "utxo_state_root",
+})
+_PERSISTED_TRANSACTION_FIELDS = frozenset({
+    "inputs",
+    "outputs",
+    "coinbase_height",
+})
+_PERSISTED_OUTPUT_FIELDS = frozenset({"amount", "recipient"})
+
+
+def _validate_persisted_transaction(raw_tx):
+    """Require the exact representation emitted by Transaction.to_dict()."""
+    if type(raw_tx) is not dict:
+        raise ValueError("persisted transaction must be an object")
+    fields=set(raw_tx)
+    if (
+        "inputs" not in fields
+        or "outputs" not in fields
+        or not fields <= _PERSISTED_TRANSACTION_FIELDS
+    ):
+        raise ValueError("invalid persisted transaction fields")
+    inputs=raw_tx["inputs"]
+    outputs=raw_tx["outputs"]
+    if type(inputs) is not list:
+        raise ValueError("persisted transaction inputs must be a list")
+    if type(outputs) is not list:
+        raise ValueError("persisted transaction outputs must be a list")
+    if (
+        "coinbase_height" in raw_tx
+        and type(raw_tx["coinbase_height"]) is not int
+    ):
+        raise ValueError("persisted transaction coinbase_height must be integer")
+
+    for raw_input in inputs:
+        if type(raw_input) is not dict:
+            raise ValueError("persisted transaction input must be an object")
+        raw_scheme=raw_input.get("scheme", "")
+        if type(raw_scheme) is not str:
+            raise ValueError("persisted transaction input scheme must be string")
+        scheme=raw_scheme or SCHEME_ED25519
+        allowed=_ALLOWED.get(scheme)
+        if allowed is None or set(raw_input) != allowed:
+            raise ValueError("invalid persisted transaction input fields")
+        if type(raw_input["prev_txid"]) is not str:
+            raise ValueError("persisted transaction prev_txid must be string")
+        if type(raw_input["index"]) is not int:
+            raise ValueError("persisted transaction input index must be integer")
+        for field in allowed - {"prev_txid", "index", "scheme"}:
+            if type(raw_input[field]) is not str:
+                raise ValueError(
+                    f"persisted transaction input {field} must be string"
+                )
+
+    for raw_output in outputs:
+        if type(raw_output) is not dict:
+            raise ValueError("persisted transaction output must be an object")
+        if set(raw_output) != _PERSISTED_OUTPUT_FIELDS:
+            raise ValueError("invalid persisted transaction output fields")
+        if type(raw_output["amount"]) is not int:
+            raise ValueError("persisted transaction output amount must be integer")
+        if type(raw_output["recipient"]) is not str:
+            raise ValueError("persisted transaction output recipient must be string")
+
+
+def _validate_persisted_chain_block(raw_block):
+    """Reject non-canonical persisted block representations before coercion."""
+    if type(raw_block) is not dict:
+        raise ValueError("persisted block must be an object")
+    if set(raw_block) != _PERSISTED_BLOCK_FIELDS:
+        raise ValueError("invalid persisted block fields")
+    for field in ("height", "timestamp", "target", "nonce"):
+        if type(raw_block[field]) is not int:
+            raise ValueError(f"persisted block {field} must be integer")
+    for field in (
+        "previous_hash", "merkle_root", "miner", "utxo_state_root"
+    ):
+        if type(raw_block[field]) is not str:
+            raise ValueError(f"persisted block {field} must be string")
+    transactions=raw_block["transactions"]
+    if type(transactions) is not list:
+        raise ValueError("persisted block transactions must be a list")
+    for raw_tx in transactions:
+        _validate_persisted_transaction(raw_tx)
+
+
 class StateStore:
     def __init__(self, directory: str):
         self.directory = Path(directory)
@@ -1563,6 +1657,8 @@ class StateStore:
             raise ValueError("chain_id mismatch")
         if payload["config_fingerprint"] != CONFIG_FINGERPRINT:
             raise ValueError("config fingerprint mismatch")
+        for raw_block in raw_blocks:
+            _validate_persisted_chain_block(raw_block)
         blocks = [Block.from_dict(b) for b in raw_blocks]
         if not blocks or blocks[0].hash() != _genesis().hash():
             raise ValueError("Bad genesis identity")
