@@ -133,6 +133,16 @@ _SCRYPT_R = 8
 _SCRYPT_P = 1
 _SCRYPT_DKLEN = 32
 _SCRYPT_PARAMS = {"n": _SCRYPT_N, "r": _SCRYPT_R, "p": _SCRYPT_P, "dklen": _SCRYPT_DKLEN}
+_BACKUP_ENVELOPE_FIELDS = frozenset({
+    "version",
+    "kdf",
+    "kdf_params",
+    "cipher",
+    "salt",
+    "nonce",
+    "ciphertext",
+    "checksum",
+})
 MAX_BACKUP_FILE_BYTES = 64 * 1024
 MAX_BACKUP_CIPHERTEXT_BYTES = 16 * 1024
 MAX_BACKUP_JSON_NESTING_DEPTH = 32
@@ -180,6 +190,8 @@ def _validated_scrypt_params(value):
 def _validated_backup_envelope(backup, passphrase):
     if type(backup) is not dict:
         raise BackupError("backup must be an object")
+    if set(backup) != _BACKUP_ENVELOPE_FIELDS:
+        raise BackupError("invalid backup envelope fields")
     if type(passphrase) is not str or not passphrase:
         raise BackupError("non-empty passphrase required")
     if type(backup.get("version")) is not int or backup.get("version") != BACKUP_VERSION:
@@ -203,6 +215,15 @@ def _validated_backup_envelope(backup, passphrase):
             or any(c not in "0123456789abcdef" for c in checksum)):
         raise BackupError("invalid backup checksum")
     return kp, salt_text, nonce_text, cipher_text, checksum
+
+def _reject_duplicate_backup_file_keys(pairs):
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise BackupError("duplicate backup JSON field")
+        out[key] = value
+    return out
+
 
 def _reject_duplicate_backup_material_keys(pairs):
     out = {}
@@ -365,7 +386,10 @@ def load_backup_file(path, passphrase: str):
         raise BackupError("backup file too large")
     _preflight_backup_json_nesting(raw)
     try:
-        data = json.loads(raw.decode("utf-8"))
+        data = json.loads(raw.decode("utf-8"),
+                          object_pairs_hook=_reject_duplicate_backup_file_keys)
+    except BackupError:
+        raise
     except (UnicodeError, json.JSONDecodeError) as e:
         raise BackupError("corrupt backup file") from e
     return restore_backup(data, passphrase)
