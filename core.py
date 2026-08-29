@@ -170,7 +170,20 @@ class AxvenCore:
             ],
         }
 
+    @staticmethod
+    def _validate_transaction_id(txid):
+        # Transaction ids are SHA-256 hexdigests. Reject aliases and malformed
+        # values before they can acquire the chain state lock or touch caches.
+        if not isinstance(txid,str):
+            raise ValueError("invalid transaction id")
+        if len(txid) > 64:
+            raise ValueError("transaction id too long")
+        if len(txid) != 64 or any(ch not in "0123456789abcdef" for ch in txid):
+            raise ValueError("invalid transaction id")
+        return txid
+
     def get_transaction(self, txid):
+        txid=self._validate_transaction_id(txid)
         with self.chain._state_lock:
             return self._get_transaction_locked(txid)
 
@@ -223,9 +236,7 @@ class AxvenCore:
         return index
 
     def _get_transaction_locked(self, txid):
-        txid=str(txid)
-        if len(txid) > 64:
-            raise ValueError("transaction id too long")
+        txid=self._validate_transaction_id(txid)
         with _mempool_guard(self.mempool):
             if txid in self.mempool.txs:
                 tx=self.mempool.txs[txid]

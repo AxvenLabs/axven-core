@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""SEC-137 requires canonical transaction ids before chain-lock acquisition."""
+
+import inspect
+
+import axven
+import core as core_module
+
+
+class ProbeLock:
+    def __init__(self):
+        self.entries=0
+
+    def __enter__(self):
+        self.entries+=1
+        return self
+
+    def __exit__(self,exc_type,exc,tb):
+        return False
+
+
+class FakeChain:
+    def __init__(self):
+        self._state_lock=ProbeLock()
+        self.blocks=[]
+
+
+class FakeMempool:
+    def __init__(self):
+        self.txs={}
+
+
+def make_core():
+    service=object.__new__(core_module.AxvenCore)
+    service.chain=FakeChain()
+    service.mempool=FakeMempool()
+    return service
+
+
+def main():
+    checks=[]
+
+    def green(name,condition):
+        assert condition,name
+        checks.append(name)
+        print("[GREEN]",name)
+
+    service=make_core()
+    malformed=(
+        "a"*63,
+        "a"*65,
+        "A"*64,
+        "g"*64,
+        "0x"+("a"*62),
+        0,
+        True,
+        None,
+        ["a"*64],
+    )
+    for value in malformed:
+        before=service.chain._state_lock.entries
+        try:
+            service.get_transaction(value)
+        except ValueError:
+            rejected=True
+        else:
+            rejected=False
+        green(
+            f"malformed transaction id rejected before state lock: {type(value).__name__}",
+            rejected and service.chain._state_lock.entries == before,
+        )
+
+    canonical="f"*64
+    before=service.chain._state_lock.entries
+    try:
+        service.get_transaction(canonical)
+    except KeyError:
+        normal_miss=True
+    else:
+        normal_miss=False
+    green(
+        "canonical lowercase 64-hex transaction id reaches normal lookup",
+        normal_miss and service.chain._state_lock.entries == before+1,
+    )
+
+    try:
+        service._get_transaction_locked("F"*64)
+    except ValueError:
+        direct_guard=True
+    else:
+        direct_guard=False
+    green(
+        "locked helper independently rejects noncanonical transaction aliases",
+        direct_guard,
+    )
+
+    public_src=inspect.getsource(core_module.AxvenCore.get_transaction)
+    validator_src=inspect.getsource(core_module.AxvenCore._validate_transaction_id)
+    green(
+        "production validates transaction id before acquiring chain state lock",
+        public_src.index("_validate_transaction_id")
+        < public_src.index("with self.chain._state_lock"),
+    )
+    green(
+        "transaction id domain is exact lowercase SHA-256 hex",
+        "len(txid) > 64" in validator_src
+        and "len(txid) != 64" in validator_src
+        and '"0123456789abcdef"' in validator_src
+        and "not isinstance(txid,str)" in validator_src,
+    )
+    green(
+        "transaction id hardening leaves canonical chain identity unchanged",
+        axven.CHAIN_ID == "axven-devnet-2"
+        and axven.CONFIG_FINGERPRINT
+        == "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae"
+        and axven.Blockchain().tip.hash()
+        == "a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3",
+    )
+
+    print(f"SEC-137 canonical transaction id pre-lock: {len(checks)}/{len(checks)} GREEN")
+
+
+if __name__ == "__main__":
+    main()
