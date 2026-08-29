@@ -135,14 +135,27 @@ class AxvenCore:
                 })
             return out
 
+    @staticmethod
+    def _validate_block_id(block_id):
+        # Public block lookup accepts only the legacy built-in int/string
+        # domain. Reject coercion aliases and oversized strings before they
+        # can acquire the chain-state lock or touch the block index.
+        if type(block_id) is int:
+            return block_id
+        if type(block_id) is not str:
+            raise ValueError("invalid block id")
+        if len(block_id) > 64:
+            raise ValueError("block id too long")
+        return block_id
+
     def get_block(self, block_id):
+        block_id=self._validate_block_id(block_id)
         with self.chain._state_lock:
             return self._get_block_locked(block_id)
 
     def _get_block_locked(self, block_id):
+        block_id=self._validate_block_id(block_id)
         block=None
-        if isinstance(block_id, str) and len(block_id) > 64:
-            raise ValueError("block id too long")
         if isinstance(block_id,int) or (isinstance(block_id,str) and block_id.isdigit()):
             h=int(block_id)
             if 0 <= h < len(self.chain.blocks):
