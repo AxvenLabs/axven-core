@@ -367,6 +367,20 @@ def restore_backup(backup, passphrase: str):
     except Exception as e:
         raise BackupError("wrong passphrase or corrupt backup") from e
 
+def _fsync_directory(directory):
+    """Persist an atomic wallet-file rename in its parent directory on POSIX."""
+    if os.name != "posix":
+        return
+    flags=os.O_RDONLY
+    if hasattr(os,"O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    dir_fd=os.open(os.fspath(directory),flags)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+
 def save_backup_file(identity, path, passphrase: str):
     data = export_backup(identity, passphrase)
     target = Path(os.fspath(path))
@@ -392,6 +406,7 @@ def save_backup_file(identity, path, passphrase: str):
         tmp_path = None
         if os.name == "posix":
             os.chmod(target, 0o600)
+        _fsync_directory(parent)
     finally:
         if fd is not None:
             os.close(fd)
