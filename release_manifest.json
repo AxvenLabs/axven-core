@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 50008,
-      "sha256": "3a2e69e64699efc32dac44bd4167c183cb1ed1d66471bc8b029cca8a722776c0"
+      "bytes": 50916,
+      "sha256": "ee3175cc22c75fe48bd23102b2f698c68b54cfd9bbb293174aa46273d83663d1"
     },
     "p2p_tx_bounds.py": {
       "bytes": 2261,
@@ -819,6 +819,10 @@
     "security_sec131_wallet_backup_envelope_canonicality_spec.py": {
       "bytes": 8069,
       "sha256": "80889346d0c0f98a675f0388b0684ed70c31a41bbc331809d68fd1c3d0b3e083"
+    },
+    "security_sec132_p2p_json_preparse_complexity_spec.py": {
+      "bytes": 6125,
+      "sha256": "bfeb9bf62432271df4042fe5dabeeb5d498b945d64d6f36f853f40531ac94066"
     },
     "setup.cmd": {
       "bytes": 172,

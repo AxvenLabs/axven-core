@@ -99,6 +99,10 @@ MAX_INBOUND_MESSAGE_HOSTS = 1024
 # post-handshake rate gate.  Reject pathological nesting in one linear raw
 # byte scan before json.loads.  This is transport parsing policy only.
 MAX_P2P_JSON_NESTING_DEPTH = 32
+# A 16 MiB frame can encode millions of shallow scalar/container entries.
+# Bound decoded-object fan-out before json.loads while retaining generous
+# headroom over any consensus-valid <=7 MiB block representation.
+MAX_P2P_JSON_STRUCTURAL_ITEMS = 512 * 1024
 MAX_P2P_MESSAGE_TYPE_CHARS = 32
 
 class ProtocolError(ValueError): pass
@@ -633,17 +637,25 @@ def _recv_exact(sock,n,deadline=None):
         out.extend(chunk)
     return bytes(out)
 
-def _preflight_json_nesting(raw,max_depth=MAX_P2P_JSON_NESTING_DEPTH):
-    """Bound JSON container nesting before allocating a decoded object graph."""
+def _preflight_json_nesting(
+    raw,
+    max_depth=MAX_P2P_JSON_NESTING_DEPTH,
+    max_items=MAX_P2P_JSON_STRUCTURAL_ITEMS,
+):
+    """Bound JSON nesting and structural fan-out before parser allocation."""
     if not isinstance(raw,(bytes,bytearray,memoryview)):
         raise ProtocolError("invalid json bytes")
     if type(max_depth) is not int or max_depth <= 0:
         raise ProtocolError("invalid json nesting limit")
+    if type(max_items) is not int or max_items <= 0:
+        raise ProtocolError("invalid json structural limit")
 
-    # Keep only opener bytes; the stack can never exceed max_depth because the
-    # function fails immediately on the next opener.  JSON syntax itself is
-    # still left to json.loads, including malformed/mismatched delimiters.
+    # Count each container plus each comma-separated member/item in the same
+    # quote-aware pass used for nesting.  A flat attacker array therefore
+    # consumes one unit per element without allocating the decoded list first.
+    # JSON grammar validity remains json.loads' responsibility.
     stack=[]
+    structural_items=0
     in_string=False
     escaped=False
     for value in raw:
@@ -660,9 +672,17 @@ def _preflight_json_nesting(raw,max_depth=MAX_P2P_JSON_NESTING_DEPTH):
             in_string=True
             continue
         if value == 0x7B or value == 0x5B:  # { or [
+            structural_items += 1
+            if structural_items > max_items:
+                raise ProtocolError("json structural complexity exceeded")
             stack.append(value)
             if len(stack) > max_depth:
                 raise ProtocolError("json nesting depth exceeded")
+            continue
+        if value == 0x2C and stack:  # comma between members/items
+            structural_items += 1
+            if structural_items > max_items:
+                raise ProtocolError("json structural complexity exceeded")
             continue
         if value == 0x7D:  # }
             if stack and stack[-1] == 0x7B:
