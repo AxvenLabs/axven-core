@@ -1,32 +1,4 @@
 #!/usr/bin/env python3
-import hashlib
-import json
-from pathlib import Path
-
-core_path=Path("core.py")
-source=core_path.read_text(encoding="utf-8")
-old='''    @staticmethod
-    def _validate_scheme_bound(scheme):
-        if scheme is not None and len(str(scheme)) > 64:
-            raise ValueError("scheme too long")
-'''
-new='''    @staticmethod
-    def _validate_scheme_bound(scheme):
-        # RPC scheme selectors are textual protocol values. Reject JSON
-        # containers and scalar coercion aliases before wallet/state work.
-        if scheme is None:
-            return
-        if type(scheme) is not str:
-            raise ValueError("scheme must be string")
-        if len(scheme) > 64:
-            raise ValueError("scheme too long")
-'''
-if source.count(old)!=1:
-    raise SystemExit("SEC-140 scheme validator anchor mismatch")
-source=source.replace(old,new,1)
-core_path.write_text(source,encoding="utf-8")
-
-spec=r'''#!/usr/bin/env python3
 """SEC-140 enforces an exact textual scheme-selector domain."""
 
 import inspect
@@ -152,20 +124,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-spec_path=Path("security_sec140_scheme_type_domain_spec.py")
-spec_path.write_text(spec,encoding="utf-8")
-
-def git_blob_bytes(path):
-    text=Path(path).read_text(encoding="utf-8")
-    return text.replace("\r\n","\n").encode("utf-8")
-
-manifest_path=Path("release_manifest.json")
-manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
-for name in ("core.py",spec_path.name):
-    raw=git_blob_bytes(name)
-    manifest["files"][name]={"bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest()}
-manifest_path.write_text(
-    json.dumps(manifest,indent=2,sort_keys=True,ensure_ascii=False)+"\n",
-    encoding="utf-8",newline="\n",
-)

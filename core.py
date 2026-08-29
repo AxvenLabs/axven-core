@@ -302,7 +302,13 @@ class AxvenCore:
 
     @staticmethod
     def _validate_scheme_bound(scheme):
-        if scheme is not None and len(str(scheme)) > 64:
+        # RPC scheme selectors are textual protocol values. Reject JSON
+        # containers and scalar coercion aliases before wallet/state work.
+        if scheme is None:
+            return
+        if type(scheme) is not str:
+            raise ValueError("scheme must be string")
+        if len(scheme) > 64:
             raise ValueError("scheme too long")
 
     def balance(self, scheme=None):
