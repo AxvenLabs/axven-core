@@ -1,49 +1,4 @@
 #!/usr/bin/env python3
-import hashlib
-import json
-from pathlib import Path
-
-core_path=Path("core.py")
-source=core_path.read_text(encoding="utf-8")
-old='''    def get_block(self, block_id):
-        with self.chain._state_lock:
-            return self._get_block_locked(block_id)
-
-    def _get_block_locked(self, block_id):
-        block=None
-        if isinstance(block_id, str) and len(block_id) > 64:
-            raise ValueError("block id too long")
-        if isinstance(block_id,int) or (isinstance(block_id,str) and block_id.isdigit()):
-'''
-new='''    @staticmethod
-    def _validate_block_id(block_id):
-        # Public block lookup accepts only the legacy built-in int/string
-        # domain. Reject coercion aliases and oversized strings before they
-        # can acquire the chain-state lock or touch the block index.
-        if type(block_id) is int:
-            return block_id
-        if type(block_id) is not str:
-            raise ValueError("invalid block id")
-        if len(block_id) > 64:
-            raise ValueError("block id too long")
-        return block_id
-
-    def get_block(self, block_id):
-        block_id=self._validate_block_id(block_id)
-        with self.chain._state_lock:
-            return self._get_block_locked(block_id)
-
-    def _get_block_locked(self, block_id):
-        block_id=self._validate_block_id(block_id)
-        block=None
-        if isinstance(block_id,int) or (isinstance(block_id,str) and block_id.isdigit()):
-'''
-if source.count(old)!=1:
-    raise SystemExit("SEC-138 block lookup anchor mismatch")
-source=source.replace(old,new,1)
-core_path.write_text(source,encoding="utf-8")
-
-spec=r'''#!/usr/bin/env python3
 """SEC-138 validates block lookup ids before chain-state lock acquisition."""
 
 import inspect
@@ -174,24 +129,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-spec_path=Path("security_sec138_block_id_prelock_domain_spec.py")
-spec_path.write_text(spec,encoding="utf-8")
-
-# Manifest hashes refer to canonical LF Git blob bytes, not Windows CRLF checkout bytes.
-def git_blob_bytes(path):
-    text=Path(path).read_text(encoding="utf-8")
-    return text.replace("\r\n","\n").encode("utf-8")
-
-manifest_path=Path("release_manifest.json")
-manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
-for name in ("core.py",spec_path.name):
-    raw=git_blob_bytes(name)
-    manifest["files"][name]={
-        "bytes":len(raw),
-        "sha256":hashlib.sha256(raw).hexdigest(),
-    }
-manifest_path.write_text(
-    json.dumps(manifest,indent=2,sort_keys=True,ensure_ascii=False)+"\n",
-    encoding="utf-8",newline="\n",
-)
