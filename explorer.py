@@ -14,6 +14,7 @@ ROOT=Path(__file__).resolve().parent
 MAX_EXPLORER_WORKERS=16
 EXPLORER_REQUEST_TIMEOUT=5.0
 EXPLORER_REQUEST_DEADLINE=5.0
+_ALLOWED_EXPLORER_HOSTS={"127.0.0.1","localhost","::1"}
 
 
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
@@ -37,6 +38,51 @@ class BoundedThreadingHTTPServer(ThreadingHTTPServer):
             super().process_request_thread(request,client_address)
         finally:
             self._worker_slots.release()
+
+
+def _require_safe_explorer_host(headers):
+    """Reject non-loopback HTTP authorities before Explorer dispatch."""
+    values=headers.get_all("Host") or []
+    if len(values) != 1:
+        raise ValueError("invalid host header")
+
+    authority=values[0].strip()
+    if (
+        not authority
+        or any(ch in authority for ch in "/\\@ \t\r\n")
+    ):
+        raise ValueError("invalid host header")
+
+    if authority.startswith("["):
+        end=authority.find("]")
+        if end <= 1:
+            raise ValueError("invalid host header")
+        host=authority[1:end].lower()
+        suffix=authority[end + 1:]
+        if suffix:
+            if not suffix.startswith(":") or not suffix[1:].isdigit():
+                raise ValueError("invalid host header")
+            port=int(suffix[1:])
+            if not 1 <= port <= 65535:
+                raise ValueError("invalid host header")
+    else:
+        if authority.count(":") > 1:
+            raise ValueError("invalid host header")
+        if ":" in authority:
+            host,port_text=authority.rsplit(":",1)
+            if not port_text.isdigit():
+                raise ValueError("invalid host header")
+            port=int(port_text)
+            if not 1 <= port <= 65535:
+                raise ValueError("invalid host header")
+        else:
+            host=authority
+        host=host.lower()
+
+    if host.endswith("."):
+        host=host[:-1]
+    if host not in _ALLOWED_EXPLORER_HOSTS:
+        raise ValueError("invalid host header")
 
 
 def _json(handler,status,obj):
@@ -89,6 +135,7 @@ def _handler(core):
             self._cancel_request_deadline()
             self.connection.settimeout(EXPLORER_REQUEST_TIMEOUT)
             try:
+                _require_safe_explorer_host(self.headers)
                 u=urlparse(self.path)
                 path=u.path
                 q=parse_qs(u.query)
