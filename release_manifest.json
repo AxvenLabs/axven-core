@@ -125,8 +125,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 67821,
-      "sha256": "bae063f7512764d19e661ef95c865c81f61896dd378a705612a8ed29bc6011fe"
+      "bytes": 68124,
+      "sha256": "ebfebfc27f5e1ff2df3eef39d6f50cbe27e374b9a43723588b1337cc55f1d26d"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -919,6 +919,10 @@
     "security_sec156_peer_config_entry_canonicality_spec.py": {
       "bytes": 3930,
       "sha256": "22402820deca2cac38aad3e6a4fd31e895b4885c5da1fcf49338628511c548fc"
+    },
+    "security_sec157_chain_persistence_snapshot_atomicity_spec.py": {
+      "bytes": 4268,
+      "sha256": "1b2cc2488c88153106a4f9435c160de076c71680536a82ff71a113d3b13e8224"
     },
     "setup.cmd": {
       "bytes": 172,

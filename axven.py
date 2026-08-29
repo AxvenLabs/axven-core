@@ -1653,10 +1653,15 @@ class StateStore:
         self.path = self.directory / "chain.json"
 
     def persist(self, chain: Blockchain):
+        # Serialize one coherent active-chain snapshot.  Consensus mutation
+        # already uses _state_lock; take the same lock only while copying the
+        # block representation, then release it before filesystem I/O.
+        with chain._state_lock:
+            blocks_snapshot = [b.to_dict() for b in chain.blocks]
         payload = {
             "chain_id": CHAIN_ID,
             "config_fingerprint": CONFIG_FINGERPRINT,
-            "blocks": [b.to_dict() for b in chain.blocks],
+            "blocks": blocks_snapshot,
         }
         fd = None
         tmp_path = None
