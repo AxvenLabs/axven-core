@@ -137,8 +137,8 @@
       "sha256": "3bf27ca9cb2212f51f9821e6d4f6f84ae90255bfb4791a729ff627cf43499574"
     },
     "axven_core.py": {
-      "bytes": 6857,
-      "sha256": "4f3422d15e6c24e1d391a2583392810f0814ec97371d70eabf50d38ee39a223e"
+      "bytes": 6958,
+      "sha256": "edb9a009d573a0f17cca5b453e0f8783c0bc695648e70e149447996538b6e5ce"
     },
     "canonical_node1_mine1.ps1": {
       "bytes": 140,
@@ -265,8 +265,8 @@
       "sha256": "e3e5c65cc41f968e7cacacf2d0aa62ddd53f145a1c17b86ab9dd56d9ce3cd3e2"
     },
     "datadir.py": {
-      "bytes": 10517,
-      "sha256": "0a8dd42b3a6cf3613270d76b1f89ea5a9f7cfa3e14de7bd8c11e1fc3b4550139"
+      "bytes": 10726,
+      "sha256": "4f6c8af75ac8559cf9d71b5427e2bb21402fe03fd2afada58984e424f38346ef"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -963,6 +963,10 @@
     "security_sec167_rpc_client_loopback_auth_boundary_spec.py": {
       "bytes": 2689,
       "sha256": "7b4c95b7f48ae88387fe421753ac4a7316b07da9bbb1a9db707a6f1287ce2b4f"
+    },
+    "security_sec168_rpc_token_bootstrap_fail_closed_spec.py": {
+      "bytes": 4051,
+      "sha256": "2ead7feacddacb27f7440f32a7d7c05597e27dde2901c4ff0b39129807f8f20b"
     },
     "setup.cmd": {
       "bytes": 172,

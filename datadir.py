@@ -168,8 +168,12 @@ class DataDir:
             fd=os.open(os.fspath(self.rpc_token_file),flags,0o600)
         except FileExistsError:
             # A concurrent node using the same datadir won the create race.
-            # Fail closed if its file is not yet a complete canonical token.
-            return self.load_rpc_token()
+            # The retry must produce a canonical token or abort; returning
+            # None here would disable RPC authentication in production.
+            existing=self.load_rpc_token()
+            if existing is None:
+                raise RuntimeError("RPC token creation race left no token")
+            return existing
         try:
             with os.fdopen(fd,"wb") as f:
                 fd=None
