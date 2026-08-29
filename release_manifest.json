@@ -125,8 +125,8 @@
       "sha256": "4eb34e9a095719eb3e4919b59790ffa579ad5c69a28d812d86bdbbf32fc49f36"
     },
     "axven.py": {
-      "bytes": 68524,
-      "sha256": "fb2fe5865cac542d783e545a3354293675a526435615495a459c3d1107b61df2"
+      "bytes": 69880,
+      "sha256": "279153682f82fa56b5947b834e668496932ded25a06fdff53cea635324379ee5"
     },
     "axven_cli.py": {
       "bytes": 7533,
@@ -987,6 +987,10 @@
     "security_sec173_datadir_mutator_single_writer_spec.py": {
       "bytes": 4603,
       "sha256": "48e4618d297a7ed2e61782c90b9b8bf8c7164d071bcd17b48a453ec75ad915c2"
+    },
+    "security_sec174_chain_state_file_integrity_spec.py": {
+      "bytes": 4211,
+      "sha256": "68d2ea22f17b3b43694163304a6ab97835a2a7718ec1470b30beeb05e91056f7"
     },
     "setup.cmd": {
       "bytes": 172,
