@@ -96,6 +96,39 @@ def _require_safe_rpc_host(headers):
         raise RPCError("invalid host header")
 
 
+def _require_rpc_request_framing(headers):
+    # The RPC server accepts one fixed-length JSON body only.  Reject HTTP
+    # framing aliases before reading a body so duplicate lengths or transfer
+    # codings cannot create parser/proxy disagreement around operator calls.
+    transfer_values = headers.get_all("Transfer-Encoding") or []
+    if transfer_values:
+        raise RPCError("transfer encoding not supported")
+
+    content_types = headers.get_all("Content-Type") or []
+    if len(content_types) != 1:
+        raise RPCError("invalid content type header")
+    media_type = content_types[0].split(";", 1)[0].strip().lower()
+    if media_type != "application/json":
+        raise RPCError("content type must be application/json")
+
+    lengths = headers.get_all("Content-Length") or []
+    if len(lengths) != 1:
+        raise RPCError("invalid content length header")
+    length_text = lengths[0].strip()
+    if (
+        not length_text
+        or len(length_text) > 10
+        or not length_text.isascii()
+        or not length_text.isdigit()
+    ):
+        raise RPCError("invalid request size")
+
+    n = int(length_text)
+    if n <= 0 or n > MAX_RPC_REQUEST_BYTES:
+        raise RPCError("invalid request size")
+    return n
+
+
 def _require_rpc_int(value, label):
     if type(value) is not int:
         raise RPCError(f"{label} must be integer")
@@ -312,14 +345,7 @@ def _handler(dispatcher):
             self.connection.settimeout(RPC_REQUEST_TIMEOUT)
             try:
                 _require_safe_rpc_host(self.headers)
-                content_type = self.headers.get("Content-Type", "")
-                media_type = content_type.split(";", 1)[0].strip().lower()
-                if media_type != "application/json":
-                    raise RPCError("content type must be application/json")
-
-                n = int(self.headers.get("Content-Length", "0"))
-                if n <= 0 or n > MAX_RPC_REQUEST_BYTES:
-                    raise RPCError("invalid request size")
+                n = _require_rpc_request_framing(self.headers)
                 raw_request = self.rfile.read(n)
                 if len(raw_request) != n:
                     raise RPCError("incomplete request body")

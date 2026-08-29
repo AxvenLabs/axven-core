@@ -345,8 +345,8 @@
       "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
     },
     "rpc.py": {
-      "bytes": 13805,
-      "sha256": "441c480e737d71924c33187a68d9a75e8128df2e46e861cf676c328d20624a69"
+      "bytes": 14651,
+      "sha256": "7fbd7f8f79793d2ba9a48b4e862804deeef5e377b53febb1ad47a092e5f5231f"
     },
     "run_full_validation.py": {
       "bytes": 8663,
@@ -871,6 +871,10 @@
     "security_sec144_peer_port_type_domain_spec.py": {
       "bytes": 5137,
       "sha256": "63178a0252441c774f627ac83d8594d8e5da16ad9cc878f2ebeee0040fa58a5b"
+    },
+    "security_sec145_rpc_request_framing_spec.py": {
+      "bytes": 7237,
+      "sha256": "4d32c595df6527528df6fca3c3f7b7c2deebb9e31e640ac7d23ed0dfd4b9778d"
     },
     "setup.cmd": {
       "bytes": 172,
