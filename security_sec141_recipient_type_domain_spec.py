@@ -1,34 +1,4 @@
-from pathlib import Path
-import hashlib
-import json
-
-CORE = Path("core.py")
-old = '''    def send(self, input_scheme, recipient, amount, fee):
-        self._validate_scheme_bound(input_scheme)
-        if len(str(recipient)) > 256:
-            raise ValueError("recipient address too long")
-        w = self.require_wallet()
-'''
-new = '''    @staticmethod
-    def _validate_recipient_bound(recipient):
-        # RPC recipients are textual address values. Reject JSON containers
-        # and scalar coercion aliases before wallet or transaction work.
-        if type(recipient) is not str:
-            raise ValueError("recipient address must be string")
-        if len(recipient) > 256:
-            raise ValueError("recipient address too long")
-
-    def send(self, input_scheme, recipient, amount, fee):
-        self._validate_scheme_bound(input_scheme)
-        self._validate_recipient_bound(recipient)
-        w = self.require_wallet()
-'''
-text = CORE.read_text(encoding="utf-8")
-if old not in text:
-    raise SystemExit("SEC-141 core anchor not found")
-CORE.write_text(text.replace(old, new, 1), encoding="utf-8", newline="\n")
-
-spec = '''#!/usr/bin/env python3
+#!/usr/bin/env python3
 """SEC-141 enforces an exact textual recipient domain before wallet work."""
 
 import inspect
@@ -114,16 +84,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-SPEC = Path("security_sec141_recipient_type_domain_spec.py")
-SPEC.write_text(spec, encoding="utf-8", newline="\n")
-
-manifest_path = Path("release_manifest.json")
-manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-for path in (CORE, SPEC):
-    raw = path.read_bytes()
-    manifest["files"][path.as_posix()] = {
-        "bytes": len(raw),
-        "sha256": hashlib.sha256(raw).hexdigest(),
-    }
-manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n")
