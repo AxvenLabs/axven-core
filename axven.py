@@ -1477,6 +1477,31 @@ def _reject_duplicate_chain_state_json_keys(pairs):
     return obj
 
 
+_CHAIN_STATE_ENVELOPE_FIELDS = frozenset({
+    "chain_id",
+    "config_fingerprint",
+    "blocks",
+})
+
+
+def _validate_chain_state_envelope(payload):
+    """Require the canonical persisted chain-state top-level schema."""
+    if type(payload) is not dict:
+        raise ValueError("chain state must be an object")
+    if set(payload) != _CHAIN_STATE_ENVELOPE_FIELDS:
+        raise ValueError("invalid chain state envelope fields")
+    if type(payload["chain_id"]) is not str:
+        raise ValueError("chain state chain_id must be string")
+    if type(payload["config_fingerprint"]) is not str:
+        raise ValueError("chain state config fingerprint must be string")
+    blocks=payload["blocks"]
+    if type(blocks) is not list:
+        raise ValueError("chain state blocks must be a list")
+    if any(type(block) is not dict for block in blocks):
+        raise ValueError("chain state block entries must be objects")
+    return blocks
+
+
 class StateStore:
     def __init__(self, directory: str):
         self.directory = Path(directory)
@@ -1533,13 +1558,12 @@ class StateStore:
             raise ValueError("invalid chain state JSON") from exc
         except RecursionError as exc:
             raise ValueError("invalid chain state JSON") from exc
-        if type(payload) is not dict:
-            raise ValueError("chain state must be an object")
-        if payload.get("chain_id") != CHAIN_ID:
+        raw_blocks = _validate_chain_state_envelope(payload)
+        if payload["chain_id"] != CHAIN_ID:
             raise ValueError("chain_id mismatch")
-        if payload.get("config_fingerprint") != CONFIG_FINGERPRINT:
+        if payload["config_fingerprint"] != CONFIG_FINGERPRINT:
             raise ValueError("config fingerprint mismatch")
-        blocks = [Block.from_dict(b) for b in payload.get("blocks", [])]
+        blocks = [Block.from_dict(b) for b in raw_blocks]
         if not blocks or blocks[0].hash() != _genesis().hash():
             raise ValueError("Bad genesis identity")
         bc = Blockchain()
