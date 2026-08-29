@@ -437,20 +437,33 @@ class AxvenCore:
             raise ValueError("P2P listener host must be string")
         if len(host) > 255:
             raise ValueError("P2P listener host too long")
+        port=self._validate_peer_port(port,allow_zero=True)
         self.p2p_server = p2p.NodeServer(
-            self.chain, self.mempool, host=host, port=int(port)
+            self.chain, self.mempool, host=host, port=port
         ).start()
         return self.p2p_server.address
 
     @staticmethod
+    def _validate_peer_port(value, allow_zero=False):
+        # Structured/runtime port values are numeric protocol fields.  Never
+        # coerce bool, float, numeric strings, or attacker-defined __int__
+        # objects into a socket port at the service/persistence boundary.
+        if type(value) is not int:
+            raise ValueError("peer port must be integer")
+        minimum=0 if allow_zero else 1
+        if value < minimum or value > 65535:
+            raise ValueError("invalid peer port")
+        return value
+
+    @staticmethod
     def _parse_peer(peer):
         if isinstance(peer,(tuple,list)) and len(peer)==2:
-            # Structured peer endpoints must carry an exact textual host.
-            # Do not accept list/dict/bool/int/bytes aliases through str().
+            # Structured peer endpoints must carry exact textual/numeric
+            # fields.  Do not accept coercion aliases through str()/int().
             if type(peer[0]) is not str:
                 raise ValueError("peer host must be string")
             host=peer[0].strip()
-            port=int(peer[1])
+            port=AxvenCore._validate_peer_port(peer[1])
         else:
             # Scalar peer endpoints use the legacy explicit host:port form.
             # Reject arbitrary objects before any __str__ coercion can run.
@@ -459,15 +472,17 @@ class AxvenCore:
             raw=peer.strip()
             if ":" not in raw:
                 raise ValueError("peer must be host:port")
-            host,port=raw.rsplit(":",1)
+            host,port_text=raw.rsplit(":",1)
             host=host.strip()
-            port=int(port)
+            try:
+                port=int(port_text)
+            except ValueError as exc:
+                raise ValueError("invalid peer port") from exc
+            port=AxvenCore._validate_peer_port(port)
         if not host:
             raise ValueError("peer host required")
         if len(host) > 255:
             raise ValueError("peer host too long")
-        if not 1 <= port <= 65535:
-            raise ValueError("invalid peer port")
         return (host,port)
 
     @staticmethod
