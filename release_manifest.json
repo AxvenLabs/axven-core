@@ -265,8 +265,8 @@
       "sha256": "6224b23624c26801d032224ca8d28fcb615351402498dd3964f25d650d6429a8"
     },
     "datadir.py": {
-      "bytes": 6569,
-      "sha256": "dddf38ed5ddb49aba93f666af8cd5fbeea1589f96e132d48945dea5b42f4e21e"
+      "bytes": 6986,
+      "sha256": "bcaa92ec4471d91c84c0b44e3d30fcc96bf5bb2d1c14affc8ed81efc766fed2f"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -943,6 +943,10 @@
     "security_sec162_wallet_directory_fsync_spec.py": {
       "bytes": 3678,
       "sha256": "88782311169abaf9d2ed4b7659c4b3ec9cd33d68a822fd229fb4fb43e181aad5"
+    },
+    "security_sec163_peer_config_directory_fsync_spec.py": {
+      "bytes": 3472,
+      "sha256": "616f844d0f4646ec1af17bbdfdab45e57e11db894ee5344a361bd6f274627413"
     },
     "setup.cmd": {
       "bytes": 172,
