@@ -4,7 +4,7 @@ from __future__ import annotations
 import json, mimetypes, socket, threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
 ROOT=Path(__file__).resolve().parent
 
@@ -15,6 +15,7 @@ MAX_EXPLORER_WORKERS=16
 EXPLORER_REQUEST_TIMEOUT=5.0
 EXPLORER_REQUEST_DEADLINE=5.0
 _ALLOWED_EXPLORER_HOSTS={"127.0.0.1","localhost","::1"}
+MAX_EXPLORER_QUERY_CHARS=1024
 
 
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
@@ -85,6 +86,42 @@ def _require_safe_explorer_host(headers):
         raise ValueError("invalid host header")
 
 
+def _validate_explorer_query_budget(raw_query):
+    # Request targets are attacker-controlled browser/process input even on
+    # loopback. Keep query work bounded before any field parsing or core call.
+    if type(raw_query) is not str:
+        raise ValueError("invalid Explorer query")
+    if len(raw_query) > MAX_EXPLORER_QUERY_CHARS:
+        raise ValueError("Explorer query too long")
+    return raw_query
+
+
+def _parse_explorer_limit_query(raw_query, default, maximum):
+    # Explorer currently exposes one optional query field: limit. Parse its
+    # wire form directly so percent-encoding, Unicode digits, signs, numeric
+    # separators, duplicate fields, and custom parser aliases cannot reach
+    # int() or the service layer as alternate numeric representations.
+    raw_query=_validate_explorer_query_budget(raw_query)
+    if not raw_query:
+        return default
+    prefix="limit="
+    if not raw_query.startswith(prefix) or raw_query.count("=") != 1:
+        raise ValueError("invalid Explorer query")
+    value_text=raw_query[len(prefix):]
+    if (
+        not value_text
+        or len(value_text) > 3
+        or not value_text.isascii()
+        or not value_text.isdigit()
+        or (len(value_text) > 1 and value_text.startswith("0"))
+    ):
+        raise ValueError("invalid Explorer limit")
+    value=int(value_text)
+    if value < 1 or value > maximum:
+        raise ValueError("invalid Explorer limit")
+    return value
+
+
 def _json(handler,status,obj):
     raw=json.dumps(obj,sort_keys=True,separators=(",",":")).encode()
     handler.send_response(status)
@@ -137,8 +174,8 @@ def _handler(core):
             try:
                 _require_safe_explorer_host(self.headers)
                 u=urlparse(self.path)
+                _validate_explorer_query_budget(u.query)
                 path=u.path
-                q=parse_qs(u.query)
                 if path in ("/","/index.html"):
                     raw=(ROOT/"explorer_index.html").read_bytes()
                     self.send_response(200)
@@ -149,7 +186,7 @@ def _handler(core):
                 if path=="/api/summary":
                     _json(self,200,{"ok":True,"result":core.explorer_summary()}); return
                 if path=="/api/blocks":
-                    limit=int((q.get("limit") or ["20"])[0])
+                    limit=_parse_explorer_limit_query(u.query,20,200)
                     _json(self,200,{"ok":True,"result":core.recent_blocks(limit)}); return
                 if path.startswith("/api/block/"):
                     ident=path.split("/api/block/",1)[1]
@@ -158,7 +195,7 @@ def _handler(core):
                     txid=path.split("/api/tx/",1)[1]
                     _json(self,200,{"ok":True,"result":core.get_transaction(txid)}); return
                 if path=="/api/mempool":
-                    limit=int((q.get("limit") or ["100"])[0])
+                    limit=_parse_explorer_limit_query(u.query,100,500)
                     _json(self,200,{"ok":True,"result":core.mempool_view(limit)}); return
                 _json(self,404,{"ok":False,"error":"not found"})
             except KeyError as e:
