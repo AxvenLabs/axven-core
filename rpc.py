@@ -233,6 +233,56 @@ def _validate_param_depth(value, depth=0, budget=None):
             _validate_param_depth(child, depth + 1, budget)
 
 
+# SEC-171: each RPC method has one canonical parameter vocabulary.  Global
+# structural bounds are necessary but not sufficient: silently ignored fields
+# create semantic aliases and can hide client/operator mistakes around mutating
+# calls.  Keep required/optional shape validation ahead of core dispatch.
+_RPC_METHOD_PARAM_SCHEMA = {
+    "get_status": (frozenset(), frozenset()),
+    "get_overview": (frozenset(), frozenset()),
+    "get_explorer_summary": (frozenset(), frozenset()),
+    "get_recent_blocks": (frozenset({"limit"}), frozenset()),
+    "get_block": (frozenset({"id"}), frozenset({"id"})),
+    "get_transaction": (frozenset({"txid"}), frozenset({"txid"})),
+    "get_mempool": (frozenset({"limit"}), frozenset()),
+    "get_chain_config": (frozenset(), frozenset()),
+    "get_addresses": (frozenset(), frozenset()),
+    "get_balance": (frozenset({"scheme"}), frozenset()),
+    "get_wallet_status": (frozenset({"scheme"}), frozenset()),
+    "list_unspent": (frozenset({"scheme"}), frozenset({"scheme"})),
+    "get_peers": (frozenset(), frozenset()),
+    "get_peer_health": (frozenset(), frozenset()),
+    "add_peer": (frozenset({"host", "port"}), frozenset({"host", "port"})),
+    "sync_peers": (frozenset(), frozenset()),
+    "remove_peer": (frozenset({"host", "port"}), frozenset({"host", "port"})),
+    "mine": (frozenset({"count", "scheme"}), frozenset()),
+    "send": (
+        frozenset({"input_scheme", "recipient", "amount", "fee"}),
+        frozenset({"input_scheme", "recipient", "amount", "fee"}),
+    ),
+    "start_p2p": (frozenset({"host", "port"}), frozenset()),
+    "stop": (frozenset(), frozenset()),
+    "sync_peer": (
+        frozenset({"host", "port", "batch"}),
+        frozenset({"host", "port"}),
+    ),
+}
+
+
+def _require_rpc_method_params(method, params):
+    schema = _RPC_METHOD_PARAM_SCHEMA.get(method)
+    if schema is None:
+        raise RPCError("unknown method")
+    allowed, required = schema
+    unknown = set(params) - allowed
+    if unknown:
+        raise RPCError(f"unknown RPC param: {sorted(unknown)[0]}")
+    missing = required - set(params)
+    if missing:
+        raise RPCError(f"missing RPC param: {sorted(missing)[0]}")
+    return params
+
+
 class RPCDispatcher:
     def __init__(self, core):
         self.core = core
@@ -254,6 +304,7 @@ class RPCDispatcher:
             for value in params.values():
                 _validate_param_depth(value, budget=budget)
         p = params or {}
+        _require_rpc_method_params(method, p)
         if method == "get_status": return self.core.status()
         if method == "get_overview": return self.core.overview()
         if method == "get_explorer_summary": return self.core.explorer_summary()

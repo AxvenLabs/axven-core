@@ -8,20 +8,27 @@ MAX_RPC_PARAM_NODES = 4096
 
 
 class DummyCore:
-    def status(self):
-        return {"ok": True}
+    pass
 
 
 def main():
     dispatcher = RPCDispatcher(DummyCore())
 
-    # Canonical scalar parameter must remain valid.
-    result = dispatcher.call("get_status", {"scheme": "N"})
-    assert result == {"ok": True}
-    print("[GREEN] canonical RPC parameter complexity preserved")
+    # An ordinary scalar value must pass the SEC-041 complexity gate and reach
+    # the later unknown-method gate without being treated as a production
+    # method-specific parameter vocabulary.
+    try:
+        dispatcher.call("__sec041_unknown_method__", {"scheme": "N"})
+    except RPCError as e:
+        assert str(e) == "unknown method", (
+            f"ordinary scalar param did not pass complexity validation: {e}"
+        )
+    else:
+        raise AssertionError("unknown method unexpectedly succeeded")
+    print("[GREEN] ordinary RPC parameter complexity passes structural gate")
 
     # Exactly the maximum node budget must pass structural validation
-    # and reach normal dispatch.
+    # and reach the later unknown-method gate.
     #
     # The outer list itself counts as one node, so 4095 scalar children
     # produce exactly 4096 nodes.
@@ -30,13 +37,13 @@ def main():
         dispatcher.call("unknown_method", maximum)
     except RPCError as e:
         assert str(e) == "unknown method", (
-            f"maximum RPC parameter complexity did not reach dispatch: {e}"
+            f"maximum RPC parameter complexity did not pass structural gate: {e}"
         )
     else:
         raise AssertionError("unknown method unexpectedly succeeded")
-    print("[GREEN] maximum RPC parameter complexity reaches normal dispatch")
+    print("[GREEN] maximum RPC parameter complexity passes structural gate")
 
-    # One node beyond the budget must be rejected before dispatch.
+    # One node beyond the budget must be rejected before method-schema work.
     oversized = {"payload": [0] * MAX_RPC_PARAM_NODES}
     try:
         dispatcher.call("unknown_method", oversized)

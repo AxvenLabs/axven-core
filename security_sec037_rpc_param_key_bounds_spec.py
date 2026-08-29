@@ -25,9 +25,15 @@ def expect_rpc_error(dispatcher, params, expected):
 def main():
     dispatcher = rpc.RPCDispatcher(DummyCore())
 
-    result = dispatcher.call("get_status", {"normal_key": 1})
-    assert result == {"ok": True}
-    print("[GREEN] canonical RPC parameter key preserved")
+    # A structurally valid key must pass SEC-037's key gate and reach the
+    # stricter SEC-171 method-specific vocabulary gate.  get_status has no
+    # parameters, so accepting this field would now be a canonicality bug.
+    expect_rpc_error(
+        dispatcher,
+        {"normal_key": 1},
+        "unknown RPC param: normal_key",
+    )
+    print("[GREEN] normal-length RPC parameter key reaches canonicality gate")
 
     expect_rpc_error(
         dispatcher,
@@ -60,16 +66,16 @@ def main():
         )
     except rpc.RPCError as e:
         assert str(e) == "unknown method", (
-            "maximum-length valid parameter key did not reach "
-            f"normal dispatch: {e}"
+            "maximum-length valid parameter key did not pass structural "
+            f"validation: {e}"
         )
     else:
         raise AssertionError(
             "SEC-037 boundary probe unexpectedly dispatched"
         )
 
-    print("[GREEN] maximum RPC parameter key length reaches normal dispatch")
-    print("SEC-037 RPC parameter key bounds: 4/4 GREEN")
+    print("[GREEN] maximum RPC parameter key length passes structural gate")
+    print("SEC-037 RPC parameter key bounds: 5/5 GREEN")
 
 
 if __name__ == "__main__":

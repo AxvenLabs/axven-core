@@ -139,10 +139,19 @@ def main():
     finally:
         server.stop()
 
+    # SEC-127 owns the parsed parameter depth gate, while SEC-171 now owns
+    # each production method's exact parameter vocabulary.  Use an unknown
+    # method so a depth-valid synthetic field can pass SEC-127 and reach the
+    # later method gate without relying on ignored production parameters.
     dispatcher = rpc.RPCDispatcher(Core())
-    shallow_ok = dispatcher.call("get_status", {"x": nested_value(16)})["height"] == 7
     try:
-        dispatcher.call("get_status", {"x": nested_value(17)})
+        dispatcher.call("__sec127_unknown_method__", {"x": nested_value(16)})
+        shallow_ok = False
+    except rpc.RPCError as exc:
+        shallow_ok = str(exc) == "unknown method"
+
+    try:
+        dispatcher.call("__sec127_unknown_method__", {"x": nested_value(17)})
         parsed_depth_rejected = False
     except rpc.RPCError as exc:
         parsed_depth_rejected = "nesting too deep" in str(exc)

@@ -8,32 +8,33 @@ MAX_RPC_PARAMS = 64
 
 
 class DummyCore:
-    def status(self):
-        return {"ok": True}
+    def recent_blocks(self, limit):
+        return [limit]
 
 
 def main():
     dispatcher = RPCDispatcher(DummyCore())
 
-    # Normal canonical request must remain valid.
-    result = dispatcher.call("get_status", {"scheme": "N"})
-    assert result == {"ok": True}
+    # A canonical one-parameter request remains valid under SEC-171.
+    result = dispatcher.call("get_recent_blocks", {"limit": 1})
+    assert result == [1]
     print("[GREEN] canonical RPC parameter count preserved")
 
     # Exactly the maximum number of parameters must pass structural
-    # validation and reach normal method dispatch.
+    # validation and reach the later unknown-method gate.
     maximum = {f"k{i}": i for i in range(MAX_RPC_PARAMS)}
     try:
         dispatcher.call("unknown_method", maximum)
     except RPCError as e:
         assert str(e) == "unknown method", (
-            f"maximum valid RPC parameter count did not reach dispatch: {e}"
+            f"maximum valid RPC parameter count did not pass structural gate: {e}"
         )
     else:
         raise AssertionError("unknown method unexpectedly succeeded")
-    print("[GREEN] maximum RPC parameter count reaches normal dispatch")
+    print("[GREEN] maximum RPC parameter count passes structural gate")
 
-    # One parameter beyond the bound must be rejected before dispatch.
+    # One parameter beyond the bound must be rejected before method-schema
+    # or dispatch work.
     oversized = {f"k{i}": i for i in range(MAX_RPC_PARAMS + 1)}
     try:
         dispatcher.call("unknown_method", oversized)
