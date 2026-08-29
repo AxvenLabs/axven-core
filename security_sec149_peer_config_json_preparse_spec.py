@@ -1,24 +1,4 @@
-from pathlib import Path
-import hashlib
-import json
-
-DATADIR = Path("datadir.py")
-text = DATADIR.read_text(encoding="utf-8")
-
-old = "MAX_PEER_CONFIG_BYTES = 1024 * 1024\n\nclass DataDir:\n"
-new = '''MAX_PEER_CONFIG_BYTES = 1024 * 1024\nMAX_PEER_CONFIG_JSON_NESTING_DEPTH = 16\nMAX_PEER_CONFIG_JSON_STRUCTURAL_ITEMS = 1024\n\n\ndef _preflight_peer_config_json(raw):\n    \"\"\"Bound persisted peer JSON structure before recursive parser allocation.\"\"\"\n    if type(raw) is not bytes:\n        raise ValueError("invalid peer config")\n    stack=[]\n    structural_items=0\n    in_string=False\n    escaped=False\n    for byte in raw:\n        if in_string:\n            if escaped:\n                escaped=False\n            elif byte == 0x5C:  # backslash\n                escaped=True\n            elif byte == 0x22:  # quote\n                in_string=False\n            continue\n\n        if byte == 0x22:\n            in_string=True\n            continue\n        if byte in (0x7B,0x5B):  # { [\n            structural_items += 1\n            if structural_items > MAX_PEER_CONFIG_JSON_STRUCTURAL_ITEMS:\n                raise ValueError("peer config JSON too complex")\n            stack.append(byte)\n            if len(stack) > MAX_PEER_CONFIG_JSON_NESTING_DEPTH:\n                raise ValueError("peer config JSON nesting too deep")\n            continue\n        if byte == 0x2C and stack:  # comma between container members/items\n            structural_items += 1\n            if structural_items > MAX_PEER_CONFIG_JSON_STRUCTURAL_ITEMS:\n                raise ValueError("peer config JSON too complex")\n            continue\n        if byte in (0x7D,0x5D):  # } ]\n            expected=0x7B if byte == 0x7D else 0x5B\n            if stack and stack[-1] == expected:\n                stack.pop()\n\n\ndef _reject_duplicate_peer_json_keys(pairs):\n    obj={}\n    for key,value in pairs:\n        if key in obj:\n            raise ValueError(f"duplicate peer config JSON key: {key}")\n        obj[key]=value\n    return obj\n\n\nclass DataDir:\n'''
-if old not in text:
-    raise SystemExit("constant/class anchor missing")
-text=text.replace(old,new,1)
-
-old = '''        try:\n            raw=json.loads(encoded.decode("utf-8"))\n        except (UnicodeError,json.JSONDecodeError) as exc:\n            raise ValueError("invalid peer config") from exc\n'''
-new = '''        _preflight_peer_config_json(encoded)\n        try:\n            raw=json.loads(\n                encoded.decode("utf-8"),\n                object_pairs_hook=_reject_duplicate_peer_json_keys,\n            )\n        except (UnicodeError,json.JSONDecodeError,RecursionError) as exc:\n            raise ValueError("invalid peer config") from exc\n'''
-if old not in text:
-    raise SystemExit("load parser anchor missing")
-text=text.replace(old,new,1)
-DATADIR.write_bytes(text.encode("utf-8"))
-
-spec = r'''#!/usr/bin/env python3
+#!/usr/bin/env python3
 """SEC-149: bound persisted peer JSON before parser allocation and reject duplicate keys."""
 import inspect
 import json
@@ -229,17 +209,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-'''
-SPEC=Path("security_sec149_peer_config_json_preparse_spec.py")
-SPEC.write_bytes(spec.encode("utf-8"))
-
-manifest_path=Path("release_manifest.json")
-manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
-for path in (DATADIR,SPEC):
-    data=path.read_bytes()
-    manifest["files"][path.as_posix()]={
-        "bytes":len(data),
-        "sha256":hashlib.sha256(data).hexdigest(),
-    }
-manifest_path.write_bytes((json.dumps(manifest,indent=2,sort_keys=True)+"\n").encode("utf-8"))
-print("SEC-149 patch staged")

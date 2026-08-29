@@ -10,6 +10,58 @@ from core import AxvenCore
 # Keep enough room for MAX_CONFIGURED_PEERS entries even when 255-character
 # Unicode hosts expand under json.dumps(ensure_ascii=True).
 MAX_PEER_CONFIG_BYTES = 1024 * 1024
+MAX_PEER_CONFIG_JSON_NESTING_DEPTH = 16
+MAX_PEER_CONFIG_JSON_STRUCTURAL_ITEMS = 1024
+
+
+def _preflight_peer_config_json(raw):
+    """Bound persisted peer JSON structure before recursive parser allocation."""
+    if type(raw) is not bytes:
+        raise ValueError("invalid peer config")
+    stack=[]
+    structural_items=0
+    in_string=False
+    escaped=False
+    for byte in raw:
+        if in_string:
+            if escaped:
+                escaped=False
+            elif byte == 0x5C:  # backslash
+                escaped=True
+            elif byte == 0x22:  # quote
+                in_string=False
+            continue
+
+        if byte == 0x22:
+            in_string=True
+            continue
+        if byte in (0x7B,0x5B):  # { [
+            structural_items += 1
+            if structural_items > MAX_PEER_CONFIG_JSON_STRUCTURAL_ITEMS:
+                raise ValueError("peer config JSON too complex")
+            stack.append(byte)
+            if len(stack) > MAX_PEER_CONFIG_JSON_NESTING_DEPTH:
+                raise ValueError("peer config JSON nesting too deep")
+            continue
+        if byte == 0x2C and stack:  # comma between container members/items
+            structural_items += 1
+            if structural_items > MAX_PEER_CONFIG_JSON_STRUCTURAL_ITEMS:
+                raise ValueError("peer config JSON too complex")
+            continue
+        if byte in (0x7D,0x5D):  # } ]
+            expected=0x7B if byte == 0x7D else 0x5B
+            if stack and stack[-1] == expected:
+                stack.pop()
+
+
+def _reject_duplicate_peer_json_keys(pairs):
+    obj={}
+    for key,value in pairs:
+        if key in obj:
+            raise ValueError(f"duplicate peer config JSON key: {key}")
+        obj[key]=value
+    return obj
+
 
 class DataDir:
     def __init__(self,path):
@@ -51,9 +103,13 @@ class DataDir:
             encoded=f.read(MAX_PEER_CONFIG_BYTES + 1)
         if len(encoded) > MAX_PEER_CONFIG_BYTES:
             raise ValueError("peer config too large")
+        _preflight_peer_config_json(encoded)
         try:
-            raw=json.loads(encoded.decode("utf-8"))
-        except (UnicodeError,json.JSONDecodeError) as exc:
+            raw=json.loads(
+                encoded.decode("utf-8"),
+                object_pairs_hook=_reject_duplicate_peer_json_keys,
+            )
+        except (UnicodeError,json.JSONDecodeError,RecursionError) as exc:
             raise ValueError("invalid peer config") from exc
         if not isinstance(raw,list):
             raise ValueError("peer config must be a list")
