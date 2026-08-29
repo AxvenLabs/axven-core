@@ -167,11 +167,22 @@ def _handler(core):
                 _json(self,400,{"ok":False,"error":f"{type(e).__name__}: {e}"})
     return Handler
 
+def _validate_explorer_listener_endpoint(host,port):
+    if type(host) is not str:
+        raise ValueError("Explorer listener host must be string")
+    if host not in ("127.0.0.1","localhost","::1"):
+        raise ValueError("Explorer v0 may bind only to loopback")
+    if type(port) is not int:
+        raise ValueError("Explorer listener port must be integer")
+    if port < 0 or port > 65535:
+        raise ValueError("invalid Explorer listener port")
+    return host,port
+
+
 class ExplorerServer:
     def __init__(self,core,host="127.0.0.1",port=0):
-        if host not in ("127.0.0.1","localhost","::1"):
-            raise ValueError("Explorer v0 may bind only to loopback")
-        self.httpd=BoundedThreadingHTTPServer((host,int(port)),_handler(core))
+        host,port=_validate_explorer_listener_endpoint(host,port)
+        self.httpd=BoundedThreadingHTTPServer((host,port),_handler(core))
         self.thread=None
     @property
     def address(self): return self.httpd.server_address
