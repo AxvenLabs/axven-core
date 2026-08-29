@@ -19,6 +19,15 @@ INBOUND_MESSAGE_DEADLINE = 30.0
 OUTBOUND_MESSAGE_DEADLINE = 30.0
 MAX_INBOUND_PEERS = 32
 MAX_INBOUND_PEERS_PER_HOST = 4
+# Concurrent peer quotas bound retained sockets but not rapid connect/close
+# churn: each admitted socket otherwise creates a worker and performs a
+# server-sent identity handshake.  Persist admission buckets on the listener
+# so reconnects cannot mint fresh pre-auth work.  Transport policy only.
+INBOUND_HANDSHAKE_GLOBAL_RATE = 64.0
+INBOUND_HANDSHAKE_GLOBAL_BURST = 128
+INBOUND_HANDSHAKE_PER_HOST_RATE = 8.0
+INBOUND_HANDSHAKE_PER_HOST_BURST = 16
+MAX_INBOUND_HANDSHAKE_HOSTS = 1024
 # A per-frame 16 MiB cap still permits 32 workers to retain roughly
 # 512 MiB of attacker-selected wire payload concurrently, before decoded
 # JSON object overhead.  Bound post-handshake in-flight frame bytes across
@@ -239,6 +248,24 @@ class _InboundBlockWorkLimiter:
                 "global_tokens": self._global_tokens,
                 "hosts": len(self._hosts),
             }
+
+
+class _InboundHandshakeRateLimiter(_InboundBlockWorkLimiter):
+    """Persistent global + source budget for pre-auth worker admission."""
+    def __init__(
+        self,
+        clock=time.monotonic,
+        global_rate=INBOUND_HANDSHAKE_GLOBAL_RATE,
+        global_burst=INBOUND_HANDSHAKE_GLOBAL_BURST,
+        per_host_rate=INBOUND_HANDSHAKE_PER_HOST_RATE,
+        per_host_burst=INBOUND_HANDSHAKE_PER_HOST_BURST,
+        max_hosts=MAX_INBOUND_HANDSHAKE_HOSTS,
+    ):
+        super().__init__(
+            clock=clock, global_rate=global_rate, global_burst=global_burst,
+            per_host_rate=per_host_rate, per_host_burst=per_host_burst,
+            max_hosts=max_hosts,
+        )
 
 
 class _InboundTxWorkLimiter:
@@ -1070,6 +1097,7 @@ class NodeServer:
         self.host=host; self.port=port
         self._sock=None; self._thread=None; self._stop=threading.Event()
         self._clients=set(); self._client_hosts={}; self._lock=threading.Lock()
+        self._handshake_rate_limiter=_InboundHandshakeRateLimiter()
         self._block_work_limiter=_InboundBlockWorkLimiter()
         self._tx_work_limiter=_InboundTxWorkLimiter()
         self._block_signature_work_limiter=_InboundBlockSignatureWorkLimiter()
@@ -1104,6 +1132,11 @@ class NodeServer:
                         len(self._clients) >= MAX_INBOUND_PEERS
                         or host_count >= MAX_INBOUND_PEERS_PER_HOST
                     ):
+                        # Concurrent saturation is already rejected cheaply;
+                        # do not burn handshake-rate tokens for sockets that
+                        # could not have created a worker anyway.
+                        reject = True
+                    elif not self._handshake_rate_limiter.consume(remote_host):
                         reject = True
                     else:
                         self._clients.add(c)
