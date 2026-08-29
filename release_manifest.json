@@ -940,6 +940,10 @@
       "bytes": 3871,
       "sha256": "66b1aa078a7a862cb61bd740abb41ab41a7e3e1300d258f310e02f8d171bb7a9"
     },
+    "security_sec162_wallet_directory_fsync_spec.py": {
+      "bytes": 3678,
+      "sha256": "88782311169abaf9d2ed4b7659c4b3ec9cd33d68a822fd229fb4fb43e181aad5"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -989,8 +993,8 @@
       "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
     },
     "wallet.py": {
-      "bytes": 16631,
-      "sha256": "9e8f77e935f5018f9b92274f89e8768e25e7a2ac9a0a651294174207abdc7b80"
+      "bytes": 17029,
+      "sha256": "b5b01ad7009dabe79dbb0ac0b861f8f4548ede0759e044e117690f740c9d2e56"
     },
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
