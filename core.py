@@ -80,6 +80,11 @@ class AxvenCore:
         self.peer_health_incident_history_entries = {}
         self.peer_persist_callback = None
         self.shutdown_requested = False
+        # SEC-136: active-chain confirmed transaction lookup cache.
+        # This is service-layer state only; consensus/persistence remain unchanged.
+        self._confirmed_tx_index = {}
+        self._confirmed_tx_index_height = -1
+        self._confirmed_tx_index_tip_hash = None
 
     def require_wallet(self):
         if self.identity is None:
@@ -169,6 +174,54 @@ class AxvenCore:
         with self.chain._state_lock:
             return self._get_transaction_locked(txid)
 
+    def _refresh_confirmed_tx_index_locked(self):
+        """Return an exact active-chain tx index while holding chain state lock."""
+        blocks=self.chain.blocks
+        if not blocks:
+            self._confirmed_tx_index={}
+            self._confirmed_tx_index_height=-1
+            self._confirmed_tx_index_tip_hash=None
+            return self._confirmed_tx_index
+
+        index=getattr(self,"_confirmed_tx_index",None)
+        cached_height=getattr(self,"_confirmed_tx_index_height",-1)
+        cached_tip=getattr(self,"_confirmed_tx_index_tip_hash",None)
+        current_height=len(blocks)-1
+        current_tip=blocks[-1].hash()
+
+        if (
+            index is not None
+            and cached_height == current_height
+            and cached_tip == current_tip
+        ):
+            return index
+
+        # Normal extension can update only the newly active suffix.  Any
+        # rollback/reorg invalidates the cached active tip and rebuilds from
+        # the current chain, automatically dropping disconnected txids.
+        if (
+            index is not None
+            and 0 <= cached_height < len(blocks)
+            and cached_tip == blocks[cached_height].hash()
+        ):
+            start=cached_height+1
+        else:
+            index={}
+            start=0
+
+        for block_pos in range(start,len(blocks)):
+            block=blocks[block_pos]
+            for tx_pos,raw_tx in enumerate(block.transactions):
+                tx=axven.Transaction.from_dict(raw_tx)
+                # Forward iteration with overwrite preserves the legacy
+                # reverse-search result if a duplicate txid ever exists.
+                index[tx.txid()]=(block_pos,tx_pos)
+
+        self._confirmed_tx_index=index
+        self._confirmed_tx_index_height=current_height
+        self._confirmed_tx_index_tip_hash=current_tip
+        return index
+
     def _get_transaction_locked(self, txid):
         txid=str(txid)
         if len(txid) > 64:
@@ -177,17 +230,20 @@ class AxvenCore:
             if txid in self.mempool.txs:
                 tx=self.mempool.txs[txid]
                 return {"txid":txid,"status":"mempool","tx":tx.to_dict()}
-        for block in reversed(self.chain.blocks):
-            for tx in block.txs():
-                if tx.txid()==txid:
-                    return {
-                        "txid":txid,
-                        "status":"confirmed",
-                        "height":block.height,
-                        "block_hash":block.hash(),
-                        "tx":tx.to_dict(),
-                    }
-        raise KeyError("transaction not found")
+
+        confirmed=self._refresh_confirmed_tx_index_locked().get(txid)
+        if confirmed is None:
+            raise KeyError("transaction not found")
+        block_pos,tx_pos=confirmed
+        block=self.chain.blocks[block_pos]
+        tx=axven.Transaction.from_dict(block.transactions[tx_pos])
+        return {
+            "txid":txid,
+            "status":"confirmed",
+            "height":block.height,
+            "block_hash":block.hash(),
+            "tx":tx.to_dict(),
+        }
 
     def mempool_view(self, limit=100):
         limit=max(1,min(int(limit),500))
