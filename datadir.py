@@ -63,6 +63,20 @@ def _reject_duplicate_peer_json_keys(pairs):
     return obj
 
 
+def _fsync_directory(directory):
+    """Persist an atomic peer-config rename in its parent directory on POSIX."""
+    if os.name != "posix":
+        return
+    flags=os.O_RDONLY
+    if hasattr(os,"O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    dir_fd=os.open(os.fspath(directory),flags)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+
 class DataDir:
     def __init__(self,path):
         self.path=Path(path).expanduser().resolve()
@@ -158,6 +172,7 @@ class DataDir:
             tmp_path=None
             if os.name=="posix":
                 os.chmod(self.peer_file,0o600)
+            _fsync_directory(self.peer_file.parent)
         finally:
             if fd is not None:
                 os.close(fd)
