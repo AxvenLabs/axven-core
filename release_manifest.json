@@ -273,8 +273,8 @@
       "sha256": "8fae69a3d5059742af03d44c4ff431a62918663d85e0a9968a14c4df3d59bba8"
     },
     "doctor.py": {
-      "bytes": 2110,
-      "sha256": "b3260c5421d12f7f68b60726c27bdde713794fa2aa3ac9b200ad833524252568"
+      "bytes": 2509,
+      "sha256": "c1002bb9d80b980136cb92ee7ba7b2318c9ed75a3a9f755e263d24dc39253260"
     },
     "explorer.py": {
       "bytes": 9267,
@@ -329,8 +329,8 @@
       "sha256": "4a4d485eedec4d982bb8abdf7505de483c07088c9e5a96bb254b39e6f0c084e6"
     },
     "pyproject.toml": {
-      "bytes": 623,
-      "sha256": "47fdfdd6ccad224720d3690d0f2899536e2cd98e0d224dd49c239a48e90913db"
+      "bytes": 627,
+      "sha256": "d7cb8c77e11a1ca1bceec220ddbcddc185aba8f19c3c3bf7e7e59be340753fd6"
     },
     "rc_audit.py": {
       "bytes": 1256,
@@ -341,8 +341,8 @@
       "sha256": "15e4743122ae79bfbe27c6645d8e86d3d7f107873662f1eff4f964634c1097ab"
     },
     "requirements.txt": {
-      "bytes": 37,
-      "sha256": "0094a815ec82fce7cb8feab6ff6fc85403555d4c8bc613060576171dfb7147b9"
+      "bytes": 41,
+      "sha256": "eac85195671568ba906d24b606be7a193b7008fb0efbb96553b643f65012a6e0"
     },
     "rpc.py": {
       "bytes": 15046,
@@ -899,6 +899,10 @@
     "security_sec151_chain_state_envelope_canonicality_spec.py": {
       "bytes": 2748,
       "sha256": "6bbd66116606f8f93062f08f54a5674c1f94b365df63f314f83330addac030ae"
+    },
+    "security_sec152_cryptography_dependency_security_floor_spec.py": {
+      "bytes": 2639,
+      "sha256": "65e39bf982d4a14703d486a4dc34309c7c3e011b3565af5759d6337aeb628cea"
     },
     "setup.cmd": {
       "bytes": 172,
