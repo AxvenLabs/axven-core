@@ -265,8 +265,8 @@
       "sha256": "6224b23624c26801d032224ca8d28fcb615351402498dd3964f25d650d6429a8"
     },
     "datadir.py": {
-      "bytes": 4547,
-      "sha256": "5084454b5559ec038c5d21732cfc3cb4b63ade3a7b1dac93a08d52963a313eb4"
+      "bytes": 6455,
+      "sha256": "a1cecccdb75ceab91b8415ccb3fc9f4492292d1c0ea8cab6df49e0df5ee823dd"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -887,6 +887,10 @@
     "security_sec148_explorer_query_domain_spec.py": {
       "bytes": 5228,
       "sha256": "77e53cec599c741413ea7c6a955da036d079fe3a24e116e1f4ba2825fee522bc"
+    },
+    "security_sec149_peer_config_json_preparse_spec.py": {
+      "bytes": 6794,
+      "sha256": "1bfba3dd4ec16b12e1bd6e709a55e96d5b77e29f37e7119cdb7e18fcf9d04f56"
     },
     "setup.cmd": {
       "bytes": 172,
