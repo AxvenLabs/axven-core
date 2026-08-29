@@ -129,8 +129,8 @@
       "sha256": "fb2fe5865cac542d783e545a3354293675a526435615495a459c3d1107b61df2"
     },
     "axven_cli.py": {
-      "bytes": 6887,
-      "sha256": "56899377c0193c46643dbcec367cb179bfe61ee3485e5e6a38956391193163ff"
+      "bytes": 7533,
+      "sha256": "3ec91f04accae3f924613a9125e8bb777f0f70db03afffe2bccdae36a030b760"
     },
     "axven_console.py": {
       "bytes": 3663,
@@ -165,8 +165,8 @@
       "sha256": "68bcd822d6fbcaa5a5f90a1c46e4bc1887ebedb275734763ba0d75174eefb2a5"
     },
     "canonical_ops.py": {
-      "bytes": 6367,
-      "sha256": "26ed235f1912934fdfeef130b07ab8c3ad11181cf147d03bca68192bb38471e9"
+      "bytes": 6458,
+      "sha256": "d6c7cfd952a644888506c466b529fe908ab90987da359cfe40e770c56af3cafd"
     },
     "canonical_ops_audit.py": {
       "bytes": 960,
@@ -967,6 +967,10 @@
     "security_sec168_rpc_token_bootstrap_fail_closed_spec.py": {
       "bytes": 4051,
       "sha256": "2ead7feacddacb27f7440f32a7d7c05597e27dde2901c4ff0b39129807f8f20b"
+    },
+    "security_sec169_rpc_client_transport_containment_spec.py": {
+      "bytes": 6217,
+      "sha256": "b1eb092d0fe526dc858ebed7e782a435a0d08bdab20c65aeec5f89f1b7f3faa7"
     },
     "setup.cmd": {
       "bytes": 172,

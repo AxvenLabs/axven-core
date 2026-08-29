@@ -10,6 +10,20 @@ _AUTHENTICATED_RPC_HOSTS={"127.0.0.1","localhost","::1"}
 
 class RPCClientError(ValueError): pass
 
+class _RejectRPCRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,req,fp,code,msg,headers,newurl):
+        raise RPCClientError("RPC redirects are not allowed")
+
+def _build_rpc_opener():
+    # Bearer-authenticated localhost traffic must never inherit ambient proxy
+    # configuration or follow redirects that could forward Authorization.
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        _RejectRPCRedirects(),
+    )
+
+def open_rpc_request(req,timeout):
+    return _build_rpc_opener().open(req,timeout=timeout)
 
 def _validate_rpc_auth_token(token):
     if type(token) is not str or len(token)!=64:
@@ -114,9 +128,11 @@ def call(host,port,method,params=None,auth_token=None):
         headers["Authorization"]="Bearer "+token
     req=urllib.request.Request(url,data=raw,headers=headers,method="POST")
     try:
-        with urllib.request.urlopen(req,timeout=10) as r:
+        with open_rpc_request(req,timeout=10) as r:
             try:return read_rpc_json_response(r)
             except RPCClientError as e:return {"ok":False,"error":str(e)}
+    except RPCClientError as e:
+        return {"ok":False,"error":str(e)}
     except urllib.error.HTTPError as e:
         try:return read_rpc_json_response(e)
         except RPCClientError as exc:return {"ok":False,"error":str(exc)}
