@@ -21,6 +21,13 @@ MAX_RPC_JSON_STRUCTURAL_ITEMS = 2 * MAX_RPC_PARAM_NODES
 
 
 class BoundedThreadingHTTPServer(ThreadingHTTPServer):
+    # ThreadingHTTPServer defaults request workers to daemon threads, which
+    # means ThreadingMixIn.server_close() does not join them.  RPC handlers can
+    # mutate chain state (mine/send/sync), so graceful shutdown must wait for
+    # every admitted handler before final persistence may be considered safe.
+    daemon_threads = False
+    block_on_close = True
+
     def __init__(self, server_address, RequestHandlerClass):
         self._worker_slots = threading.BoundedSemaphore(MAX_RPC_WORKERS)
         super().__init__(server_address, RequestHandlerClass)
