@@ -7,19 +7,21 @@ from core import AxvenCore
 def free_port():
     s=socket.socket(); s.bind(("127.0.0.1",0)); p=s.getsockname()[1]; s.close(); return p
 
-def rpc(port,method,params=None,timeout=4):
+def rpc(port,method,params=None,timeout=4,token=None):
     raw=json.dumps({"method":method,"params":params or {}}).encode()
+    headers={"Content-Type":"application/json"}
+    if token is not None: headers["Authorization"]="Bearer "+token
     req=urllib.request.Request(f"http://127.0.0.1:{port}/",data=raw,
-        headers={"Content-Type":"application/json"},method="POST")
+        headers=headers,method="POST")
     with urllib.request.urlopen(req,timeout=timeout) as r:
         return json.loads(r.read())
 
-def wait_rpc(port,deadline=8):
+def wait_rpc(port,token,deadline=8):
     end=time.time()+deadline
     last=None
     while time.time()<end:
         try:
-            return rpc(port,"get_status")
+            return rpc(port,"get_status",token=token)
         except Exception as e:
             last=e; time.sleep(.05)
     raise RuntimeError(f"rpc did not come up: {last}")
@@ -33,9 +35,9 @@ def start_daemon(datadir,rpc_port,p2p_port,pw):
         stdout=subprocess.PIPE,stderr=subprocess.PIPE
     )
 
-def stop_daemon(p, rpc_port):
+def stop_daemon(p, rpc_port, token):
     try:
-        r=rpc(rpc_port,"stop")
+        r=rpc(rpc_port,"stop",token=token)
         if not (r.get("ok") and r.get("result",{}).get("stopping")):
             raise AssertionError(f"stop RPC rejected: {r}")
     except Exception:
@@ -64,10 +66,11 @@ def main():
         )
         wallet.save_backup_file(ident,dd.wallet_file,pw)
 
+        token=dd.load_or_create_rpc_token()
         rp,pp=free_port(),free_port()
         proc=start_daemon(d,rp,pp,pw)
         try:
-            st=wait_rpc(rp)
+            st=wait_rpc(rp,token)
             ok("daemon starts",st["ok"])
             ok("daemon chain id",st["result"]["chain_id"]==axven.CHAIN_ID)
             ok("daemon genesis",st["result"]["genesis_hash"]==axven._genesis().hash())
@@ -75,9 +78,9 @@ def main():
 
             # Exercise RPC + P2P simultaneously while daemon is alive.
             r=rpc(rp,"mine",{"count":axven.COINBASE_MATURITY+2,
-                             "scheme":axven.SCHEME_ED25519},timeout=20)
+                             "scheme":axven.SCHEME_ED25519},timeout=20,token=token)
             ok("daemon mining",r["ok"] and len(r["result"])==axven.COINBASE_MATURITY+2)
-            st=rpc(rp,"get_status")["result"]
+            st=rpc(rp,"get_status",token=token)["result"]
             tip_before,height_before=st["tip_hash"],st["height"]
             ok("height advanced",height_before==axven.COINBASE_MATURITY+2)
 
@@ -88,7 +91,7 @@ def main():
             ok("live p2p tip",other.chain.tip.hash()==tip_before)
             ok("live p2p validate",other.chain.validate())
         finally:
-            stop_daemon(proc,rp)
+            stop_daemon(proc,rp,token)
 
         # Clean shutdown must have persisted the active chain.
         loaded=dd.load_chain()
@@ -100,15 +103,15 @@ def main():
         rp2,pp2=free_port(),free_port()
         proc2=start_daemon(d,rp2,pp2,pw)
         try:
-            st=wait_rpc(rp2)["result"]
+            st=wait_rpc(rp2,token)["result"]
             ok("restart height exact",st["height"]==height_before)
             ok("restart tip exact",st["tip_hash"]==tip_before)
             ok("restart mempool empty",st["mempool_size"]==0)
 
             # Advance after restart, proving the loaded state is live.
-            r=rpc(rp2,"mine",{"count":2,"scheme":axven.SCHEME_ED25519},timeout=10)
+            r=rpc(rp2,"mine",{"count":2,"scheme":axven.SCHEME_ED25519},timeout=10,token=token)
             ok("post-restart mine",r["ok"] and len(r["result"])==2)
-            st2=rpc(rp2,"get_status")["result"]
+            st2=rpc(rp2,"get_status",token=token)["result"]
             ok("post-restart height",st2["height"]==height_before+2)
 
             # Reconnect a fresh peer after restart.
@@ -118,7 +121,7 @@ def main():
             ok("restart p2p tip",fresh.chain.tip.hash()==st2["tip_hash"])
             ok("restart p2p state",fresh.chain.utxo==dd.load_chain().utxo or fresh.chain.validate())
         finally:
-            stop_daemon(proc2,rp2)
+            stop_daemon(proc2,rp2,token)
 
         final=dd.load_chain()
         ok("final persisted height",final.tip.height==height_before+2)

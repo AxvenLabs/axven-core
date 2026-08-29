@@ -14,7 +14,7 @@ accepting third-party reports.
 
 ## Current exposure boundary
 
-- RPC: loopback only
+- RPC: loopback only + per-datadir bearer authentication in the daemon
 - Explorer: loopback only
 - P2P: operator-controlled binding
 - wallet backups: encrypted with scrypt + AES-256-GCM

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 import os
+import secrets
 import tempfile
 from pathlib import Path
 import axven, wallet
@@ -12,6 +13,8 @@ from core import AxvenCore
 MAX_PEER_CONFIG_BYTES = 1024 * 1024
 MAX_PEER_CONFIG_JSON_NESTING_DEPTH = 16
 MAX_PEER_CONFIG_JSON_STRUCTURAL_ITEMS = 1024
+RPC_TOKEN_HEX_LENGTH = 64
+MAX_RPC_TOKEN_FILE_BYTES = RPC_TOKEN_HEX_LENGTH + 1
 
 
 def _preflight_peer_config_json(raw):
@@ -84,6 +87,58 @@ class DataDir:
         self.chain_dir=self.path/"chain"
         self.wallet_file=self.path/"wallet.json"
         self.peer_file=self.path/"peers.json"
+        self.rpc_token_file=self.path/"rpc.token"
+
+    @staticmethod
+    def _validate_rpc_token(raw):
+        if type(raw) is not bytes:
+            raise ValueError("invalid RPC token file")
+        if raw.endswith(b"\n"):
+            raw=raw[:-1]
+        if len(raw) != RPC_TOKEN_HEX_LENGTH:
+            raise ValueError("invalid RPC token file")
+        try:
+            token=raw.decode("ascii")
+        except UnicodeError as exc:
+            raise ValueError("invalid RPC token file") from exc
+        if any(ch not in "0123456789abcdef" for ch in token):
+            raise ValueError("invalid RPC token file")
+        return token
+
+    def load_rpc_token(self):
+        if not self.rpc_token_file.exists():
+            return None
+        with open(self.rpc_token_file,"rb") as f:
+            raw=f.read(MAX_RPC_TOKEN_FILE_BYTES+1)
+        if len(raw)>MAX_RPC_TOKEN_FILE_BYTES:
+            raise ValueError("invalid RPC token file")
+        return self._validate_rpc_token(raw)
+
+    def load_or_create_rpc_token(self):
+        existing=self.load_rpc_token()
+        if existing is not None:
+            return existing
+        token=secrets.token_hex(32)
+        flags=os.O_WRONLY|os.O_CREAT|os.O_EXCL
+        try:
+            fd=os.open(os.fspath(self.rpc_token_file),flags,0o600)
+        except FileExistsError:
+            # A concurrent node using the same datadir won the create race.
+            # Fail closed if its file is not yet a complete canonical token.
+            return self.load_rpc_token()
+        try:
+            with os.fdopen(fd,"wb") as f:
+                fd=None
+                f.write(token.encode("ascii")+b"\n")
+                f.flush()
+                os.fsync(f.fileno())
+            if os.name=="posix":
+                os.chmod(self.rpc_token_file,0o600)
+            _fsync_directory(self.rpc_token_file.parent)
+        finally:
+            if fd is not None:
+                os.close(fd)
+        return token
 
     def has_wallet(self):
         return self.wallet_file.exists()

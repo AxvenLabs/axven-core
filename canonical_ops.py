@@ -7,14 +7,19 @@ Axven Core using persistent datadirs and loopback RPC/P2P.
 from __future__ import annotations
 import argparse, json, os, subprocess, sys, time, urllib.request, urllib.error
 from pathlib import Path
-from axven_cli import RPCClientError, read_rpc_json_response
+from axven_cli import RPCClientError, read_rpc_json_response, resolve_rpc_auth_token
 
 ROOT=Path(__file__).resolve().parent
+_RPC_AUTH_TOKEN=None
 
 def rpc(port, method, params=None):
     raw=json.dumps({"method":method,"params":params or {}}).encode()
-    req=urllib.request.Request(f"http://127.0.0.1:{port}/",data=raw,
-        headers={"Content-Type":"application/json"},method="POST")
+    headers={"Content-Type":"application/json"}
+    if _RPC_AUTH_TOKEN is not None:
+        headers["Authorization"]="Bearer "+_RPC_AUTH_TOKEN
+    req=urllib.request.Request(
+        f"http://127.0.0.1:{port}/",data=raw,headers=headers,method="POST"
+    )
     try:
         with urllib.request.urlopen(req,timeout=15) as r:
             try:return read_rpc_json_response(r)
@@ -24,7 +29,9 @@ def rpc(port, method, params=None):
         except RPCClientError as exc:return {"ok":False,"error":str(exc)}
 
 def main():
+    global _RPC_AUTH_TOKEN
     ap=argparse.ArgumentParser(prog="canonical-ops")
+    ap.add_argument("--datadir",default=os.environ.get("AXVEN_DATADIR","./axven-data"))
     sp=ap.add_subparsers(dest="cmd",required=True)
 
     s=sp.add_parser("status")
@@ -110,6 +117,7 @@ def main():
     cc.add_argument("--rpc-port",type=int,default=18443)
 
     a=ap.parse_args()
+    _RPC_AUTH_TOKEN=resolve_rpc_auth_token(a.datadir)
     if a.cmd=="status":
         out=rpc(a.rpc_port,"get_status")
     elif a.cmd=="mine":
