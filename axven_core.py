@@ -82,6 +82,8 @@ def main():
         pw=_passphrase() if dd.has_wallet() else None
         core=dd.load_core(pw)
         rpc_token=dd.load_or_create_rpc_token()
+        if rpc_token is None:
+            raise RuntimeError("RPC authentication token unavailable")
         p2p_addr=core.start_p2p(args.p2p_host,args.p2p_port)
         rpc=RPCServer(
             core,args.rpc_host,args.rpc_port,auth_token=rpc_token
