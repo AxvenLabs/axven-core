@@ -265,8 +265,8 @@
       "sha256": "6224b23624c26801d032224ca8d28fcb615351402498dd3964f25d650d6429a8"
     },
     "datadir.py": {
-      "bytes": 6455,
-      "sha256": "a1cecccdb75ceab91b8415ccb3fc9f4492292d1c0ea8cab6df49e0df5ee823dd"
+      "bytes": 6569,
+      "sha256": "dddf38ed5ddb49aba93f666af8cd5fbeea1589f96e132d48945dea5b42f4e21e"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -915,6 +915,10 @@
     "security_sec155_pending_tracker_atomicity_spec.py": {
       "bytes": 6493,
       "sha256": "9238591289ca45b2b634e2e6b9a3a8209a823323b07b53d48a1d7841c6e9023a"
+    },
+    "security_sec156_peer_config_entry_canonicality_spec.py": {
+      "bytes": 3930,
+      "sha256": "22402820deca2cac38aad3e6a4fd31e895b4885c5da1fcf49338628511c548fc"
     },
     "setup.cmd": {
       "bytes": 172,

@@ -120,6 +120,8 @@ class DataDir:
             if isinstance(peer,dict):
                 if "host" not in peer or "port" not in peer:
                     raise ValueError("peer entry requires host and port")
+                if set(peer) != {"host","port"}:
+                    raise ValueError("unknown peer entry field")
                 peer=(peer["host"],peer["port"])
             peers.append(AxvenCore._parse_peer(peer))
         return peers
