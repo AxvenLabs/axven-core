@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 37007,
-      "sha256": "8806bda41d4cb212fa74f369ba5293fdab7d90f7a5386623fac60c318137e876"
+      "bytes": 37733,
+      "sha256": "824c9519a70c8cc0c75af9b0cb5b69eb8f7d0162fda866a0587f928b411ddcd2"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5613,
@@ -867,6 +867,10 @@
     "security_sec143_peer_host_type_domain_spec.py": {
       "bytes": 3591,
       "sha256": "8100f5dff00f5de8bcbff56908948071c4ff32daf579e59e40bc0c98a66c495f"
+    },
+    "security_sec144_peer_port_type_domain_spec.py": {
+      "bytes": 5137,
+      "sha256": "63178a0252441c774f627ac83d8594d8e5da16ad9cc878f2ebeee0040fa58a5b"
     },
     "setup.cmd": {
       "bytes": 172,
