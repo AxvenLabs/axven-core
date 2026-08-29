@@ -125,8 +125,8 @@
       "sha256": "e839871e2a1549a6526500744e2a61254518d69ebc11b74a4942f5ff681ce388"
     },
     "axven.py": {
-      "bytes": 68124,
-      "sha256": "ebfebfc27f5e1ff2df3eef39d6f50cbe27e374b9a43723588b1337cc55f1d26d"
+      "bytes": 68517,
+      "sha256": "ad66f4a8dedd2d644270b000b4ff38e1c47b5d4cd0e6b7593ddc810066249a99"
     },
     "axven_cli.py": {
       "bytes": 2654,
@@ -991,6 +991,10 @@
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
       "sha256": "0826cd7f03dca3bfa679c0052ae749d2adb0195eea8c065fa8ebb197b9a54804"
+    },
+    "security_sec161_chain_state_directory_durability_spec.py": {
+      "bytes": 3745,
+      "sha256": "ec285a1b9a682e0565626f0c4388a6069fb3dd378d482e473f29766aafdda9db"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

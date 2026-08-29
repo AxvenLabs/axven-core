@@ -1646,6 +1646,20 @@ def _validate_persisted_chain_block(raw_block):
         _validate_persisted_transaction(raw_tx)
 
 
+def _fsync_directory(path):
+    """Durably commit directory metadata after an atomic state-file replace."""
+    if os.name != "posix":
+        return
+    flags = os.O_RDONLY
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    fd = os.open(os.fspath(path), flags)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 class StateStore:
     def __init__(self, directory: str):
         self.directory = Path(directory)
@@ -1682,6 +1696,7 @@ class StateStore:
                 os.fsync(f.fileno())
             os.replace(tmp_path, self.path)
             tmp_path = None
+            _fsync_directory(self.directory)
         finally:
             if fd is not None:
                 os.close(fd)
