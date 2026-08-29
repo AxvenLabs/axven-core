@@ -30,7 +30,7 @@ def post_raw(address, raw):
 
 def list_request(count):
     return (
-        b'{"method":"get_status","params":{"payload":['
+        b'{"method":"__sec130_unknown_method__","params":{"payload":['
         + b','.join([b'0'] * count)
         + b']}}'
     )
@@ -51,13 +51,21 @@ def main():
         and rpc.MAX_RPC_JSON_STRUCTURAL_ITEMS == 2 * rpc.MAX_RPC_PARAM_NODES,
     )
 
+    # SEC-130 owns semantic/raw complexity limits. SEC-171 now owns exact
+    # production-method vocabularies, so use an unknown method to prove the
+    # exact semantic boundary reaches the later method gate without relying
+    # on a production method silently ignoring a synthetic payload field.
     canonical_max = list_request(4095)
     rpc._preflight_json_nesting(canonical_max)
     parsed = json.loads(canonical_max)
-    result = rpc.RPCDispatcher(Core()).call(parsed["method"], parsed["params"])
+    try:
+        rpc.RPCDispatcher(Core()).call(parsed["method"], parsed["params"])
+        semantic_boundary_reached = False
+    except rpc.RPCError as exc:
+        semantic_boundary_reached = str(exc) == "unknown method"
     green(
-        "existing exact 4096-node semantic RPC boundary remains admissible",
-        result["height"] == 7,
+        "existing exact 4096-node semantic RPC boundary reaches method gate",
+        semantic_boundary_reached,
     )
 
     semantic_over = list_request(4096)
@@ -87,7 +95,7 @@ def main():
     green("shallow structural fan-out is rejected before parsing", raw_rejected)
 
     empty_container_fanout = (
-        b'{"method":"get_status","params":{"payload":['
+        b'{"method":"__sec130_unknown_method__","params":{"payload":['
         + b','.join([b'{}'] * (rpc.MAX_RPC_JSON_STRUCTURAL_ITEMS + 1))
         + b']}}'
     )
@@ -100,7 +108,7 @@ def main():
 
     string_noise = json.dumps(
         {
-            "method": "get_status",
+            "method": "__sec130_unknown_method__",
             "params": {"text": ",{}[]" * (rpc.MAX_RPC_JSON_STRUCTURAL_ITEMS + 32)},
         },
         separators=(",", ":"),
@@ -143,10 +151,29 @@ def main():
             semantic_status == 400 and len(parser_calls) == 1,
         )
 
-        healthy_status, healthy_body = post_raw(server.address, canonical_max)
+        parser_calls = []
+        rpc.json.loads = counting_loads
+        try:
+            boundary_status, boundary_body = post_raw(server.address, canonical_max)
+        finally:
+            rpc.json.loads = original_loads
+        boundary = json.loads(boundary_body)
+        green(
+            "maximum semantic payload reaches method gate through production HTTP",
+            boundary_status == 400
+            and len(parser_calls) == 1
+            and boundary.get("ok") is False
+            and "unknown method" in boundary.get("error", ""),
+        )
+
+        healthy_raw = json.dumps(
+            {"method": "get_status", "params": {}},
+            separators=(",", ":"),
+        ).encode("utf-8")
+        healthy_status, healthy_body = post_raw(server.address, healthy_raw)
         healthy = json.loads(healthy_body)
         green(
-            "maximum canonical semantic payload remains available through production HTTP",
+            "healthy canonical production RPC remains available",
             healthy_status == 200
             and healthy.get("ok") is True
             and healthy.get("result", {}).get("height") == 7,
