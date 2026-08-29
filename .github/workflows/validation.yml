@@ -5,26 +5,42 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build-sec150:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: true
+  test:
+    runs-on: windows-latest
 
-      - name: Build SEC-150 source, regression, and manifest
-        shell: bash
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Enable UTF-8
+        shell: pwsh
         run: |
-          if grep -q 'def _preflight_chain_state_json(' axven.py; then
-            echo 'SEC-150 already built; no builder commit needed'
-            exit 0
-          fi
-          python sec150_build.py
-          git config user.name "AxvenLabs"
-          git config user.email "actions@users.noreply.github.com"
-          git add axven.py release_manifest.json security_sec150_chain_state_json_preparse_spec.py
-          git commit -m "SEC-150: Harden chain-state JSON preparse [SEC150-BUILT]"
-          git push origin HEAD:security-sec150-chain-state-json-preparse
+          chcp 65001
+
+      - name: Install
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Full validation
+        shell: pwsh
+        run: |
+          python run_full_validation.py
+
+      - name: SEC-076+ security tail
+        shell: pwsh
+        run: |
+          python security_tail_runner.py
