@@ -129,8 +129,8 @@
       "sha256": "fb2fe5865cac542d783e545a3354293675a526435615495a459c3d1107b61df2"
     },
     "axven_cli.py": {
-      "bytes": 6090,
-      "sha256": "d2994cfff7a492dabd7a3cebc6a5ce62909cf8718164dc82577099d209e3c107"
+      "bytes": 6887,
+      "sha256": "56899377c0193c46643dbcec367cb179bfe61ee3485e5e6a38956391193163ff"
     },
     "axven_console.py": {
       "bytes": 3663,
@@ -952,6 +952,18 @@
       "bytes": 3079,
       "sha256": "7b14a14bba885eb747f42a0e56ddf9517269e5bd9bbbc9a998e08d9b8019ac54"
     },
+    "security_sec165_daemon_rpc_bearer_auth_spec.py": {
+      "bytes": 4961,
+      "sha256": "e0457d30d27f8fcc5de9ba28aeabcc239acc64ad1a67429dd19ada2189bd2646"
+    },
+    "security_sec166_rpc_token_file_integrity_spec.py": {
+      "bytes": 4389,
+      "sha256": "d4bc38fee37c7be5d5fb6e4aa977b0655b211ec2935bc549e242401ca2795b85"
+    },
+    "security_sec167_rpc_client_loopback_auth_boundary_spec.py": {
+      "bytes": 2689,
+      "sha256": "7b4c95b7f48ae88387fe421753ac4a7316b07da9bbb1a9db707a6f1287ce2b4f"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -1007,14 +1019,6 @@
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
       "sha256": "0826cd7f03dca3bfa679c0052ae749d2adb0195eea8c065fa8ebb197b9a54804"
-    },
-    "security_sec165_daemon_rpc_bearer_auth_spec.py": {
-      "bytes": 4961,
-      "sha256": "e0457d30d27f8fcc5de9ba28aeabcc239acc64ad1a67429dd19ada2189bd2646"
-    },
-    "security_sec166_rpc_token_file_integrity_spec.py": {
-      "bytes": 4389,
-      "sha256": "d4bc38fee37c7be5d5fb6e4aa977b0655b211ec2935bc549e242401ca2795b85"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

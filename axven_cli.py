@@ -6,6 +6,7 @@ from pathlib import Path
 
 MAX_RPC_RESPONSE_BYTES=16*1024*1024
 MAX_RPC_TOKEN_FILE_BYTES=65
+_AUTHENTICATED_RPC_HOSTS={"127.0.0.1","localhost","::1"}
 
 class RPCClientError(ValueError): pass
 
@@ -89,14 +90,29 @@ def read_rpc_json_response(stream):
         raise RPCClientError("RPC response must be object")
     return data
 
+def _rpc_client_url(host,port,auth_token=None):
+    if type(host) is not str or not host or len(host)>255:
+        raise RPCClientError("invalid RPC host")
+    if any(ch in host for ch in "/\\@ \t\r\n"):
+        raise RPCClientError("invalid RPC host")
+    if type(port) is not int or port<1 or port>65535:
+        raise RPCClientError("invalid RPC port")
+    if auth_token is not None and host not in _AUTHENTICATED_RPC_HOSTS:
+        raise RPCClientError("authenticated RPC target must be loopback")
+    authority=f"[{host}]" if ":" in host else host
+    return f"http://{authority}:{port}/"
+
 def call(host,port,method,params=None,auth_token=None):
+    try:
+        token=None if auth_token is None else _validate_rpc_auth_token(auth_token)
+        url=_rpc_client_url(host,port,token)
+    except RPCClientError as exc:
+        return {"ok":False,"error":str(exc)}
     raw=json.dumps({"method":method,"params":params or {}}).encode()
     headers={"Content-Type":"application/json"}
-    if auth_token is not None:
-        headers["Authorization"]="Bearer "+_validate_rpc_auth_token(auth_token)
-    req=urllib.request.Request(
-        f"http://{host}:{port}/",data=raw,headers=headers,method="POST"
-    )
+    if token is not None:
+        headers["Authorization"]="Bearer "+token
+    req=urllib.request.Request(url,data=raw,headers=headers,method="POST")
     try:
         with urllib.request.urlopen(req,timeout=10) as r:
             try:return read_rpc_json_response(r)
