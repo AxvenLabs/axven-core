@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os
 import secrets
+import stat
 import tempfile
 from pathlib import Path
 import axven, wallet
@@ -80,6 +81,52 @@ def _fsync_directory(directory):
         os.close(dir_fd)
 
 
+def _read_secure_rpc_token_file(path):
+    """Read rpc.token without trusting path indirection or unsafe metadata."""
+    path=os.fspath(path)
+    try:
+        before=os.lstat(path)
+    except FileNotFoundError:
+        return None
+    if stat.S_ISLNK(before.st_mode):
+        raise ValueError("unsafe RPC token file")
+
+    flags=os.O_RDONLY
+    if hasattr(os,"O_BINARY"):
+        flags |= os.O_BINARY
+    if hasattr(os,"O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd=None
+    try:
+        try:
+            fd=os.open(path,flags)
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            raise ValueError("unsafe RPC token file") from exc
+        current=os.fstat(fd)
+        if not stat.S_ISREG(current.st_mode):
+            raise ValueError("unsafe RPC token file")
+        if (before.st_dev,before.st_ino)!=(current.st_dev,current.st_ino):
+            raise ValueError("RPC token file changed during open")
+        if getattr(current,"st_nlink",1)!=1:
+            raise ValueError("unsafe RPC token hardlink count")
+        if os.name=="posix":
+            if current.st_mode & 0o077:
+                raise ValueError("RPC token file permissions must be owner-only")
+            if hasattr(os,"getuid") and current.st_uid!=os.getuid():
+                raise ValueError("RPC token file owner mismatch")
+        with os.fdopen(fd,"rb") as f:
+            fd=None
+            raw=f.read(MAX_RPC_TOKEN_FILE_BYTES+1)
+    finally:
+        if fd is not None:
+            os.close(fd)
+    if len(raw)>MAX_RPC_TOKEN_FILE_BYTES:
+        raise ValueError("invalid RPC token file")
+    return raw
+
+
 class DataDir:
     def __init__(self,path):
         self.path=Path(path).expanduser().resolve()
@@ -106,12 +153,9 @@ class DataDir:
         return token
 
     def load_rpc_token(self):
-        if not self.rpc_token_file.exists():
+        raw=_read_secure_rpc_token_file(self.rpc_token_file)
+        if raw is None:
             return None
-        with open(self.rpc_token_file,"rb") as f:
-            raw=f.read(MAX_RPC_TOKEN_FILE_BYTES+1)
-        if len(raw)>MAX_RPC_TOKEN_FILE_BYTES:
-            raise ValueError("invalid RPC token file")
         return self._validate_rpc_token(raw)
 
     def load_or_create_rpc_token(self):
