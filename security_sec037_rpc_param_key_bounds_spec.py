@@ -7,6 +7,9 @@ class DummyCore:
     def status(self):
         return {"ok": True}
 
+    def balance(self, scheme=None):
+        return scheme
+
 
 def expect_rpc_error(dispatcher, params, expected):
     try:
@@ -25,8 +28,8 @@ def expect_rpc_error(dispatcher, params, expected):
 def main():
     dispatcher = rpc.RPCDispatcher(DummyCore())
 
-    result = dispatcher.call("get_status", {"normal_key": 1})
-    assert result == {"ok": True}
+    result = dispatcher.call("get_balance", {"scheme": "N"})
+    assert result == "N"
     print("[GREEN] canonical RPC parameter key preserved")
 
     expect_rpc_error(

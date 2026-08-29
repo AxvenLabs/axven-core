@@ -140,15 +140,19 @@ def main():
         server.stop()
 
     dispatcher = rpc.RPCDispatcher(Core())
-    shallow_ok = dispatcher.call("get_status", {"x": nested_value(16)})["height"] == 7
     try:
-        dispatcher.call("get_status", {"x": nested_value(17)})
+        dispatcher.call("unknown_method", {"x": nested_value(16)})
+        shallow_reaches_grammar = False
+    except rpc.RPCError as exc:
+        shallow_reaches_grammar = str(exc) == "unknown method"
+    try:
+        dispatcher.call("unknown_method", {"x": nested_value(17)})
         parsed_depth_rejected = False
     except rpc.RPCError as exc:
         parsed_depth_rejected = "nesting too deep" in str(exc)
     green(
         "existing parsed parameter depth contract remains independently enforced",
-        shallow_ok and parsed_depth_rejected,
+        shallow_reaches_grammar and parsed_depth_rejected,
     )
 
     handler_src = inspect.getsource(rpc._handler)

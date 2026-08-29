@@ -11,13 +11,16 @@ class DummyCore:
     def status(self):
         return {"ok": True}
 
+    def balance(self, scheme=None):
+        return scheme
+
 
 def main():
     dispatcher = RPCDispatcher(DummyCore())
 
     # Normal canonical request must remain valid.
-    result = dispatcher.call("get_status", {"scheme": "N"})
-    assert result == {"ok": True}
+    result = dispatcher.call("get_balance", {"scheme": "N"})
+    assert result == "N"
     print("[GREEN] canonical RPC parameter count preserved")
 
     # Exactly the maximum number of parameters must pass structural

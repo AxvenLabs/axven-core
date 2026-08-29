@@ -345,8 +345,8 @@
       "sha256": "eac85195671568ba906d24b606be7a193b7008fb0efbb96553b643f65012a6e0"
     },
     "rpc.py": {
-      "bytes": 16689,
-      "sha256": "7a7758b7431db6f3d109246e4d6215e4646b852b83b43f3670bf8a4e0c0b77cc"
+      "bytes": 18929,
+      "sha256": "c1d7824535ff1e9c0f41a474266277cdad1993bb8f516bdc7fd1c13a7f4f9569"
     },
     "run_full_validation.py": {
       "bytes": 8663,
@@ -449,24 +449,24 @@
       "sha256": "071c165921cdce7e3c25b27bacda7c137e2ad6c37def23993f84deb02e2d73f2"
     },
     "security_sec037_rpc_param_key_bounds_spec.py": {
-      "bytes": 1800,
-      "sha256": "057ea42eed9e067f461f4b7cf4c06508b0078fe52eb62447040861bed9b53676"
+      "bytes": 1849,
+      "sha256": "d428826637125345c540c7c4c4efef51484647c0bad2b379b01decab807f17f5"
     },
     "security_sec038_rpc_param_count_bounds_spec.py": {
-      "bytes": 1664,
-      "sha256": "09505c89d4cf953efbfb4189c0347ba56952a3a01d599955f59268af3dafa366"
+      "bytes": 1715,
+      "sha256": "9ef323a52443f85c536a14d702571d585d3491cd4bb6778eb98cad2c20ae9622"
     },
     "security_sec039_rpc_duplicate_json_keys_spec.py": {
       "bytes": 2289,
       "sha256": "af4dff76341e5a09cba6c0c7879cea1d575044e4611e2a33a97a354c5d261ce1"
     },
     "security_sec040_rpc_param_depth_bounds_spec.py": {
-      "bytes": 2468,
-      "sha256": "6463b30455558498755f899fb0865fba806fe01adbd5f1511b8fbad997bb8a67"
+      "bytes": 2780,
+      "sha256": "0c8e48989a18f734d4ee40d4c3b375c34b89cbce350b9931deede7e8caccef0a"
     },
     "security_sec041_rpc_param_complexity_bounds_spec.py": {
-      "bytes": 2410,
-      "sha256": "0daec4794f4325753b88169b9c31b06232c2fcff52221cf25bf03724361f21a1"
+      "bytes": 2649,
+      "sha256": "e2295e0f18deff430901997f65103a3871e9cc8620128ba6d24423288d7651d3"
     },
     "security_sec042_rpc_mine_count_bounds_spec.py": {
       "bytes": 2027,
@@ -801,8 +801,8 @@
       "sha256": "d68deaec1244fff438bac32613e203c4210be42a032fed37f275f6b402b6927a"
     },
     "security_sec127_rpc_json_preparse_depth_spec.py": {
-      "bytes": 5464,
-      "sha256": "55ea3cd52029bd43a96fb3f1fba7e4e56aa53e6296512ee0279aebf63e43a431"
+      "bytes": 5605,
+      "sha256": "7f436a1168bb1166bccfc93393fbef573dfe7c76667c192e97fdbac44259e300"
     },
     "security_sec128_wallet_backup_json_preparse_depth_spec.py": {
       "bytes": 6942,
@@ -813,8 +813,8 @@
       "sha256": "62ae28e74229d3184a75f831bdbd0e9debd0da042a2dca0989e70d2ccd07d070"
     },
     "security_sec130_rpc_json_preparse_complexity_spec.py": {
-      "bytes": 6036,
-      "sha256": "66e32391b1c1621cd9a2faa101fffb529e8be4809e0e76ac5eee600e89ad4a67"
+      "bytes": 6349,
+      "sha256": "71a2a7ab88afde9618e3cd1bf0e524a00cb378eecaeb941ba7eb2691c2082b3e"
     },
     "security_sec131_wallet_backup_envelope_canonicality_spec.py": {
       "bytes": 8069,
@@ -967,6 +967,10 @@
     "security_sec168_rpc_token_bootstrap_fail_closed_spec.py": {
       "bytes": 4051,
       "sha256": "2ead7feacddacb27f7440f32a7d7c05597e27dde2901c4ff0b39129807f8f20b"
+    },
+    "security_sec169_rpc_method_param_canonicality_spec.py": {
+      "bytes": 4166,
+      "sha256": "da975d9df99fa1545c5848f6ae7aabb5ea4c113501c35b2cc25af5f49bcdf5b9"
     },
     "setup.cmd": {
       "bytes": 172,

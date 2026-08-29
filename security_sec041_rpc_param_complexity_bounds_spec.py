@@ -15,10 +15,15 @@ class DummyCore:
 def main():
     dispatcher = RPCDispatcher(DummyCore())
 
-    # Canonical scalar parameter must remain valid.
-    result = dispatcher.call("get_status", {"scheme": "N"})
-    assert result == {"ok": True}
-    print("[GREEN] canonical RPC parameter complexity preserved")
+    # A bounded scalar parameter must pass structural validation and reach the
+    # method grammar.  Method-specific vocabulary is enforced separately.
+    try:
+        dispatcher.call("unknown_method", {"scheme": "N"})
+    except RPCError as e:
+        assert str(e) == "unknown method", e
+    else:
+        raise AssertionError("unknown method unexpectedly succeeded")
+    print("[GREEN] canonical RPC parameter complexity reaches method grammar")
 
     # Exactly the maximum node budget must pass structural validation
     # and reach normal dispatch.

@@ -51,16 +51,24 @@ def main():
         and rpc.MAX_RPC_JSON_STRUCTURAL_ITEMS == 2 * rpc.MAX_RPC_PARAM_NODES,
     )
 
-    canonical_max = list_request(4095)
+    canonical_max = list_request(4095).replace(
+        b'"method":"get_status"', b'"method":"unknown_method"', 1
+    )
     rpc._preflight_json_nesting(canonical_max)
     parsed = json.loads(canonical_max)
-    result = rpc.RPCDispatcher(Core()).call(parsed["method"], parsed["params"])
+    try:
+        rpc.RPCDispatcher(Core()).call(parsed["method"], parsed["params"])
+        boundary_reaches_grammar = False
+    except rpc.RPCError as exc:
+        boundary_reaches_grammar = str(exc) == "unknown method"
     green(
-        "existing exact 4096-node semantic RPC boundary remains admissible",
-        result["height"] == 7,
+        "existing exact 4096-node semantic RPC boundary reaches method grammar",
+        boundary_reaches_grammar,
     )
 
-    semantic_over = list_request(4096)
+    semantic_over = list_request(4096).replace(
+        b'"method":"get_status"', b'"method":"unknown_method"', 1
+    )
     rpc._preflight_json_nesting(semantic_over)
     parsed_over = json.loads(semantic_over)
     try:
@@ -143,13 +151,13 @@ def main():
             semantic_status == 400 and len(parser_calls) == 1,
         )
 
-        healthy_status, healthy_body = post_raw(server.address, canonical_max)
-        healthy = json.loads(healthy_body)
+        boundary_status, boundary_body = post_raw(server.address, canonical_max)
+        boundary = json.loads(boundary_body)
         green(
-            "maximum canonical semantic payload remains available through production HTTP",
-            healthy_status == 200
-            and healthy.get("ok") is True
-            and healthy.get("result", {}).get("height") == 7,
+            "maximum semantic payload reaches method grammar through production HTTP",
+            boundary_status == 400
+            and boundary.get("ok") is False
+            and "unknown method" in boundary.get("error", ""),
         )
     finally:
         server.stop()

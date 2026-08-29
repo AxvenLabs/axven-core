@@ -22,18 +22,24 @@ def nested_value(depth):
 def main():
     dispatcher = RPCDispatcher(DummyCore())
 
-    # Canonical scalar parameter values must remain valid.
-    result = dispatcher.call(
-        "get_status",
-        {
-            "string": "value",
-            "integer": 1,
-            "boolean": True,
-            "null": None,
-        },
-    )
-    assert result == {"ok": True}
-    print("[GREEN] canonical RPC parameter values preserved")
+    # Canonical scalar JSON values must pass structural validation and reach
+    # the method grammar.  SEC-169 intentionally no longer treats arbitrary
+    # keys on get_status as valid method parameters.
+    try:
+        dispatcher.call(
+            "unknown_method",
+            {
+                "string": "value",
+                "integer": 1,
+                "boolean": True,
+                "null": None,
+            },
+        )
+    except RPCError as e:
+        assert str(e) == "unknown method", e
+    else:
+        raise AssertionError("unknown method unexpectedly succeeded")
+    print("[GREEN] canonical RPC scalar values reach method grammar")
 
     # Exactly the maximum permitted nesting depth must pass structural
     # validation and reach normal dispatch.
