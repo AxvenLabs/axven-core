@@ -1361,6 +1361,13 @@ class Mempool:
     def _add_locked(self, tx: Transaction, work_gate=None) -> str:
         if tx.is_coinbase:
             raise ValueError("Coinbase cannot enter the mempool")
+        # A non-coinbase transaction with no inputs spends no state and can be
+        # made artificially unique with optional metadata.  Reject it before
+        # txid hashing, byte accounting or crypto-work reservation so public
+        # relay cannot cheaply consume the bounded mempool with no-spend junk.
+        inputs = tx._in()
+        if not inputs:
+            raise ValueError("Transaction requires at least one input")
         tid = tx.txid()
         if tid in self.txs:
             raise ValueError("Already in mempool")
@@ -1369,7 +1376,6 @@ class Mempool:
         tx_bytes = serialized_transaction_size(tx)
         if self.total_bytes + tx_bytes > MAX_MEMPOOL_BYTES:
             raise ValueError("Mempool byte budget full")
-        inputs = tx._in()
         ops = [outpoint(i.prev_txid, i.index) for i in inputs]
         if len(ops) != len(set(ops)) or any(op in self.spent for op in ops):
             raise ValueError("Double spend")
