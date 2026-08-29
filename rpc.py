@@ -377,13 +377,24 @@ def _handler(dispatcher):
     return Handler
 
 
+def _validate_rpc_listener_endpoint(host, port):
+    if type(host) is not str:
+        raise ValueError("RPC listener host must be string")
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        raise ValueError("RPC v0 may bind only to loopback")
+    if type(port) is not int:
+        raise ValueError("RPC listener port must be integer")
+    if port < 0 or port > 65535:
+        raise ValueError("invalid RPC listener port")
+    return host, port
+
+
 class RPCServer:
     def __init__(self, core, host="127.0.0.1", port=0):
         # v0: intentionally loopback only.
-        if host not in ("127.0.0.1", "localhost", "::1"):
-            raise ValueError("RPC v0 may bind only to loopback")
+        host, port = _validate_rpc_listener_endpoint(host, port)
         self.dispatcher = RPCDispatcher(core)
-        self.httpd = BoundedThreadingHTTPServer((host, int(port)), _handler(self.dispatcher))
+        self.httpd = BoundedThreadingHTTPServer((host, port), _handler(self.dispatcher))
         self.thread = None
 
     @property

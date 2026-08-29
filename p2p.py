@@ -1088,9 +1088,22 @@ def sync_once(sock,session:PeerSession,limit=128):
     return session.handle(msg)
 
 
+def _validate_p2p_listener_endpoint(host,port):
+    if type(host) is not str:
+        raise ValueError("P2P listener host must be string")
+    if len(host) > 255:
+        raise ValueError("P2P listener host too long")
+    if type(port) is not int:
+        raise ValueError("P2P listener port must be integer")
+    if port < 0 or port > 65535:
+        raise ValueError("invalid P2P listener port")
+    return host,port
+
+
 class NodeServer:
     """Small threaded TCP node wrapper for integration/devnet operation."""
     def __init__(self, chain=None, mempool=None, host="127.0.0.1", port=0):
+        host,port=_validate_p2p_listener_endpoint(host,port)
         self.chain=chain or axven.Blockchain()
         self.mempool=mempool or axven.Mempool(self.chain)
         self.session=PeerSession(self.chain,self.mempool)
