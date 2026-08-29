@@ -277,8 +277,8 @@
       "sha256": "b3260c5421d12f7f68b60726c27bdde713794fa2aa3ac9b200ad833524252568"
     },
     "explorer.py": {
-      "bytes": 3260,
-      "sha256": "ee3845c50c5ba1a06b322f5c1f9af74237687acf67fdad32716340b52322ce1c"
+      "bytes": 5728,
+      "sha256": "3faad334db2df4b4a92944bccde25e5d5660ff11c3810c5d8b4053f807e0afa9"
     },
     "explorer_index.html": {
       "bytes": 4693,
@@ -827,6 +827,10 @@
     "security_sec133_p2p_handshake_admission_rate_spec.py": {
       "bytes": 7092,
       "sha256": "56b3ea5d11daf9a6c96245e23d1dd7c62d89478c08e6686e2dce62666b1cf6bf"
+    },
+    "security_sec134_explorer_http_resource_bounds_spec.py": {
+      "bytes": 6357,
+      "sha256": "27203ab6897b8c87f4ae3d28e7c340bfb3165e404bacfced8ab6ae94382ec29a"
     },
     "setup.cmd": {
       "bytes": 172,
