@@ -191,10 +191,15 @@ def main():
         < server_src.index("_handshake_rate_limiter.consume(remote_host)")
         < server_src.index("self._clients.add(c)"),
     )
+    rate_gate=server_src.index("_handshake_rate_limiter.consume(remote_host)")
+    worker_create=server_src.index(
+        "worker_thread=threading.Thread(target=worker,daemon=True)"
+    )
+    worker_publish=server_src.index("self._workers.add(worker_thread)")
+    worker_start=server_src.index("worker_thread.start()")
     green(
-        "production admission gate runs before handshake worker creation",
-        server_src.index("_handshake_rate_limiter.consume(remote_host)")
-        < server_src.index("threading.Thread(target=worker,daemon=True).start()"),
+        "production admission gate runs before tracked handshake worker creation",
+        rate_gate < worker_create < worker_publish < worker_start,
     )
     green(
         "listener owns both pre-auth and post-handshake persistent rate budgets",
