@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Axven CLI JSON-RPC client — canonical UX."""
 from __future__ import annotations
-import argparse, json, os, sys, urllib.request, urllib.error
+import argparse, json, os, stat, sys, urllib.request, urllib.error
 from pathlib import Path
 
 MAX_RPC_RESPONSE_BYTES=16*1024*1024
@@ -17,18 +17,58 @@ def _validate_rpc_auth_token(token):
         raise RPCClientError("invalid RPC auth token")
     return token
 
+def _read_secure_rpc_token_file(path):
+    path=os.fspath(path)
+    try:
+        before=os.lstat(path)
+    except FileNotFoundError:
+        return None
+    if stat.S_ISLNK(before.st_mode):
+        raise RPCClientError("unsafe RPC token file")
+    flags=os.O_RDONLY
+    if hasattr(os,"O_BINARY"):
+        flags |= os.O_BINARY
+    if hasattr(os,"O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd=None
+    try:
+        try:
+            fd=os.open(path,flags)
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            raise RPCClientError("unsafe RPC token file") from exc
+        current=os.fstat(fd)
+        if not stat.S_ISREG(current.st_mode):
+            raise RPCClientError("unsafe RPC token file")
+        if (before.st_dev,before.st_ino)!=(current.st_dev,current.st_ino):
+            raise RPCClientError("RPC token file changed during open")
+        if getattr(current,"st_nlink",1)!=1:
+            raise RPCClientError("unsafe RPC token hardlink count")
+        if os.name=="posix":
+            if current.st_mode & 0o077:
+                raise RPCClientError("RPC token file permissions must be owner-only")
+            if hasattr(os,"getuid") and current.st_uid!=os.getuid():
+                raise RPCClientError("RPC token file owner mismatch")
+        with os.fdopen(fd,"rb") as f:
+            fd=None
+            raw=f.read(MAX_RPC_TOKEN_FILE_BYTES+1)
+    finally:
+        if fd is not None:
+            os.close(fd)
+    if len(raw)>MAX_RPC_TOKEN_FILE_BYTES:
+        raise RPCClientError("invalid RPC auth token")
+    return raw
+
 def resolve_rpc_auth_token(datadir=None):
     env=os.environ.get("AXVEN_RPC_TOKEN")
     if env is not None:
         return _validate_rpc_auth_token(env)
     root=Path(datadir or os.environ.get("AXVEN_DATADIR","./axven-data")).expanduser()
     path=root/"rpc.token"
-    if not path.exists():
+    raw=_read_secure_rpc_token_file(path)
+    if raw is None:
         return None
-    with open(path,"rb") as f:
-        raw=f.read(MAX_RPC_TOKEN_FILE_BYTES+1)
-    if len(raw)>MAX_RPC_TOKEN_FILE_BYTES:
-        raise RPCClientError("invalid RPC auth token")
     if raw.endswith(b"\n"):
         raw=raw[:-1]
     try:

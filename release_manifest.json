@@ -129,8 +129,8 @@
       "sha256": "fb2fe5865cac542d783e545a3354293675a526435615495a459c3d1107b61df2"
     },
     "axven_cli.py": {
-      "bytes": 4635,
-      "sha256": "179a3242b3eb30f6e9862b19caa460035379527cad93957ac5db117f5a03cf27"
+      "bytes": 6090,
+      "sha256": "d2994cfff7a492dabd7a3cebc6a5ce62909cf8718164dc82577099d209e3c107"
     },
     "axven_console.py": {
       "bytes": 3663,
@@ -265,8 +265,8 @@
       "sha256": "e3e5c65cc41f968e7cacacf2d0aa62ddd53f145a1c17b86ab9dd56d9ce3cd3e2"
     },
     "datadir.py": {
-      "bytes": 9030,
-      "sha256": "d777b253185c6cc5d7a0f7a88d7230fb46689a30f3475d839d7708936af6352a"
+      "bytes": 10517,
+      "sha256": "0a8dd42b3a6cf3613270d76b1f89ea5a9f7cfa3e14de7bd8c11e1fc3b4550139"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -1011,6 +1011,10 @@
     "security_sec165_daemon_rpc_bearer_auth_spec.py": {
       "bytes": 4961,
       "sha256": "e0457d30d27f8fcc5de9ba28aeabcc239acc64ad1a67429dd19ada2189bd2646"
+    },
+    "security_sec166_rpc_token_file_integrity_spec.py": {
+      "bytes": 4389,
+      "sha256": "d4bc38fee37c7be5d5fb6e4aa977b0655b211ec2935bc549e242401ca2795b85"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
