@@ -1432,6 +1432,51 @@ class Mempool:
                 self.spent.discard(outpoint(i.prev_txid, i.index))
 
 
+MAX_CHAIN_STATE_JSON_NESTING_DEPTH = 32
+
+
+def _preflight_chain_state_json(raw, max_depth=MAX_CHAIN_STATE_JSON_NESTING_DEPTH):
+    """Reject pathological persisted-chain nesting before json.loads recursion."""
+    if type(raw) is not bytes:
+        raise ValueError("invalid chain state JSON bytes")
+    if type(max_depth) is not int or max_depth <= 0:
+        raise ValueError("invalid chain state JSON depth limit")
+
+    stack = []
+    in_string = False
+    escaped = False
+    for byte in raw:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif byte == 0x5C:
+                escaped = True
+            elif byte == 0x22:
+                in_string = False
+            continue
+        if byte == 0x22:
+            in_string = True
+            continue
+        if byte in (0x7B, 0x5B):
+            stack.append(byte)
+            if len(stack) > max_depth:
+                raise ValueError("chain state JSON nesting depth exceeded")
+            continue
+        if byte in (0x7D, 0x5D):
+            expected = 0x7B if byte == 0x7D else 0x5B
+            if stack and stack[-1] == expected:
+                stack.pop()
+
+
+def _reject_duplicate_chain_state_json_keys(pairs):
+    obj = {}
+    for key, value in pairs:
+        if key in obj:
+            raise ValueError(f"duplicate chain state JSON key: {key}")
+        obj[key] = value
+    return obj
+
+
 class StateStore:
     def __init__(self, directory: str):
         self.directory = Path(directory)
@@ -1473,7 +1518,23 @@ class StateStore:
                     pass
 
     def load(self) -> Blockchain:
-        payload = json.loads(self.path.read_text())
+        raw = self.path.read_bytes()
+        _preflight_chain_state_json(raw)
+        try:
+            decoded = raw.decode("utf-8")
+        except UnicodeError as exc:
+            raise ValueError("invalid chain state JSON encoding") from exc
+        try:
+            payload = json.loads(
+                decoded,
+                object_pairs_hook=_reject_duplicate_chain_state_json_keys,
+            )
+        except json.JSONDecodeError as exc:
+            raise ValueError("invalid chain state JSON") from exc
+        except RecursionError as exc:
+            raise ValueError("invalid chain state JSON") from exc
+        if type(payload) is not dict:
+            raise ValueError("chain state must be an object")
         if payload.get("chain_id") != CHAIN_ID:
             raise ValueError("chain_id mismatch")
         if payload.get("config_fingerprint") != CONFIG_FINGERPRINT:
