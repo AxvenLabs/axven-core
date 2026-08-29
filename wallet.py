@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import tempfile
+import threading
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -43,6 +44,7 @@ class PendingTracker:
     def __init__(self):
         self._by_txid = {}
         self._reserved = set()
+        self._lock = threading.RLock()
 
     @staticmethod
     def _norm(op):
@@ -51,27 +53,48 @@ class PendingTracker:
             return (txid, int(idx))
         return (op[0], int(op[1]))
 
-    def reserve(self, txid, outpoints):
-        ops = {self._norm(op) for op in outpoints}
-        # replace an existing reservation atomically
-        self.release(txid)
-        self._by_txid[txid] = ops
-        self._reserved.update(ops)
-
-    def release(self, txid):
+    def _release_locked(self, txid):
         ops = self._by_txid.pop(txid, set())
         for op in ops:
             if not any(op in other for other in self._by_txid.values()):
                 self._reserved.discard(op)
 
-    def is_reserved(self, outpoint):
-        return self._norm(outpoint) in self._reserved
+    def reserve(self, txid, outpoints):
+        ops = {self._norm(op) for op in outpoints}
+        with self._lock:
+            # Replace an existing reservation as one tracker-state update.
+            self._release_locked(txid)
+            self._by_txid[txid] = ops
+            self._reserved.update(ops)
 
-    def reconcile(self, mempool):
-        live = set(getattr(mempool, "txs", {}).keys())
+    def release(self, txid):
+        with self._lock:
+            self._release_locked(txid)
+
+    def is_reserved(self, outpoint):
+        op = self._norm(outpoint)
+        with self._lock:
+            return op in self._reserved
+
+    def _reconcile_live_locked(self, live):
         for txid in list(self._by_txid):
             if txid not in live:
-                self.release(txid)
+                self._release_locked(txid)
+
+    def reconcile(self, mempool):
+        # Keep mempool membership and pending reservations in one ordered
+        # snapshot.  Global order is mempool -> pending; callers that also own
+        # chain state use chain -> mempool -> pending.
+        mempool_lock = getattr(mempool, "_lock", None)
+        if mempool_lock is None:
+            live = set(getattr(mempool, "txs", {}).keys())
+            with self._lock:
+                self._reconcile_live_locked(live)
+            return
+        with mempool_lock:
+            live = set(getattr(mempool, "txs", {}).keys())
+            with self._lock:
+                self._reconcile_live_locked(live)
 
 
 def select_coins(chain, identity, scheme, amount, fee, tracker=None):
