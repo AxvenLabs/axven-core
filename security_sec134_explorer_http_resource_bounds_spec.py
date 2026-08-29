@@ -81,40 +81,75 @@ def main():
         and explorer.EXPLORER_REQUEST_DEADLINE == 5.0,
     )
 
+    # Fill every production worker slot deterministically.  Starting a large
+    # client burst and hoping the scheduler observes all 16 handlers at once is
+    # flaky across Python/Windows revisions; instead admit one real HTTP request
+    # at a time and wait until its handler has entered the blocking core.
     core=BlockingCore()
     server=explorer.ExplorerServer(core,port=0).start()
-    start=threading.Event()
-    errors=[]
-    clients=[
-        threading.Thread(
-            target=send_summary,
-            args=(server.address,start,errors),
-            daemon=True,
-        )
-        for _ in range(explorer.MAX_EXPLORER_WORKERS + 12)
-    ]
+    clients=[]
+    overflow=None
     try:
-        for client in clients:
-            client.start()
-        start.set()
-        reached=wait_for(
-            lambda: core.max_active >= explorer.MAX_EXPLORER_WORKERS,
-            timeout=5.0,
+        request=(
+            b"GET /api/summary HTTP/1.1\r\n"
+            b"Host: localhost\r\n"
+            b"Connection: close\r\n\r\n"
         )
+        for expected in range(1,explorer.MAX_EXPLORER_WORKERS + 1):
+            client=socket.create_connection(server.address,timeout=2.0)
+            client.settimeout(2.0)
+            client.sendall(request)
+            clients.append(client)
+            if not wait_for(lambda n=expected: core.active >= n,timeout=2.0):
+                raise AssertionError(
+                    f"Explorer worker slot {expected} was not admitted"
+                )
+
         with core.lock:
-            peak=core.max_active
+            active_at_cap=core.active
+            peak_at_cap=core.max_active
+        green(
+            "Explorer concurrent request workers reach the exact configured cap",
+            active_at_cap == explorer.MAX_EXPLORER_WORKERS
+            and peak_at_cap == explorer.MAX_EXPLORER_WORKERS,
+        )
+
+        # The next accepted TCP socket must be rejected by process_request before
+        # a request handler can enter core.explorer_summary().
+        overflow=socket.create_connection(server.address,timeout=2.0)
+        overflow.settimeout(2.0)
+        overflow.sendall(request)
+        rejected=False
+        try:
+            rejected=overflow.recv(1) == b""
+        except (ConnectionResetError,ConnectionAbortedError,OSError):
+            rejected=True
+        with core.lock:
+            active_after_overflow=core.active
+            peak_after_overflow=core.max_active
         green(
             "Explorer concurrent request workers are strictly bounded",
-            reached and peak == explorer.MAX_EXPLORER_WORKERS,
+            rejected
+            and active_after_overflow == explorer.MAX_EXPLORER_WORKERS
+            and peak_after_overflow == explorer.MAX_EXPLORER_WORKERS,
         )
         green(
             "worker saturation does not exceed semaphore capacity",
-            peak <= explorer.MAX_EXPLORER_WORKERS,
+            peak_after_overflow <= explorer.MAX_EXPLORER_WORKERS,
         )
     finally:
         core.release.set()
+        if overflow is not None:
+            try: overflow.close()
+            except OSError: pass
         for client in clients:
-            client.join(2.0)
+            try:
+                while client.recv(4096):
+                    pass
+            except OSError:
+                pass
+            try: client.close()
+            except OSError: pass
         server.stop()
 
     original_deadline=explorer.EXPLORER_REQUEST_DEADLINE

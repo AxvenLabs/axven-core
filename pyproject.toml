@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "axven-core"
 version = "0.9.0.dev9"
 description = "Axven Core devnet rebuild"
-requires-python = ">=3.10"
+requires-python = ">=3.13.15,<3.14"
 dependencies = [
   "cryptography==50.0.1",
   "dilithium-py==1.4.0",
