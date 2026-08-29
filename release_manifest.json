@@ -277,8 +277,8 @@
       "sha256": "b3260c5421d12f7f68b60726c27bdde713794fa2aa3ac9b200ad833524252568"
     },
     "explorer.py": {
-      "bytes": 5728,
-      "sha256": "3faad334db2df4b4a92944bccde25e5d5660ff11c3810c5d8b4053f807e0afa9"
+      "bytes": 7347,
+      "sha256": "b3f5ade4a43c1c6e8227785c24ab61ff17b293437a8929c1741b536b9bc8abca"
     },
     "explorer_index.html": {
       "bytes": 4693,
@@ -831,6 +831,10 @@
     "security_sec134_explorer_http_resource_bounds_spec.py": {
       "bytes": 6357,
       "sha256": "27203ab6897b8c87f4ae3d28e7c340bfb3165e404bacfced8ab6ae94382ec29a"
+    },
+    "security_sec135_explorer_host_header_guard_spec.py": {
+      "bytes": 4274,
+      "sha256": "0fc24a46f03fccf28e465eb2b07f369229a8ac1ac7e2e36c486388c2ed4b1953"
     },
     "setup.cmd": {
       "bytes": 172,
