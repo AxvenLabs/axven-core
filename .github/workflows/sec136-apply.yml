@@ -1,0 +1,41 @@
+name: SEC-136 Apply
+
+on:
+  push:
+    branches:
+      - security-sec136-confirmed-tx-lookup-work
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Apply and verify SEC-136
+        shell: pwsh
+        run: |
+          chcp 65001
+          python -m pip install -e .
+          python .github/sec136_apply.py
+          python security_sec136_confirmed_tx_lookup_work_spec.py
+
+      - name: Commit clean SEC-136 tree
+        shell: pwsh
+        run: |
+          Remove-Item .github/sec136_apply.py
+          Remove-Item .github/workflows/sec136-apply.yml
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "SEC-136: Bound confirmed transaction lookup work"
+          git push
