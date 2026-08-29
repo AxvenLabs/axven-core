@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import base64, hashlib, json, os, tempfile
+import base64, hashlib, json, os, stat, tempfile
 import threading
 from collections import OrderedDict
 from pathlib import Path
@@ -1646,6 +1646,43 @@ def _validate_persisted_chain_block(raw_block):
         _validate_persisted_transaction(raw_tx)
 
 
+def _read_secure_chain_state_file(path):
+    """Read chain.json without trusting path indirection or unsafe metadata."""
+    path = os.fspath(path)
+    before = os.lstat(path)
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+        raise ValueError("unsafe chain state file")
+    if getattr(before, "st_nlink", 1) != 1:
+        raise ValueError("unsafe chain state hardlink count")
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = None
+    try:
+        try:
+            fd = os.open(path, flags)
+        except FileNotFoundError:
+            raise
+        except OSError as exc:
+            raise ValueError("unsafe chain state file") from exc
+        current = os.fstat(fd)
+        if not stat.S_ISREG(current.st_mode):
+            raise ValueError("unsafe chain state file")
+        if (before.st_dev, before.st_ino) != (current.st_dev, current.st_ino):
+            raise ValueError("chain state file changed during open")
+        if getattr(current, "st_nlink", 1) != 1:
+            raise ValueError("unsafe chain state hardlink count")
+        with os.fdopen(fd, "rb") as f:
+            fd = None
+            return f.read()
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
 def _fsync_directory(directory):
     """Persist a completed rename in the parent directory on POSIX."""
     if os.name != "posix":
@@ -1707,7 +1744,7 @@ class StateStore:
                     pass
 
     def load(self) -> Blockchain:
-        raw = self.path.read_bytes()
+        raw = _read_secure_chain_state_file(self.path)
         _preflight_chain_state_json(raw)
         try:
             decoded = raw.decode("utf-8")
