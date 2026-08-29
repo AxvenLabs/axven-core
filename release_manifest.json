@@ -345,8 +345,8 @@
       "sha256": "eac85195671568ba906d24b606be7a193b7008fb0efbb96553b643f65012a6e0"
     },
     "rpc.py": {
-      "bytes": 15046,
-      "sha256": "a556accb16da46f63b438abc871147b49c472357e97c525ef359a562915dddbe"
+      "bytes": 15412,
+      "sha256": "3ad902ce9a6b2f0026588ca2eb91da25feafc48382b111d2c5166c4740747eb1"
     },
     "run_full_validation.py": {
       "bytes": 8663,
@@ -927,6 +927,10 @@
     "security_sec158_p2p_shutdown_worker_quiescence_spec.py": {
       "bytes": 3770,
       "sha256": "f1b798899965c6222746fe293c009223f049e49736195f0198dab2926e1b5a17"
+    },
+    "security_sec159_rpc_shutdown_worker_quiescence_spec.py": {
+      "bytes": 4290,
+      "sha256": "91a0bb442fc35247348779b3cbed6bfcbc8452332d341ba4c6b51550d25893ca"
     },
     "setup.cmd": {
       "bytes": 172,
