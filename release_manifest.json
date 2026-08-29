@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 36199,
-      "sha256": "aa6f554e72cab6b172c6167e392981fff2901cada452a7388c38d602edcf7b45"
+      "bytes": 37007,
+      "sha256": "8806bda41d4cb212fa74f369ba5293fdab7d90f7a5386623fac60c318137e876"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5613,
@@ -856,6 +856,18 @@
       "bytes": 4366,
       "sha256": "ea33337a98d9d0a73599b5185895d31a33a23d4b7e1c8ab7ffce1238f6cf857f"
     },
+    "security_sec141_recipient_type_domain_spec.py": {
+      "bytes": 3257,
+      "sha256": "ff8aec4a2fd249fbd75a26dc108fd7dd5f1e77d9557cb385df9a59c8665a477d"
+    },
+    "security_sec142_peer_retry_publication_atomicity_spec.py": {
+      "bytes": 7027,
+      "sha256": "cf501dc64b11516137a2aa54fd255788266b69ef9419292097f38d94f0c78663"
+    },
+    "security_sec143_peer_host_type_domain_spec.py": {
+      "bytes": 3591,
+      "sha256": "8100f5dff00f5de8bcbff56908948071c4ff32daf579e59e40bc0c98a66c495f"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -911,14 +923,6 @@
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
       "sha256": "0826cd7f03dca3bfa679c0052ae749d2adb0195eea8c065fa8ebb197b9a54804"
-    },
-    "security_sec141_recipient_type_domain_spec.py": {
-      "bytes": 3257,
-      "sha256": "ff8aec4a2fd249fbd75a26dc108fd7dd5f1e77d9557cb385df9a59c8665a477d"
-    },
-    "security_sec142_peer_retry_publication_atomicity_spec.py": {
-      "bytes": 7027,
-      "sha256": "cf501dc64b11516137a2aa54fd255788266b69ef9419292097f38d94f0c78663"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

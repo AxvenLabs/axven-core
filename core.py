@@ -430,7 +430,12 @@ class AxvenCore:
     def start_p2p(self, host="127.0.0.1", port=0):
         if self.p2p_server is not None:
             return self.p2p_server.address
-        if len(str(host)) > 255:
+        # Listener hosts are textual socket authorities. Reject coercion
+        # aliases before socket/server construction instead of stringifying
+        # attacker-controlled JSON values at the service boundary.
+        if type(host) is not str:
+            raise ValueError("P2P listener host must be string")
+        if len(host) > 255:
             raise ValueError("P2P listener host too long")
         self.p2p_server = p2p.NodeServer(
             self.chain, self.mempool, host=host, port=int(port)
@@ -440,10 +445,18 @@ class AxvenCore:
     @staticmethod
     def _parse_peer(peer):
         if isinstance(peer,(tuple,list)) and len(peer)==2:
-            host=str(peer[0]).strip()
+            # Structured peer endpoints must carry an exact textual host.
+            # Do not accept list/dict/bool/int/bytes aliases through str().
+            if type(peer[0]) is not str:
+                raise ValueError("peer host must be string")
+            host=peer[0].strip()
             port=int(peer[1])
         else:
-            raw=str(peer).strip()
+            # Scalar peer endpoints use the legacy explicit host:port form.
+            # Reject arbitrary objects before any __str__ coercion can run.
+            if type(peer) is not str:
+                raise ValueError("peer must be host:port string")
+            raw=peer.strip()
             if ":" not in raw:
                 raise ValueError("peer must be host:port")
             host,port=raw.rsplit(":",1)
