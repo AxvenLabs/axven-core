@@ -23,6 +23,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
+      - name: Correct SEC-134 static regression anchor
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          path=Path(".github/sec134_apply.py")
+          text=path.read_text(encoding="utf-8")
+          old='''        "BoundedThreadingHTTPServer" in server_src
+          and "ThreadingHTTPServer((host" not in server_src,'''
+          new='''        "self.httpd=BoundedThreadingHTTPServer(" in server_src
+          and "self.httpd=ThreadingHTTPServer(" not in server_src,'''
+          if text.count(old) != 1:
+              raise SystemExit("SEC-134 static anchor correction mismatch")
+          path.write_text(text.replace(old,new,1),encoding="utf-8",newline="\n")
+          '@ | python -
       - name: Apply SEC-134
         shell: pwsh
         run: python .github/sec134_apply.py
