@@ -74,6 +74,8 @@ def main():
         explorer=ExplorerServer(core,args.explorer_host,args.explorer_port).start()
         for raw_peer in args.peer:
             core.add_outbound_peer(raw_peer)
+        base_sync_interval=max(.5,args.sync_interval)
+        core.configure_peer_retry_publication(base_sync_interval,60.0)
         initial_sync=core.sync_outbound_peers()
 
         print(json.dumps({"rpc":{"host":rpc.address[0],"port":rpc.address[1]},
@@ -88,7 +90,6 @@ def main():
         signal.signal(signal.SIGINT,halt)
         signal.signal(signal.SIGTERM,halt)
         try:
-            base_sync_interval=max(.5,args.sync_interval)
             peer_next_sync={
                 addr:time.monotonic()+base_sync_interval
                 for addr in core.outbound_peer_addresses()
