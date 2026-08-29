@@ -403,6 +403,23 @@ def serialized_transaction_size(tx: "Transaction") -> int:
     )
 
 
+def _fit_transactions_to_byte_budget(candidates, byte_budget):
+    """Preserve candidate order while fitting tx JSON into a block budget."""
+    if type(byte_budget) is not int or byte_budget < 0:
+        raise ValueError("invalid miner transaction byte budget")
+    chosen = []
+    used_bytes = 0
+    for tx in candidates:
+        # Every non-coinbase transaction adds its canonical JSON bytes plus
+        # exactly one comma inside the block's transactions array.
+        wire_bytes = serialized_transaction_size(tx) + 1
+        if used_bytes + wire_bytes > byte_budget:
+            continue
+        chosen.append(tx)
+        used_bytes += wire_bytes
+    return chosen
+
+
 def serialized_block_size(block: "Block") -> int:
     # Matches the P2P JSON payload shape used by the rebuilt network layer.
     return len(json.dumps({"block": block.to_dict()}, separators=(",", ":")).encode())
@@ -1040,7 +1057,38 @@ class Blockchain:
         height = self.tip.height + 1
         if not output_scheme_allowed(miner_address, height):
             raise ValueError(f"Forbidden coinbase output scheme at {height}")
-        selected = mempool.select() if mempool else []
+        timestamp = max(
+            int(time.time()), median_time_past(self.blocks, height) + 1
+        )
+        target = next_target_for_height(self.blocks, height)
+        selected = []
+        if mempool:
+            # Reserve the complete block/header + coinbase envelope before
+            # selecting mempool transactions.  The amount and nonce values are
+            # deliberately conservative so the actual mined representation is
+            # no larger under normal operation.
+            sizing_coinbase = make_coinbase(
+                miner_address, MAX_SUPPLY + INITIAL_REWARD, height
+            )
+            sizing_block = Block(
+                height=height,
+                timestamp=timestamp,
+                previous_hash=self.tip.hash(),
+                merkle_root="0" * 64,
+                target=target,
+                transactions=[sizing_coinbase.to_dict()],
+                nonce=(1 << 256) - 1,
+                miner=miner_address,
+                utxo_state_root="0" * 64,
+            )
+            tx_byte_budget = max(
+                0,
+                int(CHAIN_CONFIG["max_block_bytes"])
+                - serialized_block_size(sizing_block),
+            )
+            selected = _fit_transactions_to_byte_budget(
+                mempool.select(), tx_byte_budget
+            )
         total_fees = 0
         for tx in selected:
             in_sum = sum(self.utxo[outpoint(i.prev_txid, i.index)]["amount"] for i in tx._in())
@@ -1050,10 +1098,10 @@ class Blockchain:
         ordered = [coinbase] + selected
         block = Block(
             height=height,
-            timestamp=max(int(time.time()), median_time_past(self.blocks, height) + 1),
+            timestamp=timestamp,
             previous_hash=self.tip.hash(),
             merkle_root=merkle_root([t.txid() for t in ordered]),
-            target=next_target_for_height(self.blocks, height),
+            target=target,
             transactions=[t.to_dict() for t in ordered],
             nonce=0,
             miner=miner_address,
@@ -1066,6 +1114,8 @@ class Blockchain:
         block.utxo_state_root = expected_state_root(trial, height)
         while not block.pow_ok():
             block.nonce += 1
+        if not block_size_valid(block):
+            raise RuntimeError("self-built block exceeds max bytes")
         return block
 
     def mine(self, miner_address, mempool=None):
