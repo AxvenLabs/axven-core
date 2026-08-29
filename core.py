@@ -441,9 +441,14 @@ class AxvenCore:
             height=self.chain.tip.height + 1, tracker=self.pending
         )
         signed = wallet.sign_transaction(w, tx, input_scheme)
-        txid = self.mempool.add(signed)
         ops = [axven.outpoint(i.prev_txid, i.index) for i in signed._in()]
-        self.pending.reserve(txid, ops)
+        # SEC-155: publish mempool admission and pending reservation atomically.
+        # Reconcile uses mempool -> pending, so service publication follows the
+        # global chain -> mempool -> pending lock order.
+        with self.chain._state_lock:
+            with _mempool_guard(self.mempool):
+                txid = self.mempool.add(signed)
+                self.pending.reserve(txid, ops)
         self._propagate_tx_outbound(signed)
         return {"txid": txid, "transaction": signed.to_dict()}
 

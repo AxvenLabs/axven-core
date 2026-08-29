@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 38712,
-      "sha256": "751ad1d2f6c4314a38d46286162562900cc40644b8ad0c070882d25b4d987faa"
+      "bytes": 39030,
+      "sha256": "d135f56735215ab392b17d95d04244d23f5053d7dd18cebedca89a3af43e0722"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5613,
@@ -912,6 +912,10 @@
       "bytes": 3865,
       "sha256": "58b1e1212241a24acc1d4d1b12708c8ad2a125c8ed2b0463457720922b815a18"
     },
+    "security_sec155_pending_tracker_atomicity_spec.py": {
+      "bytes": 6493,
+      "sha256": "9238591289ca45b2b634e2e6b9a3a8209a823323b07b53d48a1d7841c6e9023a"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -961,8 +965,8 @@
       "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
     },
     "wallet.py": {
-      "bytes": 15745,
-      "sha256": "2cf290918335b3af8c21d5ed9646767ebd42459843810dbd621343c4a57095eb"
+      "bytes": 16631,
+      "sha256": "9e8f77e935f5018f9b92274f89e8768e25e7a2ac9a0a651294174207abdc7b80"
     },
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
