@@ -1,0 +1,46 @@
+name: SEC138 Apply
+
+on:
+  push:
+    branches:
+      - security-sec138-block-id-prelock-domain
+    paths:
+      - .github/workflows/sec138-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: windows-2025
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - name: Install
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+      - name: Apply and verify SEC-138
+        shell: pwsh
+        run: |
+          python .github/sec138_apply.py
+          python security_sec053_block_id_bounds_spec.py
+          python security_sec056_block_string_id_bounds_spec.py
+          python security_sec138_block_id_prelock_domain_spec.py
+      - name: Commit clean SEC-138 tree
+        shell: pwsh
+        run: |
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "security-automation@users.noreply.github.com"
+          git add core.py release_manifest.json security_sec138_block_id_prelock_domain_spec.py
+          git rm .github/sec138_apply.py .github/workflows/sec138-apply.yml
+          git commit -m "SEC-138: Validate block ids before chain lock"
+          git push origin HEAD:security-sec138-block-id-prelock-domain
