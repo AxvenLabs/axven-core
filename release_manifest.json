@@ -137,8 +137,8 @@
       "sha256": "3bf27ca9cb2212f51f9821e6d4f6f84ae90255bfb4791a729ff627cf43499574"
     },
     "axven_core.py": {
-      "bytes": 6958,
-      "sha256": "edb9a009d573a0f17cca5b453e0f8783c0bc695648e70e149447996538b6e5ce"
+      "bytes": 7326,
+      "sha256": "1e3c44f1d410386438e65fe45dacc80a7ca9bd8b5a8fb42978a33096d5eeb981"
     },
     "canonical_node1_mine1.ps1": {
       "bytes": 140,
@@ -265,8 +265,8 @@
       "sha256": "e3e5c65cc41f968e7cacacf2d0aa62ddd53f145a1c17b86ab9dd56d9ce3cd3e2"
     },
     "datadir.py": {
-      "bytes": 10726,
-      "sha256": "4f6c8af75ac8559cf9d71b5427e2bb21402fe03fd2afada58984e424f38346ef"
+      "bytes": 14742,
+      "sha256": "f651f18377fbbfcca15d0ff09385e78d9802162011046a52bbbe14aa6b28b9d4"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -983,6 +983,10 @@
     "security_sec172_python_packaging_toolchain_pins_spec.py": {
       "bytes": 2636,
       "sha256": "285350980829a4d1fe9bb3f956624675ff2e5591e249ddb7f7ed264cdccd5fbb"
+    },
+    "security_sec173_datadir_mutator_single_writer_spec.py": {
+      "bytes": 4603,
+      "sha256": "48e4618d297a7ed2e61782c90b9b8bf8c7164d071bcd17b48a453ec75ad915c2"
     },
     "setup.cmd": {
       "bytes": 172,

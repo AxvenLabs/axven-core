@@ -127,6 +127,124 @@ def _read_secure_rpc_token_file(path):
     return raw
 
 
+class DataDirBusyError(RuntimeError):
+    """Raised when another Axven mutator owns the resolved datadir."""
+
+
+class _DataDirRuntimeLock:
+    """Cross-process advisory lock held for the complete mutator lifetime."""
+
+    def __init__(self, path):
+        self.path = Path(path)
+        self._fd = None
+        self._backend = None
+
+    @staticmethod
+    def _reject_unsafe_metadata(metadata):
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+            raise DataDirBusyError("unsafe datadir runtime lock file")
+        if getattr(metadata, "st_nlink", 1) != 1:
+            raise DataDirBusyError("unsafe datadir runtime lock hardlink count")
+
+    def _open_lock_file(self):
+        path=os.fspath(self.path)
+        before=None
+        try:
+            before=os.lstat(path)
+            self._reject_unsafe_metadata(before)
+        except FileNotFoundError:
+            pass
+
+        flags=os.O_RDWR
+        if hasattr(os,"O_BINARY"):
+            flags |= os.O_BINARY
+        if hasattr(os,"O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+
+        if before is None:
+            try:
+                return os.open(path,flags|os.O_CREAT|os.O_EXCL,0o600),None
+            except FileExistsError:
+                try:
+                    before=os.lstat(path)
+                except FileNotFoundError as exc:
+                    raise DataDirBusyError("datadir runtime lock path raced") from exc
+                self._reject_unsafe_metadata(before)
+
+        try:
+            fd=os.open(path,flags)
+        except OSError as exc:
+            raise DataDirBusyError("unsafe datadir runtime lock file") from exc
+        return fd,before
+
+    def acquire(self):
+        if self._fd is not None:
+            raise RuntimeError("datadir runtime lock already acquired")
+
+        fd=None
+        try:
+            fd,before=self._open_lock_file()
+            current=os.fstat(fd)
+            self._reject_unsafe_metadata(current)
+            if before is not None and (
+                before.st_dev,before.st_ino
+            ) != (current.st_dev,current.st_ino):
+                raise DataDirBusyError("datadir runtime lock changed during open")
+
+            if os.name == "posix":
+                os.fchmod(fd,0o600)
+                import fcntl
+                try:
+                    fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
+                except OSError as exc:
+                    raise DataDirBusyError("datadir already in use") from exc
+                backend=("posix",fcntl)
+            elif os.name == "nt":
+                import msvcrt
+                if current.st_size < 1:
+                    os.lseek(fd,0,os.SEEK_SET)
+                    os.write(fd,b"\0")
+                    os.fsync(fd)
+                os.lseek(fd,0,os.SEEK_SET)
+                try:
+                    msvcrt.locking(fd,msvcrt.LK_NBLCK,1)
+                except OSError as exc:
+                    raise DataDirBusyError("datadir already in use") from exc
+                backend=("nt",msvcrt)
+            else:
+                raise RuntimeError("unsupported datadir runtime lock platform")
+
+            self._fd=fd
+            self._backend=backend
+            fd=None
+            return self
+        finally:
+            if fd is not None:
+                os.close(fd)
+
+    def close(self):
+        fd=self._fd
+        if fd is None:
+            return
+        backend=self._backend
+        self._fd=None
+        self._backend=None
+        try:
+            if backend[0] == "posix":
+                backend[1].flock(fd,backend[1].LOCK_UN)
+            else:
+                os.lseek(fd,0,os.SEEK_SET)
+                backend[1].locking(fd,backend[1].LK_UNLCK,1)
+        finally:
+            os.close(fd)
+
+    def __enter__(self):
+        return self.acquire()
+
+    def __exit__(self,exc_type,exc,tb):
+        self.close()
+        return False
+
 class DataDir:
     def __init__(self,path):
         self.path=Path(path).expanduser().resolve()
@@ -135,6 +253,10 @@ class DataDir:
         self.wallet_file=self.path/"wallet.json"
         self.peer_file=self.path/"peers.json"
         self.rpc_token_file=self.path/"rpc.token"
+        self.runtime_lock_file=self.path/".axven-runtime.lock"
+
+    def runtime_lock(self):
+        return _DataDirRuntimeLock(self.runtime_lock_file)
 
     @staticmethod
     def _validate_rpc_token(raw):
