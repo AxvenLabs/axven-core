@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 37733,
-      "sha256": "824c9519a70c8cc0c75af9b0cb5b69eb8f7d0162fda866a0587f928b411ddcd2"
+      "bytes": 38712,
+      "sha256": "751ad1d2f6c4314a38d46286162562900cc40644b8ad0c070882d25b4d987faa"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5613,
@@ -875,6 +875,10 @@
     "security_sec145_rpc_request_framing_spec.py": {
       "bytes": 7237,
       "sha256": "4d32c595df6527528df6fca3c3f7b7c2deebb9e31e640ac7d23ed0dfd4b9778d"
+    },
+    "security_sec146_core_numeric_domain_spec.py": {
+      "bytes": 8844,
+      "sha256": "bb555b640abdcb24d9de84aa2ff6086a05fd51306cee17c2ad4e0a0e56f1939b"
     },
     "setup.cmd": {
       "bytes": 172,

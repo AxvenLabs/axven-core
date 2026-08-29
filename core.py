@@ -122,9 +122,23 @@ class AxvenCore:
             data["balances"] = None
         return data
 
+    @staticmethod
+    def _validate_service_int(value, label, minimum=None, maximum=None):
+        # Public service numeric fields use exact built-in integers. Reject
+        # bool, floats, numeric strings and custom __int__/__index__ aliases
+        # before locks, wallet work, mining loops, or network I/O.
+        if type(value) is not int:
+            raise ValueError(f"{label} must be integer")
+        if minimum is not None and value < minimum:
+            raise ValueError(f"invalid {label}")
+        if maximum is not None and value > maximum:
+            raise ValueError(f"invalid {label}")
+        return value
+
     def recent_blocks(self, limit=20):
+        limit=self._validate_service_int(limit,"recent block limit")
+        limit=max(1,min(limit,200))
         with self.chain._state_lock:
-            limit=max(1,min(int(limit),200))
             out=[]
             for b in reversed(self.chain.blocks[-limit:]):
                 out.append({
@@ -274,7 +288,8 @@ class AxvenCore:
         }
 
     def mempool_view(self, limit=100):
-        limit=max(1,min(int(limit),500))
+        limit=self._validate_service_int(limit,"mempool limit")
+        limit=max(1,min(limit,500))
         with _mempool_guard(self.mempool):
             out=[]
             for txid,tx in list(self.mempool.txs.items())[:limit]:
@@ -382,8 +397,7 @@ class AxvenCore:
 
     def mine(self, count=1, scheme=None):
         self._validate_scheme_bound(scheme)
-        if count <= 0:
-            raise ValueError("count must be positive")
+        count=self._validate_service_int(count,"mine count",1,1000)
         w = self.require_wallet()
         if scheme is None:
             height = self.chain.tip.height + 1
@@ -415,9 +429,15 @@ class AxvenCore:
     def send(self, input_scheme, recipient, amount, fee):
         self._validate_scheme_bound(input_scheme)
         self._validate_recipient_bound(recipient)
+        amount=self._validate_service_int(
+            amount,"send amount",1,(1 << 63)-1
+        )
+        fee=self._validate_service_int(
+            fee,"send fee",0,(1 << 63)-1
+        )
         w = self.require_wallet()
         tx = wallet.build_transaction(
-            self.chain, w, input_scheme, recipient, int(amount), int(fee),
+            self.chain, w, input_scheme, recipient, amount, fee,
             height=self.chain.tip.height + 1, tracker=self.pending
         )
         signed = wallet.sign_transaction(w, tx, input_scheme)
@@ -935,8 +955,9 @@ class AxvenCore:
             self.p2p_server = None
 
     def sync_peer(self, host, port, batch=128):
+        batch=self._validate_service_int(batch,"sync batch",1,128)
         addr = self._parse_peer((host, port))
         return p2p.sync_to_peer(
             addr, p2p.PeerSession(self.chain, self.mempool),
-            limit=int(batch)
+            limit=batch
         )
