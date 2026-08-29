@@ -11,6 +11,8 @@ permissions:
 jobs:
   apply:
     runs-on: windows-2025
+    env:
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
