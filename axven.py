@@ -1646,6 +1646,20 @@ def _validate_persisted_chain_block(raw_block):
         _validate_persisted_transaction(raw_tx)
 
 
+def _fsync_directory(directory):
+    """Persist a completed rename in the parent directory on POSIX."""
+    if os.name != "posix":
+        return
+    flags=os.O_RDONLY
+    if hasattr(os,"O_DIRECTORY"):
+        flags |= os.O_DIRECTORY
+    dir_fd=os.open(os.fspath(directory),flags)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+
 class StateStore:
     def __init__(self, directory: str):
         self.directory = Path(directory)
@@ -1681,6 +1695,7 @@ class StateStore:
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(tmp_path, self.path)
+            _fsync_directory(self.directory)
             tmp_path = None
         finally:
             if fd is not None:
