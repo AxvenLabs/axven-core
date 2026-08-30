@@ -1,0 +1,51 @@
+name: SEC-194 Apply V5
+
+on:
+  push:
+    branches:
+      - security-sec194-outbound-status-validation
+    paths:
+      - .github/workflows/sec194-apply-v5.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13.15'
+      - name: Install exact runtime pins
+        run: >-
+          python -m pip install --disable-pip-version-check
+          cryptography==50.0.1 cffi==2.1.1 pycparser==3.0
+      - name: Reuse V3 apply with robust SEC-194 source assertion
+        shell: python
+        run: |
+          from pathlib import Path
+
+          raw=Path('.github/workflows/sec194-apply-v3.yml').read_text(encoding='utf-8')
+          marker='        run: |\n'
+          if raw.count(marker) != 1:
+              raise SystemExit(f'V3 run marker count={raw.count(marker)}')
+          body=raw.split(marker,1)[1]
+          lines=[]
+          for line in body.splitlines():
+              if line.startswith('          '):
+                  lines.append(line[10:])
+              elif line:
+                  raise SystemExit('unexpected V3 workflow suffix')
+              else:
+                  lines.append('')
+          script='\n'.join(lines)+'\n'
+          old="and 'if typ==\"status\":\\n            validate_status_message(msg)' in source"
+          new="and 'validate_status_message(msg)' in source"
+          if script.count(old) != 1:
+              raise SystemExit(f'V3 brittle assertion count={script.count(old)}')
+          script=script.replace(old,new,1)
+          exec(compile(script,'sec194-v3-reused.py','exec'),{'__name__':'__main__'})
