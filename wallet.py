@@ -173,6 +173,7 @@ _BACKUP_ENVELOPE_FIELDS = frozenset({
 MAX_BACKUP_FILE_BYTES = 64 * 1024
 MAX_BACKUP_CIPHERTEXT_BYTES = 16 * 1024
 MAX_BACKUP_JSON_NESTING_DEPTH = 32
+MAX_BACKUP_PASSPHRASE_BYTES = 1024
 ED25519_PRIVATE_KEY_BYTES = 32
 ML_DSA_PUBLIC_KEY_BYTES = 1312
 ML_DSA_SEED_KEY_BYTES = 32
@@ -222,13 +223,23 @@ def _validated_scrypt_params(value):
         return dict(_SCRYPT_LEGACY_PARAMS)
     raise BackupError("unsupported scrypt parameters")
 
+def _validated_passphrase_bytes(passphrase):
+    if type(passphrase) is not str or not passphrase:
+        raise BackupError("non-empty passphrase required")
+    try:
+        encoded = passphrase.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise BackupError("invalid backup passphrase encoding") from exc
+    if len(encoded) > MAX_BACKUP_PASSPHRASE_BYTES:
+        raise BackupError("backup passphrase too large")
+    return encoded
+
 def _validated_backup_envelope(backup, passphrase):
     if type(backup) is not dict:
         raise BackupError("backup must be an object")
     if set(backup) != _BACKUP_ENVELOPE_FIELDS:
         raise BackupError("invalid backup envelope fields")
-    if type(passphrase) is not str or not passphrase:
-        raise BackupError("non-empty passphrase required")
+    _validated_passphrase_bytes(passphrase)
     if type(backup.get("version")) is not int or backup.get("version") != BACKUP_VERSION:
         raise BackupError("unsupported backup version")
     if backup.get("kdf") != "scrypt" or backup.get("cipher") != "aes-256-gcm":
@@ -329,8 +340,7 @@ def _raw_ed_private(identity):
     )
 
 def export_backup(identity, passphrase: str):
-    if not isinstance(passphrase, str) or not passphrase:
-        raise BackupError("non-empty passphrase required")
+    passphrase_bytes = _validated_passphrase_bytes(passphrase)
     material = {
         "ed_private": base64.b64encode(_raw_ed_private(identity)).decode("ascii"),
         "ml_public": base64.b64encode(identity.ml_public_key).decode("ascii"),
@@ -339,7 +349,7 @@ def export_backup(identity, passphrase: str):
     plain = json.dumps(material, sort_keys=True, separators=(",", ":")).encode()
     salt = os.urandom(16)
     nonce = os.urandom(12)
-    key = hashlib.scrypt(passphrase.encode(), salt=salt, n=_SCRYPT_N,
+    key = hashlib.scrypt(passphrase_bytes, salt=salt, n=_SCRYPT_N,
                          r=_SCRYPT_R, p=_SCRYPT_P, dklen=_SCRYPT_DKLEN,
                          maxmem=_SCRYPT_MAXMEM)
     cipher = AESGCM(key).encrypt(nonce, plain, b"axven-wallet-backup-v1")
@@ -356,6 +366,7 @@ def export_backup(identity, passphrase: str):
 
 def restore_backup(backup, passphrase: str):
     try:
+        passphrase_bytes = _validated_passphrase_bytes(passphrase)
         kp, salt_text, nonce_text, cipher_text, checksum = _validated_backup_envelope(
             backup, passphrase)
         salt = base64.b64decode(salt_text, validate=True)
@@ -369,7 +380,7 @@ def restore_backup(backup, passphrase: str):
             raise BackupError("backup ciphertext too large or invalid")
         if hashlib.sha256(cipher).hexdigest() != checksum:
             raise BackupError("backup checksum mismatch")
-        key = hashlib.scrypt(passphrase.encode(), salt=salt, n=kp["n"],
+        key = hashlib.scrypt(passphrase_bytes, salt=salt, n=kp["n"],
                              r=kp["r"], p=kp["p"], dklen=kp["dklen"],
                              maxmem=_SCRYPT_MAXMEM)
         plain = AESGCM(key).decrypt(nonce, cipher, b"axven-wallet-backup-v1")
