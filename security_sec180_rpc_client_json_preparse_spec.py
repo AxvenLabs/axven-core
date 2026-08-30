@@ -49,10 +49,15 @@ def main():
     original_depth=axven_cli.MAX_RPC_RESPONSE_JSON_NESTING_DEPTH
     original_items=axven_cli.MAX_RPC_RESPONSE_JSON_STRUCTURAL_ITEMS
     try:
-        axven_cli.MAX_RPC_RESPONSE_JSON_NESTING_DEPTH=3
+        # SEC-181 makes the RPC response envelope exact.  Keep exercising
+        # the SEC-180 raw nesting boundary through a canonical success envelope.
+        # Depth is: outer response object -> result object -> nested object -> list.
+        axven_cli.MAX_RPC_RESPONSE_JSON_NESTING_DEPTH=4
         green(
             "exact nesting boundary accepted",
-            axven_cli.read_rpc_json_response(FakeStream(b'{"a":{"b":[]}}'))["a"]["b"]==[],
+            axven_cli.read_rpc_json_response(
+                FakeStream(b'{"ok":true,"result":{"a":{"b":[]}}}')
+            )["result"]["a"]["b"]==[],
         )
 
         loads_called=[]
@@ -61,7 +66,10 @@ def main():
             axven_cli.json.loads=lambda *a,**k: loads_called.append(True) or old_loads(*a,**k)
             green(
                 "over-depth response rejected before parser",
-                rejected(b'{"a":{"b":[[]]}}',"RPC response JSON nesting too deep")
+                rejected(
+                    b'{"ok":true,"result":{"a":{"b":[[]]}}}',
+                    "RPC response JSON nesting too deep",
+                )
                 and loads_called==[],
             )
         finally:
@@ -70,14 +78,18 @@ def main():
         green(
             "quoted structural bytes ignored",
             axven_cli.read_rpc_json_response(
-                FakeStream(b'{"text":"[[[[{{{{,,,,}}}}]]]]"}')
-            )["text"].startswith("[[[["),
+                FakeStream(b'{"ok":true,"result":{"text":"[[[[{{{{,,,,}}}}]]]]"}}')
+            )["result"]["text"].startswith("[[[["),
         )
 
-        axven_cli.MAX_RPC_RESPONSE_JSON_STRUCTURAL_ITEMS=4
+        # Structural count is six for this canonical envelope:
+        # outer object, outer comma, result object, list, and two list commas.
+        axven_cli.MAX_RPC_RESPONSE_JSON_STRUCTURAL_ITEMS=6
         green(
             "exact structural boundary accepted",
-            axven_cli.read_rpc_json_response(FakeStream(b'{"x":[1,2,3]}'))["x"]==[1,2,3],
+            axven_cli.read_rpc_json_response(
+                FakeStream(b'{"ok":true,"result":{"x":[1,2,3]}}')
+            )["result"]["x"]==[1,2,3],
         )
         loads_called=[]
         old_loads=axven_cli.json.loads
@@ -85,7 +97,10 @@ def main():
             axven_cli.json.loads=lambda *a,**k: loads_called.append(True) or old_loads(*a,**k)
             green(
                 "over-complex response rejected before parser",
-                rejected(b'{"x":[1,2,3,4]}',"RPC response JSON too complex")
+                rejected(
+                    b'{"ok":true,"result":{"x":[1,2,3,4]}}',
+                    "RPC response JSON too complex",
+                )
                 and loads_called==[],
             )
         finally:

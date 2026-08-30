@@ -156,6 +156,26 @@ def _preflight_rpc_response_json(
                 stack.pop()
 
 
+
+def _validate_rpc_response_envelope(data):
+    """Require the exact success/error envelope emitted by the Axven RPC server."""
+    if type(data) is not dict:
+        raise RPCClientError("RPC response must be object")
+
+    ok=data.get("ok")
+    if type(ok) is not bool:
+        raise RPCClientError("RPC response ok must be boolean")
+
+    expected={"ok","result"} if ok else {"ok","error"}
+    if set(data)!=expected:
+        raise RPCClientError("invalid RPC response envelope")
+
+    if not ok:
+        error=data["error"]
+        if type(error) is not str or not error:
+            raise RPCClientError("invalid RPC response error")
+    return data
+
 def read_rpc_json_response(stream):
     raw=stream.read(MAX_RPC_RESPONSE_BYTES+1)
     if len(raw)>MAX_RPC_RESPONSE_BYTES:
@@ -174,9 +194,7 @@ def read_rpc_json_response(stream):
         raise
     except (ValueError,RecursionError) as exc:
         raise RPCClientError("invalid RPC response") from exc
-    if type(data) is not dict:
-        raise RPCClientError("RPC response must be object")
-    return data
+    return _validate_rpc_response_envelope(data)
 
 def _rpc_client_url(host,port,auth_token=None):
     if type(host) is not str or not host or len(host)>255:
