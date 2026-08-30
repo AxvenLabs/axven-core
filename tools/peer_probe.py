@@ -16,7 +16,7 @@ def main():
     ap.add_argument("--timeout",type=float,default=5.0)
     a=ap.parse_args()
 
-    sock=p2p.connect((a.host,a.port),timeout=a.timeout)
+    sock,remote_identity=p2p.connect_with_identity((a.host,a.port),timeout=a.timeout)
     try:
         status=p2p.request(sock,{"type":"get_status"})
     finally:
@@ -25,7 +25,7 @@ def main():
     out={
         "ok": True,
         "peer": f"{a.host}:{a.port}",
-        "identity": p2p.local_identity(),
+        "identity": remote_identity,
         "status": status,
     }
     print(json.dumps(out,indent=2,sort_keys=True))

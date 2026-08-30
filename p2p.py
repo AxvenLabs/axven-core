@@ -1248,17 +1248,27 @@ class NodeServer:
         self._sock=None
         self._thread=None
 
-def connect(address,timeout=3.0):
+def connect_with_identity(address,timeout=3.0):
     s=socket.create_connection(address,timeout=timeout)
     s.settimeout(timeout)
     deadline=(None if timeout is None else time.monotonic()+timeout)
     try:
-        handshake(s,deadline=deadline)
+        peer=handshake(s,deadline=deadline)
+        identity={
+            key:peer[key]
+            for key in (
+                "protocol_version","chain_id","config_fingerprint","genesis_hash"
+            )
+        }
     except Exception:
         try:s.close()
         except OSError:pass
         raise
     s.settimeout(timeout)
+    return s,identity
+
+def connect(address,timeout=3.0):
+    s,_identity=connect_with_identity(address,timeout=timeout)
     return s
 
 def request(sock,msg,deadline=None):

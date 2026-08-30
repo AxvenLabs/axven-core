@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 54717,
-      "sha256": "8eabbba61e473b69051ea8e106ac572ea62bd3c83d5e8d67182015c01d2cf05b"
+      "bytes": 55032,
+      "sha256": "fa92eb5102741e2424255b4686d2e3b7123cc7f58827954060f4abe8dedb5df0"
     },
     "p2p_tx_bounds.py": {
       "bytes": 3630,
@@ -1068,6 +1068,10 @@
       "bytes": 5772,
       "sha256": "d902b3cb68ec09d6dabc692c0f283a0ec6cbbb02ae2958205af984537dbd75bf"
     },
+    "security_sec193_remote_identity_provenance_spec.py": {
+      "bytes": 5973,
+      "sha256": "f8f7610695b4ea100ee6026c2e3d50700db0cb134192253e12388ea63733c4de"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -1099,6 +1103,18 @@
     "sync-node2-from-node1.cmd": {
       "bytes": 137,
       "sha256": "bc129a2164928f7457e489e4c35770ed27eeccde6144e6953859b5b548881011"
+    },
+    "tools/peer_probe.py": {
+      "bytes": 921,
+      "sha256": "531352a417501ec89ff1cfb8ff0ce699a82ed6d796335ae58cf0ff367f089879"
+    },
+    "tools/public_peer_acceptance.py": {
+      "bytes": 1204,
+      "sha256": "80cb4ecd1840f5e3a324ec03046c5b3a2557dc75f9789ec815419834fa37fb53"
+    },
+    "tools/seed_health.py": {
+      "bytes": 1744,
+      "sha256": "3792193e76be3cd02808c77db979f8383e6b6ba9ac1f9767734137c72d48760c"
     },
     "ux_spec_test.py": {
       "bytes": 2263,
