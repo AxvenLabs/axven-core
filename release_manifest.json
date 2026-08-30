@@ -797,8 +797,8 @@
       "sha256": "65b5ade89a39a43ed11ca60814fb5346984c36fb914b65ad719663c90ddf7b3e"
     },
     "security_sec126_peer_config_resource_bounds_spec.py": {
-      "bytes": 6499,
-      "sha256": "d68deaec1244fff438bac32613e203c4210be42a032fed37f275f6b402b6927a"
+      "bytes": 6653,
+      "sha256": "46e5b52dedf226fe919baf97dfb780db623ba4c2c4038630fc8f4b572c29923c"
     },
     "security_sec127_rpc_json_preparse_depth_spec.py": {
       "bytes": 5890,
