@@ -775,6 +775,29 @@ def handshake(sock: socket.socket,deadline=None) -> Dict[str, Any]:
     validate_handshake(peer)
     return peer
 
+def validate_status_message(msg: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(msg,dict):
+        raise ProtocolError("status must be object")
+    expected_fields={"type","height","tip_hash","chainwork"}
+    if set(msg) != expected_fields:
+        raise ProtocolError("invalid status message fields")
+    if msg.get("type") != "status":
+        raise ProtocolError("invalid status message type")
+    raw_height=msg.get("height")
+    if type(raw_height) is not int or raw_height < 0:
+        raise ProtocolError("invalid status height")
+    raw_tip_hash=msg.get("tip_hash")
+    if (
+        not isinstance(raw_tip_hash,str)
+        or len(raw_tip_hash) != 64
+        or any(c not in "0123456789abcdef" for c in raw_tip_hash)
+    ):
+        raise ProtocolError("invalid status tip hash")
+    raw_chainwork=msg.get("chainwork")
+    if type(raw_chainwork) is not int or raw_chainwork < 0:
+        raise ProtocolError("invalid status chainwork")
+    return msg
+
 class PeerSession:
     def __init__(self, chain: axven.Blockchain, mempool: Optional[axven.Mempool]=None):
         self.chain=chain
@@ -809,22 +832,7 @@ class PeerSession:
     ):
         typ=_validate_message_type(msg)
         if typ=="status":
-            expected_fields={"type","height","tip_hash","chainwork"}
-            if set(msg) != expected_fields:
-                raise ProtocolError("invalid status message fields")
-            raw_height=msg.get("height")
-            if type(raw_height) is not int or raw_height < 0:
-                raise ProtocolError("invalid status height")
-            raw_tip_hash=msg.get("tip_hash")
-            if (
-                not isinstance(raw_tip_hash,str)
-                or len(raw_tip_hash) != 64
-                or any(c not in "0123456789abcdef" for c in raw_tip_hash)
-            ):
-                raise ProtocolError("invalid status tip hash")
-            raw_chainwork=msg.get("chainwork")
-            if type(raw_chainwork) is not int or raw_chainwork < 0:
-                raise ProtocolError("invalid status chainwork")
+            validate_status_message(msg)
             return None
         if typ=="get_status":
             if any(key != "type" for key in msg):
@@ -1281,6 +1289,10 @@ def request(sock,msg,deadline=None):
     finally:
         try:sock.settimeout(original_timeout)
         except OSError:pass
+
+def request_status(sock,deadline=None):
+    status=request(sock,{"type":"get_status"},deadline=deadline)
+    return validate_status_message(status)
 
 def sync_to_peer(
     address, session, limit=128, max_rounds=100,
