@@ -993,8 +993,8 @@
       "sha256": "68d2ea22f17b3b43694163304a6ab97835a2a7718ec1470b30beeb05e91056f7"
     },
     "security_sec175_mempool_zero_input_admission_spec.py": {
-      "bytes": 3372,
-      "sha256": "64e7f4b4b8480970b3c58f43d6ab1db92518797e6074bcd1be80dbf54e6fddde"
+      "bytes": 4065,
+      "sha256": "d8620d76f9432bb9a5b6e81e517ffb387563e88f8dd80b214395deb103a3aa72"
     },
     "security_sec176_wallet_backup_file_integrity_spec.py": {
       "bytes": 4442,
