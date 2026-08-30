@@ -171,8 +171,8 @@ def main():
         and axven._genesis().hash() == "a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3",
     )
 
-    assert len(checks) == 14, len(checks)
-    print("SEC-197 peer diversity: 14/14 GREEN")
+    assert len(checks) == 15, len(checks)
+    print("SEC-197 peer diversity: 15/15 GREEN")
 
 
 if __name__ == "__main__":
