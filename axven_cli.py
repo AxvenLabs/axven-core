@@ -5,6 +5,8 @@ import argparse, json, os, stat, sys, urllib.request, urllib.error
 from pathlib import Path
 
 MAX_RPC_RESPONSE_BYTES=16*1024*1024
+MAX_RPC_RESPONSE_JSON_NESTING_DEPTH=32
+MAX_RPC_RESPONSE_JSON_STRUCTURAL_ITEMS=1024*1024
 MAX_RPC_TOKEN_FILE_BYTES=65
 _AUTHENTICATED_RPC_HOSTS={"127.0.0.1","localhost","::1"}
 
@@ -92,13 +94,85 @@ def resolve_rpc_auth_token(datadir=None):
         raise RPCClientError("invalid RPC auth token") from exc
     return _validate_rpc_auth_token(token)
 
+def _reject_duplicate_rpc_response_json_keys(pairs):
+    obj={}
+    for key,value in pairs:
+        if key in obj:
+            raise RPCClientError("duplicate RPC response JSON key")
+        obj[key]=value
+    return obj
+
+def _preflight_rpc_response_json(
+    raw,
+    max_depth=None,
+    max_items=None,
+):
+    """Bound response JSON nesting/fan-out before parser allocation."""
+    if type(raw) is not bytes:
+        raise RPCClientError("invalid RPC response")
+    if max_depth is None:
+        max_depth=MAX_RPC_RESPONSE_JSON_NESTING_DEPTH
+    if max_items is None:
+        max_items=MAX_RPC_RESPONSE_JSON_STRUCTURAL_ITEMS
+    if type(max_depth) is not int or max_depth<1:
+        raise RPCClientError("invalid RPC response JSON limit")
+    if type(max_items) is not int or max_items<1:
+        raise RPCClientError("invalid RPC response JSON limit")
+    stack=[]
+    structural_items=0
+    in_string=False
+    escaped=False
+    for value in raw:
+        if in_string:
+            if escaped:
+                escaped=False
+            elif value==0x5C:
+                escaped=True
+            elif value==0x22:
+                in_string=False
+            continue
+        if value==0x22:
+            in_string=True
+            continue
+        if value in (0x7B,0x5B):
+            structural_items+=1
+            if structural_items>max_items:
+                raise RPCClientError("RPC response JSON too complex")
+            stack.append(value)
+            if len(stack)>max_depth:
+                raise RPCClientError("RPC response JSON nesting too deep")
+            continue
+        if value==0x2C and stack:
+            structural_items+=1
+            if structural_items>max_items:
+                raise RPCClientError("RPC response JSON too complex")
+            continue
+        if value==0x7D:
+            if stack and stack[-1]==0x7B:
+                stack.pop()
+            continue
+        if value==0x5D:
+            if stack and stack[-1]==0x5B:
+                stack.pop()
+
+
 def read_rpc_json_response(stream):
     raw=stream.read(MAX_RPC_RESPONSE_BYTES+1)
     if len(raw)>MAX_RPC_RESPONSE_BYTES:
         raise RPCClientError("RPC response too large")
+    _preflight_rpc_response_json(raw)
     try:
-        data=json.loads(raw)
-    except (UnicodeError,json.JSONDecodeError,RecursionError) as exc:
+        decoded=raw.decode("utf-8")
+    except UnicodeError as exc:
+        raise RPCClientError("invalid RPC response") from exc
+    try:
+        data=json.loads(
+            decoded,
+            object_pairs_hook=_reject_duplicate_rpc_response_json_keys,
+        )
+    except RPCClientError:
+        raise
+    except (ValueError,RecursionError) as exc:
         raise RPCClientError("invalid RPC response") from exc
     if type(data) is not dict:
         raise RPCClientError("RPC response must be object")
