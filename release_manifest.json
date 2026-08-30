@@ -577,8 +577,8 @@
       "sha256": "7248a31237e4792ce8baac0319bb66880819ecafd165a98b2477dd35379a5993"
     },
     "security_sec067_p2p_tx_numeric_types_spec.py": {
-      "bytes": 4016,
-      "sha256": "2355bd8fefd2fe7ca8afd2a99125805991746a527ca3eaee05a6457f12167777"
+      "bytes": 3958,
+      "sha256": "f12ea564698445bd9ece6c0c34ae7fda018f0805c3b97ac824977c79f5724634"
     },
     "security_sec068_p2p_tx_string_types_spec.py": {
       "bytes": 4678,
