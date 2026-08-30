@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import os
+import stat
 import tempfile
 import threading
 from pathlib import Path
@@ -416,10 +417,49 @@ def save_backup_file(identity, path, passphrase: str):
             except FileNotFoundError:
                 pass
 
-def load_backup_file(path, passphrase: str):
+def _read_secure_backup_file(path):
+    """Read an encrypted wallet backup without trusting path indirection."""
     path = os.fspath(path)
-    with open(path, "rb") as f:
-        raw = f.read(MAX_BACKUP_FILE_BYTES + 1)
+    try:
+        before = os.lstat(path)
+    except FileNotFoundError:
+        raise
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+        raise BackupError("unsafe wallet backup file")
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_BINARY"):
+        flags |= os.O_BINARY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = None
+    try:
+        try:
+            fd = os.open(path, flags)
+        except OSError as exc:
+            raise BackupError("unsafe wallet backup file") from exc
+        current = os.fstat(fd)
+        if not stat.S_ISREG(current.st_mode):
+            raise BackupError("unsafe wallet backup file")
+        if (before.st_dev, before.st_ino) != (current.st_dev, current.st_ino):
+            raise BackupError("wallet backup file changed during open")
+        if getattr(current, "st_nlink", 1) != 1:
+            raise BackupError("unsafe wallet backup hardlink count")
+        if os.name == "posix":
+            if current.st_mode & 0o077:
+                raise BackupError("wallet backup permissions must be owner-only")
+            if hasattr(os, "getuid") and current.st_uid != os.getuid():
+                raise BackupError("wallet backup owner mismatch")
+        with os.fdopen(fd, "rb") as f:
+            fd = None
+            return f.read(MAX_BACKUP_FILE_BYTES + 1)
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
+def load_backup_file(path, passphrase: str):
+    raw = _read_secure_backup_file(path)
     if len(raw) > MAX_BACKUP_FILE_BYTES:
         raise BackupError("backup file too large")
     _preflight_backup_json_nesting(raw)
