@@ -29,6 +29,7 @@ def _authenticated_backup_with_plain(plain, passphrase):
         r=wallet._SCRYPT_R,
         p=wallet._SCRYPT_P,
         dklen=wallet._SCRYPT_DKLEN,
+        maxmem=wallet._SCRYPT_MAXMEM,
     )
     cipher = AESGCM(key).encrypt(nonce, plain, b"axven-wallet-backup-v1")
     return {

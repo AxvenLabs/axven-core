@@ -809,8 +809,8 @@
       "sha256": "54ea6023792517aa0c0ce4bc1d4563605073827b41cce497e36c655416717592"
     },
     "security_sec128_wallet_backup_json_preparse_depth_spec.py": {
-      "bytes": 6942,
-      "sha256": "eb80e493ed90d061dd42535f665e5bb16e9e5c78864d90e99d1c3447b68202ad"
+      "bytes": 6980,
+      "sha256": "121e7089a96a3ad11525c2a213621c61a4a1d6a37fe0d31997b03c85c2c8ef4c"
     },
     "security_sec129_wallet_inner_material_canonicality_spec.py": {
       "bytes": 8815,
