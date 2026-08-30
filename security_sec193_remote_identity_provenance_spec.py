@@ -171,7 +171,7 @@ def main():
 
     green(
         "SEC-193 leaves chain identity, protocol, and PQ activation semantics unchanged",
-        p2p.PROTOCOL_VERSION == 2
+        p2p.PROTOCOL_VERSION == 3
         and axven.CHAIN_ID == "axven-devnet-2"
         and axven.CONFIG_FINGERPRINT
         == "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae"

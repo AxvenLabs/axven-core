@@ -219,6 +219,12 @@ TARGET_TIMESPAN = ADJUST_INTERVAL * TARGET_BLOCK_TIME
 RETARGET_CLAMP = 4
 MEDIAN_TIME_SPAN = 11
 GENESIS_TIME = 0
+# Axven targets two-second blocks and retargets every ~67 minutes, so
+# Bitcoin's multi-hour future-time tolerance would itself permit a
+# material epoch-end difficulty skew.  Allow two minutes for ordinary
+# clock drift, but never admit farther-future timestamps into retarget
+# history.  SEC-196 is network-gated by P2P protocol v3.
+MAX_FUTURE_BLOCK_TIME = 120
 
 COINBASE_MATURITY = 100
 DUST = 1
@@ -592,6 +598,8 @@ def _check_context(block: Block, path: List[Block], height: int):
     if not (1 <= block.target <= MAX_TARGET): return f"Target out of range at {height}"
     if not block.pow_ok(): return f"PoW fail at {height}"
     if block.timestamp <= median_time_past(path, height): return f"Timestamp <= MTP at {height}"
+    if block.timestamp > int(time.time()) + MAX_FUTURE_BLOCK_TIME:
+        return f"Timestamp too far in future at {height}"
     if not block.transactions: return f"No coinbase at {height}"
     if len(block.transactions) > MAX_BLOCK_TXS: return f"Block too many txs at {height}"
     if not block_size_valid(block): return f"Block exceeds max bytes at {height}"
