@@ -53,6 +53,28 @@ def run():
         "required":"1.4.0","detail":pq_detail if not pq_ok else "ok"
     }
 
+    cffi_import,cffi_detail=check_module("cffi")
+    cffi_version=None
+    if cffi_import:
+        try:cffi_version=importlib.metadata.version("cffi")
+        except Exception as e:cffi_detail=f"metadata error: {e}"
+    cffi_ok=cffi_import and cffi_version=="2.1.1"
+    checks["cffi"]={
+        "ok":cffi_ok,"import_ok":cffi_import,"version":cffi_version,
+        "required":"2.1.1","detail":cffi_detail if not cffi_ok else "ok"
+    }
+
+    parser_import,parser_detail=check_module("pycparser")
+    parser_version=None
+    if parser_import:
+        try:parser_version=importlib.metadata.version("pycparser")
+        except Exception as e:parser_detail=f"metadata error: {e}"
+    parser_ok=parser_import and parser_version=="3.0"
+    checks["pycparser"]={
+        "ok":parser_ok,"import_ok":parser_import,"version":parser_version,
+        "required":"3.0","detail":parser_detail if not parser_ok else "ok"
+    }
+
     checks["chain_identity"]={
         "ok":(
             axven.CHAIN_ID=="axven-devnet-2" and

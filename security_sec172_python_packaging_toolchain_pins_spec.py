@@ -11,6 +11,7 @@ import axven
 PIP = "26.2.1"
 SETUPTOOLS = "84.0.0"
 WHEEL = "0.48.0"
+PACKAGING = "26.3"
 
 
 def main():
@@ -26,20 +27,25 @@ def main():
     build_requires=pyproject["build-system"]["requires"]
 
     green(
-        "PEP 517 build backend dependencies are exact pins",
-        build_requires == [f"setuptools=={SETUPTOOLS}", f"wheel=={WHEEL}"],
+        "PEP 517 build backend dependency closure is exactly pinned",
+        build_requires == [
+            f"setuptools=={SETUPTOOLS}",
+            f"wheel=={WHEEL}",
+            f"packaging=={PACKAGING}",
+        ],
     )
     green(
-        "open-ended setuptools and wheel build requirements are absent",
+        "open-ended packaging build requirements are absent",
         all(">=" not in item and "~=" not in item and ">" not in item
             for item in build_requires),
     )
     pinned_install=(
         f'python -m pip install "pip=={PIP}" '
-        f'"setuptools=={SETUPTOOLS}" "wheel=={WHEEL}"'
+        f'"setuptools=={SETUPTOOLS}" "wheel=={WHEEL}" '
+        f'"packaging=={PACKAGING}"'
     )
     green(
-        "validation CI installs an exact packaging toolchain",
+        "validation CI installs an exact packaging toolchain closure",
         pinned_install in workflow,
     )
     green(
@@ -64,9 +70,14 @@ def main():
         importlib.metadata.version("wheel") == WHEEL,
     )
     green(
-        "runtime dependency pins remain unchanged",
-        pyproject["project"]["dependencies"]
-        == ["cryptography==50.0.1", "dilithium-py==1.4.0"],
+        "active CI packaging version matches the immutable build pin",
+        importlib.metadata.version("packaging") == PACKAGING,
+    )
+    runtime_dependencies=pyproject["project"]["dependencies"]
+    green(
+        "original runtime security pins remain present",
+        "cryptography==50.0.1" in runtime_dependencies
+        and "dilithium-py==1.4.0" in runtime_dependencies,
     )
     green(
         "packaging hardening leaves canonical chain identity unchanged",

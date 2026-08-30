@@ -21,8 +21,8 @@
   "explorer_node2_port": 18455,
   "files": {
     ".github/workflows/validation.yml": {
-      "bytes": 971,
-      "sha256": "bdc42298508a4d7218b2f6d89892ba3d338a0216d9a663465777ab2f146a6cd5"
+      "bytes": 1019,
+      "sha256": "634154bf5cacf3055b732c2c9623f5957a8624b57f99728a257f9af29e69907e"
     },
     "CANONICAL_OPERATIONS.md": {
       "bytes": 1434,
@@ -265,16 +265,16 @@
       "sha256": "e3e5c65cc41f968e7cacacf2d0aa62ddd53f145a1c17b86ab9dd56d9ce3cd3e2"
     },
     "datadir.py": {
-      "bytes": 16207,
-      "sha256": "f9f0da1f090de6067d562f1b746bd7bce484488aa1a0545107d64f3185134490"
+      "bytes": 17063,
+      "sha256": "fcdcba4f9630a531ab112ff85bcd7225a5ec91a7d06819099df782dabc032039"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
       "sha256": "8fae69a3d5059742af03d44c4ff431a62918663d85e0a9968a14c4df3d59bba8"
     },
     "doctor.py": {
-      "bytes": 2839,
-      "sha256": "c6deb522dd36ef2c9ba273a1233c4fe295eaf7d22a4c327da412fec7c20db7b2"
+      "bytes": 3750,
+      "sha256": "440f43b27134b9e5a6795927865bc76cae36f7e6a12cbc91f0830560aad21b58"
     },
     "explorer.py": {
       "bytes": 9267,
@@ -329,8 +329,8 @@
       "sha256": "4a4d485eedec4d982bb8abdf7505de483c07088c9e5a96bb254b39e6f0c084e6"
     },
     "pyproject.toml": {
-      "bytes": 648,
-      "sha256": "6f640b65f7870168dd77be4ada0b6cec08f726791bebc072527457c3e55fefef"
+      "bytes": 704,
+      "sha256": "33538278dd2f3121779193ec7b9e71e5498f2e61ee22f4ec7bdec3aaed6047e1"
     },
     "rc_audit.py": {
       "bytes": 1256,
@@ -341,8 +341,8 @@
       "sha256": "15e4743122ae79bfbe27c6645d8e86d3d7f107873662f1eff4f964634c1097ab"
     },
     "requirements.txt": {
-      "bytes": 41,
-      "sha256": "eac85195671568ba906d24b606be7a193b7008fb0efbb96553b643f65012a6e0"
+      "bytes": 68,
+      "sha256": "25a689ca3907cb831ccfe6d07f80c512961479b1113669a2b38a7d0e10b92c3a"
     },
     "rpc.py": {
       "bytes": 18929,
@@ -973,16 +973,16 @@
       "sha256": "b1eb092d0fe526dc858ebed7e782a435a0d08bdab20c65aeec5f89f1b7f3faa7"
     },
     "security_sec170_python_runtime_security_floor_spec.py": {
-      "bytes": 2855,
-      "sha256": "52e018ad08ad3270a97f9fc5b02cdfde6c68f3f2a4a609d5e9aaf36f41bb9826"
+      "bytes": 2927,
+      "sha256": "d6db9b0128d0f26e50242ca9159e4b663f93ede1c91ee7159a2152da94ac6b90"
     },
     "security_sec171_rpc_method_param_canonicality_spec.py": {
       "bytes": 4166,
       "sha256": "6b7d89789b0f52357d9183c0d7916d9c72d571b4e0a6a1d4fecaf1c3084b125f"
     },
     "security_sec172_python_packaging_toolchain_pins_spec.py": {
-      "bytes": 2636,
-      "sha256": "285350980829a4d1fe9bb3f956624675ff2e5591e249ddb7f7ed264cdccd5fbb"
+      "bytes": 2998,
+      "sha256": "55d692ef9d3df84724f0df3cffbc225f4c516e43ead444f0b1a9da615be31e7b"
     },
     "security_sec173_datadir_mutator_single_writer_spec.py": {
       "bytes": 4603,
@@ -1003,6 +1003,14 @@
     "security_sec177_peer_config_file_integrity_spec.py": {
       "bytes": 4868,
       "sha256": "38615ae4bb788e492ecdd19b2c56c62fbdaf9b0228d5c7aa36ca43203026a34c"
+    },
+    "security_sec178_datadir_directory_integrity_spec.py": {
+      "bytes": 2881,
+      "sha256": "2ae6dfff1488833b7aedecc50e5063ea541851247ef842098770baa4edab4875"
+    },
+    "security_sec178_dependency_closure_pins_spec.py": {
+      "bytes": 3411,
+      "sha256": "92a835f69fa0e88c04a080f9f2d49eaf83554f6195796a705edb04e0b6430dbf"
     },
     "setup.cmd": {
       "bytes": 172,

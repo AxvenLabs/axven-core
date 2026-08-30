@@ -168,6 +168,26 @@ def _read_secure_peer_config_file(path):
             os.close(fd)
 
 
+def _validate_datadir_directory_metadata(metadata):
+    """Require an owner-controlled datadir directory on POSIX."""
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise ValueError("unsafe datadir directory")
+    if os.name == "posix":
+        if metadata.st_mode & 0o022:
+            raise ValueError("datadir must not be group/world writable")
+        if hasattr(os, "getuid") and metadata.st_uid != os.getuid():
+            raise ValueError("datadir owner mismatch")
+    return metadata
+
+
+def _validate_datadir_directory(path):
+    """Validate the resolved datadir before trusting child lock/state paths."""
+    metadata = os.lstat(os.fspath(path))
+    if stat.S_ISLNK(metadata.st_mode):
+        raise ValueError("unsafe datadir directory")
+    return _validate_datadir_directory_metadata(metadata)
+
+
 class DataDirBusyError(RuntimeError):
     """Raised when another Axven mutator owns the resolved datadir."""
 
@@ -290,6 +310,7 @@ class DataDir:
     def __init__(self,path):
         self.path=Path(path).expanduser().resolve()
         self.path.mkdir(parents=True,exist_ok=True)
+        _validate_datadir_directory(self.path)
         self.chain_dir=self.path/"chain"
         self.wallet_file=self.path/"wallet.json"
         self.peer_file=self.path/"peers.json"

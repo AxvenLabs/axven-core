@@ -63,10 +63,11 @@ def main():
         doctor_result["checks"]["python"]["ok"] is True
         and doctor_result["checks"]["python"]["required"] == ">=3.13.15,<3.14",
     )
+    runtime_dependencies=pyproject["project"]["dependencies"]
     green(
         "runtime dependency security pins remain unchanged",
-        pyproject["project"]["dependencies"]
-        == ["cryptography==50.0.1","dilithium-py==1.4.0"],
+        "cryptography==50.0.1" in runtime_dependencies
+        and "dilithium-py==1.4.0" in runtime_dependencies,
     )
     green(
         "Python runtime migration leaves canonical chain identity unchanged",
