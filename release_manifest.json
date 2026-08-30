@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 46053,
-      "sha256": "a1797268a394de492760e2b4f26992f8704e5b17540a42220d2ab55a8781b940"
+      "bytes": 44951,
+      "sha256": "691f83eff52be26fc9f91490cc593349d9d2ff6a78db002170a5cbe4e9c9fef0"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5864,
@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 58039,
-      "sha256": "de8506dbdd2046b8663bfb83a57aaf9cb8ddb081ecd2207e86ad42164c6a8d8b"
+      "bytes": 56639,
+      "sha256": "16ce52cfce08969b3be1bc8aed864f0c9b43266a1c95343ff6af695351d5b9ec"
     },
     "p2p_tx_bounds.py": {
       "bytes": 3630,
