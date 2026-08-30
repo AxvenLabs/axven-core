@@ -626,7 +626,7 @@
     },
     "security_sec082_p2p_handshake_protocol_type_spec.py": {
       "bytes": 1177,
-      "sha256": "f5bf0c0a63c13dbef39883b79cbc1375f9e5ebe8f0e26245039e24c1e3abf552"
+      "sha256": "a3eb93df5f4fa3e9eb01e9682c9a4f3e28975292ddffa8016f2448b5bb9622b8"
     },
     "security_sec083_p2p_locator_type_spec.py": {
       "bytes": 1414,
