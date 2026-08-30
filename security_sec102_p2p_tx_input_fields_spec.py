@@ -57,7 +57,7 @@ def main():
         "standalone tx input unknown field rejected",
         session,
         {"type": "tx", "tx": raw_tx},
-        "unknown tx input field",
+        "non-canonical tx input fields",
     )
     assert mempool.add_calls == 0, "malformed tx reached mempool"
     checks += 1
@@ -68,7 +68,7 @@ def main():
         "coinbase tx input unknown field rejected",
         p2p.PeerSession(axven.Blockchain()),
         {"type": "block", "block": raw},
-        "unknown tx input field",
+        "non-canonical coinbase input fields",
     )
     checks += 1
 
@@ -78,7 +78,7 @@ def main():
         "coinbase known-but-noncanonical input field rejected",
         p2p.PeerSession(axven.Blockchain()),
         {"type": "blocks", "blocks": [raw]},
-        "unknown tx input field",
+        "non-canonical coinbase input fields",
     )
     checks += 1
 
@@ -88,7 +88,7 @@ def main():
         "coinbase unknown input scheme rejected fail-closed",
         p2p.PeerSession(axven.Blockchain()),
         {"type": "block", "block": raw},
-        "unknown tx input scheme",
+        "non-canonical coinbase input fields",
     )
     checks += 1
 
