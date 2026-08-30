@@ -388,10 +388,15 @@ class DataDir:
         return wallet.load_backup_file(self.wallet_file,passphrase)
 
     def load_chain(self):
-        chain_file=self.chain_dir/"chain.json"
-        if chain_file.exists():
-            return axven.StateStore(str(self.chain_dir)).load()
-        return axven.Blockchain()
+        # Construct StateStore first so the child chain-directory trust boundary
+        # cannot be skipped just because chain.json appears absent.  lstat the
+        # state path so a dangling symlink is not mistaken for first-run state.
+        store=axven.StateStore(str(self.chain_dir))
+        try:
+            os.lstat(os.fspath(store.path))
+        except FileNotFoundError:
+            return axven.Blockchain()
+        return store.load()
 
     def save_chain(self,chain):
         axven.StateStore(str(self.chain_dir)).persist(chain)
