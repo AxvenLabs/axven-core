@@ -119,12 +119,45 @@ def _verify_mldsa44_signature(public_key, message, signature):
     except (InvalidSignature,ValueError,TypeError):
         return False
 
+ML_DSA_PUBLIC_KEY_BYTES=1312
+ML_DSA_SEED_KEY_BYTES=32
+ML_DSA_LEGACY_SECRET_KEY_BYTES=2560
+
 class MLDSAWallet:
     def __init__(self,keypair=None):
-        if keypair is None:self.public_key,self._secret=_mldsa().keygen()
-        else:self.public_key,self._secret=keypair
+        self._private=None
+        if keypair is None:
+            private=mldsa.MLDSA44PrivateKey.generate()
+            self.public_key=private.public_key().public_bytes_raw()
+            self._secret=private.private_bytes_raw()
+            self._private=private
+        else:
+            if type(keypair) not in (tuple,list) or len(keypair)!=2:
+                raise ValueError("invalid ML-DSA keypair")
+            self.public_key,self._secret=keypair
+            if type(self.public_key) is not bytes or len(self.public_key)!=ML_DSA_PUBLIC_KEY_BYTES:
+                raise ValueError("invalid ML-DSA public key")
+            if type(self._secret) is not bytes:
+                raise ValueError("invalid ML-DSA private key")
+            if len(self._secret)==ML_DSA_SEED_KEY_BYTES:
+                private=mldsa.MLDSA44PrivateKey.from_seed_bytes(self._secret)
+                if private.public_key().public_bytes_raw()!=self.public_key:
+                    raise ValueError("ML-DSA keypair mismatch")
+                self._private=private
+            elif len(self._secret)==ML_DSA_LEGACY_SECRET_KEY_BYTES:
+                try:
+                    recovered=_mldsa().pk_from_sk(self._secret)
+                except Exception as exc:
+                    raise ValueError("invalid legacy ML-DSA private key") from exc
+                if recovered!=self.public_key:
+                    raise ValueError("ML-DSA keypair mismatch")
+            else:
+                raise ValueError("invalid ML-DSA private key length")
         self.address=ml_address_from_pubkey(self.public_key)
-    def sign(self,sh): return _mldsa().sign(self._secret,sh)
+    def sign(self,sh):
+        if self._private is not None:
+            return self._private.sign(sh)
+        return _mldsa().sign(self._secret,sh)
     def sign_input(self,tx,i):
         inp=tx._in()[i]; return {"prev_txid":inp.prev_txid,"index":inp.index,"scheme":SCHEME_ML_DSA,"signature":_b64e(self.sign(tx.sighash())),"public_key":_b64e(self.public_key)}
 class HybridWallet:

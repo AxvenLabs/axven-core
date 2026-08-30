@@ -69,7 +69,9 @@ def main():
         "wallet key-material byte sizes pinned to runtime crypto formats",
         wallet.ED25519_PRIVATE_KEY_BYTES == 32
         and wallet.ML_DSA_PUBLIC_KEY_BYTES == 1312
-        and wallet.ML_DSA_SECRET_KEY_BYTES == 2560,
+        and wallet.ML_DSA_SEED_KEY_BYTES == 32
+        and wallet.ML_DSA_LEGACY_SECRET_KEY_BYTES == 2560
+        and wallet._ML_DSA_ACCEPTED_PRIVATE_KEY_BYTES == frozenset({32, 2560}),
     )
 
     ident = wallet.WalletIdentity()
@@ -141,10 +143,7 @@ def main():
     )
 
     ml_sec_lengths = []
-    for size in (
-        wallet.ML_DSA_SECRET_KEY_BYTES - 1,
-        wallet.ML_DSA_SECRET_KEY_BYTES + 1,
-    ):
+    for size in (31, 33, 2559, 2561):
         bad = dict(material)
         bad["ml_secret"] = base64.b64encode(b"K" * size).decode("ascii")
         ml_sec_lengths.append(
@@ -196,10 +195,11 @@ def main():
     message = hashlib.sha256(
         b"axven-wallet-backup-mldsa-keypair-v1|" + ident.ml_public_key
     ).digest()
-    signature = axven._mldsa().sign(ident.ml_secret_key, message)
+    signer = axven.MLDSAWallet((ident.ml_public_key, ident.ml_secret_key))
+    signature = signer.sign(message)
     green(
         "canonical restored ML-DSA keypair remains cryptographically usable",
-        bool(axven._mldsa().verify(ident.ml_public_key, message, signature)),
+        axven._verify_mldsa44_signature(ident.ml_public_key, message, signature),
     )
 
     validator_src = inspect.getsource(wallet._validated_backup_material)
@@ -211,13 +211,14 @@ def main():
         and "validate=True" in validator_src
         and "ED25519_PRIVATE_KEY_BYTES" in validator_src
         and "ML_DSA_PUBLIC_KEY_BYTES" in validator_src
-        and "ML_DSA_SECRET_KEY_BYTES" in validator_src,
+        and "_ML_DSA_ACCEPTED_PRIVATE_KEY_BYTES" in validator_src,
     )
     green(
         "production ML-DSA keypair validator signs and verifies a domain-separated probe",
         "axven-wallet-backup-mldsa-keypair-v1|" in pair_src
-        and ".sign(ml_sec, message)" in pair_src
-        and ".verify(ml_pub, message, signature)" in pair_src,
+        and "axven.MLDSAWallet((ml_pub, ml_sec))" in pair_src
+        and "signer.sign(message)" in pair_src
+        and "axven._verify_mldsa44_signature(ml_pub, message, signature)" in pair_src,
     )
     green(
         "restore preserves SEC-128 preflight then rejects duplicate keys before constructors",
