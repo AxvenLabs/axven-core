@@ -969,7 +969,18 @@ class AxvenCore:
     def sync_peer(self, host, port, batch=128):
         batch=self._validate_service_int(batch,"sync batch",1,128)
         addr = self._parse_peer((host, port))
+        source_host=addr[0]
+        block_gate=lambda: (
+            self._outbound_sync_block_work_limiter.consume(source_host)
+        )
+        signature_gate=lambda cost: (
+            self._outbound_sync_block_signature_work_limiter.consume(
+                source_host,cost
+            )
+        )
         return p2p.sync_to_peer(
             addr, p2p.PeerSession(self.chain, self.mempool),
-            limit=batch
+            limit=batch,
+            block_work_gate=block_gate,
+            block_signature_work_gate=signature_gate,
         )

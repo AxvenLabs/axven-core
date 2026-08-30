@@ -224,7 +224,7 @@ def main():
     core_sync_src = inspect.getsource(core_module.AxvenCore.sync_outbound_peer)
     manual_sync_src = inspect.getsource(core_module.AxvenCore.sync_peer)
     green(
-        "production wiring meters only automatic configured-peer catch-up",
+        "production wiring meters configured and manual peer catch-up",
         "stop_on_work_budget=True" in sync_src
         and "work_budget_exhausted" in sync_src
         and "_work_budget_status(status)" in handle_src
@@ -232,8 +232,10 @@ def main():
         and "_outbound_sync_block_signature_work_limiter.consume" in core_sync_src
         and "block_work_gate=block_gate" in core_sync_src
         and "block_signature_work_gate=signature_gate" in core_sync_src
-        and "block_work_gate" not in manual_sync_src
-        and "block_signature_work_gate" not in manual_sync_src,
+        and "_outbound_sync_block_work_limiter.consume(source_host)" in manual_sync_src
+        and "block_work_gate=block_gate" in manual_sync_src
+        and "_outbound_sync_block_signature_work_limiter.consume" in manual_sync_src
+        and "block_signature_work_gate=signature_gate" in manual_sync_src,
     )
 
     print(f"SEC-121 outbound sync work budget: {len(checks)}/{len(checks)} GREEN")
