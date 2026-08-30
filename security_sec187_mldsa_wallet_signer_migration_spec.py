@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""SEC-187: migrate new ML-DSA wallet keygen/signing to pyca with legacy compatibility."""
+"""SEC-187: migrate new ML-DSA wallet keygen/signing to pyca with legacy recovery compatibility."""
 
 import base64
-import hashlib
 from unittest import mock
 
 from cryptography.hazmat.primitives.asymmetric import mldsa
@@ -52,14 +51,19 @@ def main():
     checks += 1
     print("[GREEN] mismatched seed/public keypair rejected")
 
-    # Existing 2560-byte expanded wallets remain usable until explicit re-key.
+    # Existing 2560-byte expanded wallets may be opened for recovery, but never sign.
     legacy_pub, legacy_sk = ML_DSA_44.keygen()
     assert len(legacy_sk) == 2560
     legacy_wallet = axven.MLDSAWallet((legacy_pub, legacy_sk))
-    legacy_sig = legacy_wallet.sign(msg)
-    assert axven._verify_mldsa44_signature(legacy_pub, msg, legacy_sig)
+    assert legacy_wallet.public_key == legacy_pub
+    try:
+        legacy_wallet.sign(msg)
+    except RuntimeError as exc:
+        assert "recovery-only" in str(exc)
+    else:
+        raise AssertionError("legacy expanded ML-DSA key was allowed to sign")
     checks += 1
-    print("[GREEN] legacy expanded wallet compatibility preserved")
+    print("[GREEN] legacy expanded wallet is recovery-only and cannot sign")
 
     # Newly-created WalletIdentity objects and backups persist the compact seed.
     ident = wallet.WalletIdentity()
@@ -75,14 +79,22 @@ def main():
     checks += 1
     print("[GREEN] new seed wallet backup roundtrip preserved")
 
-    # Legacy backup material remains loadable without silently rewriting identity.
+    # Legacy backup material remains recoverable without silently rewriting identity.
     legacy_ident = wallet.WalletIdentity(ml_keypair=(legacy_pub, legacy_sk))
     legacy_backup = wallet.export_backup(legacy_ident, "legacy-pass")
     legacy_restored = wallet.restore_backup(legacy_backup, "legacy-pass")
     assert legacy_restored.ml_public_key == legacy_pub
     assert legacy_restored.ml_secret_key == legacy_sk
+    try:
+        axven.MLDSAWallet(
+            (legacy_restored.ml_public_key, legacy_restored.ml_secret_key)
+        ).sign(msg)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("restored legacy key regained signing capability")
     checks += 1
-    print("[GREEN] legacy expanded backup roundtrip preserved")
+    print("[GREEN] legacy expanded backup recovery roundtrip preserved without signing")
 
     # Backup parser accepts only the two standards-relevant Axven private forms.
     material = {
@@ -99,10 +111,16 @@ def main():
     checks += 1
     print("[GREEN] non-canonical ML-DSA private-key lengths rejected")
 
-    # Wallet keypair validation must terminate at the production verifier.
+    # Seed validation terminates at production signing; legacy validation is recovery-only.
     wallet._validate_mldsa_keypair(ident.ml_public_key, ident.ml_secret_key)
+    with mock.patch.object(
+        legacy,
+        "sign",
+        side_effect=AssertionError("legacy sign used during recovery validation"),
+    ):
+        wallet._validate_mldsa_keypair(legacy_pub, legacy_sk)
     checks += 1
-    print("[GREEN] wallet backup keypair validation uses hardened signer/verifier boundary")
+    print("[GREEN] wallet keypair validation keeps legacy material recovery-only")
 
     assert axven.CHAIN_ID == "axven-devnet-2"
     assert axven.CONFIG_FINGERPRINT == "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae"

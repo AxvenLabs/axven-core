@@ -288,17 +288,30 @@ def _validated_backup_material(material):
 
 
 def _validate_mldsa_keypair(ml_pub, ml_sec):
-    message = hashlib.sha256(
-        b"axven-wallet-backup-mldsa-keypair-v1|" + ml_pub
-    ).digest()
-    try:
-        signer = axven.MLDSAWallet((ml_pub, ml_sec))
-        signature = signer.sign(message)
-        valid = axven._verify_mldsa44_signature(ml_pub, message, signature)
-    except Exception as exc:
-        raise BackupError("invalid ML-DSA keypair") from exc
-    if not valid:
-        raise BackupError("invalid ML-DSA keypair")
+    if len(ml_sec) == ML_DSA_SEED_KEY_BYTES:
+        message = hashlib.sha256(
+            b"axven-wallet-backup-mldsa-keypair-v1|" + ml_pub
+        ).digest()
+        try:
+            signer = axven.MLDSAWallet((ml_pub, ml_sec))
+            signature = signer.sign(message)
+            valid = axven._verify_mldsa44_signature(ml_pub, message, signature)
+        except Exception as exc:
+            raise BackupError("invalid ML-DSA keypair") from exc
+        if not valid:
+            raise BackupError("invalid ML-DSA keypair")
+        return
+
+    if len(ml_sec) == ML_DSA_LEGACY_SECRET_KEY_BYTES:
+        try:
+            recovered = axven._mldsa().pk_from_sk(ml_sec)
+        except Exception as exc:
+            raise BackupError("invalid ML-DSA keypair") from exc
+        if recovered != ml_pub:
+            raise BackupError("invalid ML-DSA keypair")
+        return
+
+    raise BackupError("invalid ML-DSA keypair")
 
 
 def _raw_ed_private(identity):
