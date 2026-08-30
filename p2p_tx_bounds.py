@@ -45,8 +45,15 @@ def _is_wire_coinbase(raw_tx):
 
 def _validate_tx_input_fields(raw_input, *, coinbase=False):
     if coinbase:
-        if set(raw_input) != {"prev_txid", "index"}:
+        # The historical canonical serializer emits the legacy Ed25519 witness
+        # slots as empty strings for coinbase. Preserve that exact wire shape,
+        # but never allow attacker-controlled witness material to hide behind a
+        # coinbase txid that does not commit to it.
+        required = {"prev_txid", "index", "signature", "public_key"}
+        if set(raw_input) != required:
             raise ValueError("non-canonical coinbase input fields")
+        if raw_input["signature"] != "" or raw_input["public_key"] != "":
+            raise ValueError("coinbase witness fields must be empty")
         return
 
     raw_scheme = raw_input.get("scheme", "")
