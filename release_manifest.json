@@ -612,6 +612,10 @@
       "bytes": 1673,
       "sha256": "c3f96e59c195c88754454d47df935df6bdbf8d83cab3886dee28217af7fb9578"
     },
+    "security_sec077_wallet_kdf_resource_bounds_spec.py": {
+      "bytes": 3249,
+      "sha256": "f3e99f1d818263197262dea05b6e72f69eafa207283f485681e071f581413f33"
+    },
     "security_sec080_p2p_duplicate_json_keys_spec.py": {
       "bytes": 2281,
       "sha256": "e03100a5c8a63683af780acd758e38a5c144097e666f26187b26b8a3f3ac979d"
@@ -805,12 +809,12 @@
       "sha256": "54ea6023792517aa0c0ce4bc1d4563605073827b41cce497e36c655416717592"
     },
     "security_sec128_wallet_backup_json_preparse_depth_spec.py": {
-      "bytes": 6942,
-      "sha256": "eb80e493ed90d061dd42535f665e5bb16e9e5c78864d90e99d1c3447b68202ad"
+      "bytes": 6980,
+      "sha256": "121e7089a96a3ad11525c2a213621c61a4a1d6a37fe0d31997b03c85c2c8ef4c"
     },
     "security_sec129_wallet_inner_material_canonicality_spec.py": {
-      "bytes": 8815,
-      "sha256": "0308feae52383171221f4987539d5d743b0f09cdf1c85337635e0f9c5a4869cf"
+      "bytes": 8853,
+      "sha256": "7e8c965259e4508fb9c03ff504a8495583cf3a1764e14d6443bca52ff1ea6d6d"
     },
     "security_sec130_rpc_json_preparse_complexity_spec.py": {
       "bytes": 7209,
@@ -1056,6 +1060,10 @@
       "bytes": 2349,
       "sha256": "d6c32c253ad35a1d636a87dd6c400ee81314f61f28b526843e20aadd184a428a"
     },
+    "security_sec191_wallet_kdf_strength_spec.py": {
+      "bytes": 4758,
+      "sha256": "21d9cf3f230b7f8387d34a6a0772a14adb6cb5f72d6d6c24da6b7d8e2a1b0ba3"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -1105,8 +1113,8 @@
       "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
     },
     "wallet.py": {
-      "bytes": 19335,
-      "sha256": "1643199c2abc65507d4a843625fc1ce51defe630bef8a64c061d737c00ee79e9"
+      "bytes": 19735,
+      "sha256": "fa95dbe6cde71c237e52de69f443f94e7a5a75c532c22b3c6ba10d1a89dc1064"
     },
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,

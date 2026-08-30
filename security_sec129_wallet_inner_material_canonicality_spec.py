@@ -37,6 +37,7 @@ def authenticated_backup_with_plain(base_backup, passphrase, plain):
         r=kp["r"],
         p=kp["p"],
         dklen=kp["dklen"],
+        maxmem=wallet._SCRYPT_MAXMEM,
     )
     cipher = AESGCM(key).encrypt(nonce, plain, AAD)
     forged["ciphertext"] = base64.b64encode(cipher).decode("ascii")

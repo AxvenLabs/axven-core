@@ -31,19 +31,26 @@ def expect_rejected_before_scrypt(backup, label):
 
 def main():
     checks = 0
-    expected = {"n": 1 << 14, "r": 8, "p": 1, "dklen": 32}
-    assert wallet._SCRYPT_PARAMS == expected
+    current = {"n": 1 << 17, "r": 8, "p": 1, "dklen": 32}
+    legacy = {"n": 1 << 14, "r": 8, "p": 1, "dklen": 32}
+    assert wallet._SCRYPT_PARAMS == current
     checks += 1
-    print("[GREEN] canonical scrypt parameters pinned")
+    print("[GREEN] current scrypt parameters pinned to strengthened profile")
+
+    assert wallet._SCRYPT_LEGACY_PARAMS == legacy
+    assert wallet._validated_scrypt_params(dict(legacy)) == legacy
+    checks += 1
+    print("[GREEN] exact legacy scrypt profile retained for restore only")
 
     identity = wallet.WalletIdentity()
     backup = wallet.export_backup(identity, "sec077-passphrase")
+    assert backup["kdf_params"] == current
     restored = wallet.restore_backup(deepcopy(backup), "sec077-passphrase")
     assert restored.address_n == identity.address_n
     assert restored.address_m == identity.address_m
     assert restored.address_h == identity.address_h
     checks += 1
-    print("[GREEN] canonical backup round-trip preserved")
+    print("[GREEN] strengthened canonical backup round-trip preserved")
 
     bad_cases = []
 
@@ -60,7 +67,7 @@ def main():
     bad_cases.append(("unknown kdf parameter", b))
 
     b = deepcopy(backup)
-    b["kdf_params"]["n"] = str(1 << 14)
+    b["kdf_params"]["n"] = str(1 << 17)
     bad_cases.append(("string scrypt n", b))
 
     b = deepcopy(backup)
@@ -70,6 +77,10 @@ def main():
     b = deepcopy(backup)
     b["kdf_params"]["r"] = 8.0
     bad_cases.append(("float scrypt r", b))
+
+    b = deepcopy(backup)
+    b["kdf_params"]["n"] = 1 << 15
+    bad_cases.append(("intermediate unapproved scrypt n", b))
 
     b = deepcopy(backup)
     b["kdf_params"]["n"] = 1 << 20
@@ -91,8 +102,8 @@ def main():
         expect_rejected_before_scrypt(candidate, label)
         checks += 1
 
-    assert checks == 12
-    print(f"SEC-077 wallet backup KDF resource bounds: {checks}/12 GREEN")
+    assert checks == 14
+    print(f"SEC-077 wallet backup KDF resource bounds: {checks}/14 GREEN")
 
 
 if __name__ == "__main__":

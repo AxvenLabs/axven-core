@@ -152,11 +152,14 @@ class BackupError(ValueError):
     pass
 
 BACKUP_VERSION = 1
-_SCRYPT_N = 1 << 14
+_SCRYPT_LEGACY_N = 1 << 14
+_SCRYPT_N = 1 << 17
 _SCRYPT_R = 8
 _SCRYPT_P = 1
 _SCRYPT_DKLEN = 32
+_SCRYPT_MAXMEM = 256 * 1024 * 1024
 _SCRYPT_PARAMS = {"n": _SCRYPT_N, "r": _SCRYPT_R, "p": _SCRYPT_P, "dklen": _SCRYPT_DKLEN}
+_SCRYPT_LEGACY_PARAMS = {"n": _SCRYPT_LEGACY_N, "r": _SCRYPT_R, "p": _SCRYPT_P, "dklen": _SCRYPT_DKLEN}
 _BACKUP_ENVELOPE_FIELDS = frozenset({
     "version",
     "kdf",
@@ -210,10 +213,14 @@ def _preflight_backup_json_nesting(raw):
 def _validated_scrypt_params(value):
     if type(value) is not dict or set(value) != set(_SCRYPT_PARAMS):
         raise BackupError("unsupported scrypt parameters")
-    for name, expected in _SCRYPT_PARAMS.items():
-        if type(value[name]) is not int or value[name] != expected:
+    for name in _SCRYPT_PARAMS:
+        if type(value[name]) is not int:
             raise BackupError("unsupported scrypt parameters")
-    return _SCRYPT_PARAMS
+    if value == _SCRYPT_PARAMS:
+        return dict(_SCRYPT_PARAMS)
+    if value == _SCRYPT_LEGACY_PARAMS:
+        return dict(_SCRYPT_LEGACY_PARAMS)
+    raise BackupError("unsupported scrypt parameters")
 
 def _validated_backup_envelope(backup, passphrase):
     if type(backup) is not dict:
@@ -333,7 +340,8 @@ def export_backup(identity, passphrase: str):
     salt = os.urandom(16)
     nonce = os.urandom(12)
     key = hashlib.scrypt(passphrase.encode(), salt=salt, n=_SCRYPT_N,
-                         r=_SCRYPT_R, p=_SCRYPT_P, dklen=_SCRYPT_DKLEN)
+                         r=_SCRYPT_R, p=_SCRYPT_P, dklen=_SCRYPT_DKLEN,
+                         maxmem=_SCRYPT_MAXMEM)
     cipher = AESGCM(key).encrypt(nonce, plain, b"axven-wallet-backup-v1")
     return {
         "version": BACKUP_VERSION,
@@ -362,7 +370,8 @@ def restore_backup(backup, passphrase: str):
         if hashlib.sha256(cipher).hexdigest() != checksum:
             raise BackupError("backup checksum mismatch")
         key = hashlib.scrypt(passphrase.encode(), salt=salt, n=kp["n"],
-                             r=kp["r"], p=kp["p"], dklen=kp["dklen"])
+                             r=kp["r"], p=kp["p"], dklen=kp["dklen"],
+                             maxmem=_SCRYPT_MAXMEM)
         plain = AESGCM(key).decrypt(nonce, cipher, b"axven-wallet-backup-v1")
         _preflight_backup_json_nesting(plain)
         try:
