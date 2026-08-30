@@ -41,28 +41,28 @@ def main():
         raise AssertionError("canonical string recipient must reach wallet path")
     print("[GREEN] canonical string recipient reaches normal wallet path"); checks += 1
 
-    maximum = "N" + ("a" * 255)
-    try:
-        service.send(axven.SCHEME_ED25519, maximum, 1, 0)
-    except RuntimeError as exc:
-        assert str(exc) == "wallet not loaded"
-    else:
-        raise AssertionError("maximum bounded string recipient must reach wallet path")
-    print("[GREEN] legacy 256-character string boundary remains downstream-compatible"); checks += 1
+    legacy_maximum = "N" + ("a" * 255)
+    expect_value_error(
+        lambda: service.send(axven.SCHEME_ED25519, legacy_maximum, 1, 0),
+        "legacy 256-character string alias rejected at canonical boundary",
+        "invalid recipient address",
+    ); checks += 1
 
     expect_value_error(
         lambda: service.send(axven.SCHEME_ED25519, "N" + ("a" * 256), 1, 0),
-        "oversized string recipient preserves legacy bound error",
-        "recipient address too long",
+        "oversized string recipient rejected at canonical boundary",
+        "invalid recipient address",
     ); checks += 1
 
     validator_src = inspect.getsource(core_module.AxvenCore._validate_recipient_bound)
     assert (
         "type(recipient) is not str" in validator_src
-        and "len(recipient) > 256" in validator_src
+        and "len(recipient) != 41" in validator_src
+        and "recipient[0] not in" in validator_src
+        and "0123456789abcdef" in validator_src
         and "str(recipient)" not in validator_src
-    ), "recipient validator must not stringify attacker-controlled values"
-    print("[GREEN] recipient validator contains no attacker-controlled string coercion"); checks += 1
+    ), "recipient validator must enforce canonical text without coercion"
+    print("[GREEN] recipient validator enforces exact canonical text without coercion"); checks += 1
 
     send_src = inspect.getsource(core_module.AxvenCore.send)
     assert "_validate_recipient_bound(recipient)" in send_src

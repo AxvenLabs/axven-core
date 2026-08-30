@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 39030,
-      "sha256": "d135f56735215ab392b17d95d04244d23f5053d7dd18cebedca89a3af43e0722"
+      "bytes": 39350,
+      "sha256": "64803d42aa7a5756e720b7f8a9e672b10f320428a03bf016e13ad3558706c4bf"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5864,
@@ -517,8 +517,8 @@
       "sha256": "1b4944dc609d18c7119a22450e8b2e977a0d8191d73e963652ebb4e133018d1d"
     },
     "security_sec054_recipient_address_bounds_spec.py": {
-      "bytes": 1901,
-      "sha256": "110ae9128c56e01f03a3885e28cf1bf304841a160170a327069d8c4e50f0c944"
+      "bytes": 2072,
+      "sha256": "31b19da5cc8d045ad6ec38708626ed935c4bd6854bfc353dfbbf4c2855329d13"
     },
     "security_sec055_scheme_bounds_spec.py": {
       "bytes": 3237,
@@ -857,8 +857,8 @@
       "sha256": "ea33337a98d9d0a73599b5185895d31a33a23d4b7e1c8ab7ffce1238f6cf857f"
     },
     "security_sec141_recipient_type_domain_spec.py": {
-      "bytes": 3257,
-      "sha256": "ff8aec4a2fd249fbd75a26dc108fd7dd5f1e77d9557cb385df9a59c8665a477d"
+      "bytes": 3247,
+      "sha256": "1d86732ebfdd9a7426c972108edf09f530703dcbe55871bf48762c58c933407f"
     },
     "security_sec142_peer_retry_publication_atomicity_spec.py": {
       "bytes": 7027,
@@ -1019,6 +1019,10 @@
     "security_sec181_rpc_client_response_envelope_spec.py": {
       "bytes": 2713,
       "sha256": "e8688806cafce60ae51f10b2d06b5495ad4f036edbfc178bcd57b55b0fb6672c"
+    },
+    "security_sec182_wallet_recipient_canonicality_spec.py": {
+      "bytes": 2570,
+      "sha256": "b5fc486418306e3fcd5550205262555224d22b5c3702f9425df58e47cdb7ec61"
     },
     "setup.cmd": {
       "bytes": 172,

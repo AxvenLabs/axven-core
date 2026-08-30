@@ -1,9 +1,6 @@
 from core import AxvenCore
 
 
-MAX_RECIPIENT_LENGTH = 256
-
-
 class DummyIdentity:
     pass
 
@@ -18,8 +15,8 @@ def expect_downstream(fn, label):
     try:
         fn()
     except Exception as exc:
-        if isinstance(exc, ValueError) and str(exc) == "recipient address too long":
-            raise AssertionError(label + ": rejected too early") from exc
+        if isinstance(exc, ValueError) and "recipient" in str(exc).lower():
+            raise AssertionError(label + ": rejected by recipient guard") from exc
         print(f"[GREEN] {label}")
         return
     raise AssertionError(label)
@@ -29,7 +26,7 @@ def expect_bound(fn, label):
     try:
         fn()
     except ValueError as exc:
-        if str(exc) != "recipient address too long":
+        if "recipient" not in str(exc).lower():
             raise AssertionError(
                 f"{label}: wrong ValueError: {exc}"
             ) from exc
@@ -51,16 +48,19 @@ def main():
         "canonical recipient reaches normal send path",
     )
 
-    maximum = "N" + ("a" * (MAX_RECIPIENT_LENGTH - 1))
-    expect_downstream(
-        lambda: core.send("ed25519", maximum, 1, 0),
-        "maximum recipient length reaches normal send path",
+    # SEC-182 supersedes the old loose 256-character service allowance with
+    # the canonical Axven address width.  SEC-054 still owns the invariant
+    # that oversized recipient text is rejected before downstream work.
+    legacy_maximum = "N" + ("a" * 255)
+    expect_bound(
+        lambda: core.send("ed25519", legacy_maximum, 1, 0),
+        "legacy maximum recipient alias rejected at canonical boundary",
     )
 
     expect_bound(
         lambda: core.send(
             "ed25519",
-            "N" + ("a" * MAX_RECIPIENT_LENGTH),
+            "N" + ("a" * 256),
             1,
             0,
         ),
