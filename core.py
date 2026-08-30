@@ -55,6 +55,9 @@ class AxvenCore:
         self.pending = wallet.PendingTracker()
         self.p2p_server = None
         self._peer_lock = threading.RLock()
+        # SEC-199: remember the actual kernel-connected IP for each configured
+        # peer so DNS aliases cannot mint independent diversity/work identities.
+        self.peer_resolved_hosts = {}
         # Persist automatic configured-peer work budgets on the core, not
         # on a socket.  Reconnecting therefore cannot mint a fresh burst.
         self._outbound_sync_block_work_limiter = (
@@ -584,6 +587,39 @@ class AxvenCore:
         return normalized
 
     @staticmethod
+    def _canonical_resolved_peer_host(remote_host):
+        """Canonicalize a kernel-reported connected peer host as an IP."""
+        if type(remote_host) is not str or not remote_host:
+            raise ValueError("invalid resolved peer host")
+        host=remote_host
+        if host.startswith("[") and host.endswith("]"):
+            host=host[1:-1]
+        try:
+            return str(ipaddress.ip_address(host))
+        except ValueError as exc:
+            raise ValueError("resolved peer host must be IP address") from exc
+
+    def _admit_resolved_peer_host(self, peer, remote_host):
+        """Bind a configured peer to its actual IP and enforce resolved diversity."""
+        addr=self._parse_peer(peer)
+        remote_host=self._canonical_resolved_peer_host(remote_host)
+        group=self._peer_diversity_group(remote_host)
+        with _peer_guard(self):
+            if addr not in self.outbound_peers:
+                return True
+            if group is not None:
+                count=0
+                for other_addr,other_host in self.peer_resolved_hosts.items():
+                    if other_addr == addr or other_addr not in self.outbound_peers:
+                        continue
+                    if self._peer_diversity_group(other_host) == group:
+                        count += 1
+                if count >= self.MAX_CONFIGURED_PEERS_PER_DIVERSITY_GROUP:
+                    return False
+            self.peer_resolved_hosts[addr]=remote_host
+            return True
+
+    @staticmethod
     def _peer_health_timestamp():
         return datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
 
@@ -619,6 +655,7 @@ class AxvenCore:
         self.peer_consecutive_failures.pop(addr,None)
         self.peer_last_success_at.pop(addr,None)
         self.peer_last_failure_at.pop(addr,None)
+        self.peer_resolved_hosts.pop(addr,None)
         self.peer_health_current_state.pop(addr,None)
         self.peer_previous_health_state.pop(addr,None)
         self.peer_health_transition_count.pop(addr,None)
@@ -962,6 +999,10 @@ class AxvenCore:
         addr=self._parse_peer(peer)
         try:
             source_host=addr[0]
+            def remote_host_gate(remote_host):
+                nonlocal source_host
+                source_host=self._canonical_resolved_peer_host(remote_host)
+                return self._admit_resolved_peer_host(addr,source_host)
             block_gate=lambda: (
                 self._outbound_sync_block_work_limiter.consume(source_host)
             )
@@ -974,6 +1015,7 @@ class AxvenCore:
                 addr,p2p.PeerSession(self.chain,self.mempool),limit=128,
                 block_work_gate=block_gate,
                 block_signature_work_gate=signature_gate,
+                remote_host_gate=remote_host_gate,
             )
         except Exception as e:
             error=f"{type(e).__name__}: {e}"
@@ -1039,6 +1081,10 @@ class AxvenCore:
         batch=self._validate_service_int(batch,"sync batch",1,128)
         addr = self._parse_peer((host, port))
         source_host=addr[0]
+        def remote_host_gate(remote_host):
+            nonlocal source_host
+            source_host=self._canonical_resolved_peer_host(remote_host)
+            return True
         block_gate=lambda: (
             self._outbound_sync_block_work_limiter.consume(source_host)
         )
@@ -1052,4 +1098,5 @@ class AxvenCore:
             limit=batch,
             block_work_gate=block_gate,
             block_signature_work_gate=signature_gate,
+            remote_host_gate=remote_host_gate,
         )

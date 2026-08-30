@@ -1258,11 +1258,33 @@ class NodeServer:
         self._sock=None
         self._thread=None
 
-def connect_with_identity(address,timeout=3.0):
+def _apply_remote_host_gate(sock,remote_host_gate):
+    """Expose the kernel-connected remote IP before any peer handshake work."""
+    if remote_host_gate is None:
+        return None
+    try:
+        peername=sock.getpeername()
+    except (OSError,AttributeError) as exc:
+        raise ProtocolError("remote peer endpoint unavailable") from exc
+    if (
+        type(peername) not in (tuple,list)
+        or not peername
+        or type(peername[0]) is not str
+        or not peername[0]
+    ):
+        raise ProtocolError("invalid remote peer endpoint")
+    remote_host=peername[0]
+    if remote_host_gate(remote_host) is not True:
+        raise ProtocolError("outbound peer resolved diversity limit exceeded")
+    return remote_host
+
+
+def connect_with_identity(address,timeout=3.0,remote_host_gate=None):
     s=socket.create_connection(address,timeout=timeout)
     s.settimeout(timeout)
     deadline=(None if timeout is None else time.monotonic()+timeout)
     try:
+        _apply_remote_host_gate(s,remote_host_gate)
         peer=handshake(s,deadline=deadline)
         identity={
             key:peer[key]
@@ -1277,8 +1299,13 @@ def connect_with_identity(address,timeout=3.0):
     s.settimeout(timeout)
     return s,identity
 
-def connect(address,timeout=3.0):
-    s,_identity=connect_with_identity(address,timeout=timeout)
+def connect(address,timeout=3.0,remote_host_gate=None):
+    if remote_host_gate is None:
+        s,_identity=connect_with_identity(address,timeout=timeout)
+    else:
+        s,_identity=connect_with_identity(
+            address,timeout=timeout,remote_host_gate=remote_host_gate
+        )
     return s
 
 def request(sock,msg,deadline=None):
@@ -1299,10 +1326,14 @@ def request_status(sock,deadline=None):
 def sync_to_peer(
     address, session, limit=128, max_rounds=100,
     block_work_gate=None, block_signature_work_gate=None,
+    remote_host_gate=None,
 ):
     """Reconnect-friendly catch-up until empty reply or local work budget."""
     total=0
-    sock=connect(address)
+    if remote_host_gate is None:
+        sock=connect(address)
+    else:
+        sock=connect(address,remote_host_gate=remote_host_gate)
     try:
         for _ in range(max_rounds):
             reply=request(sock,{"type":"get_blocks","locator":session.locator(),"limit":limit})
