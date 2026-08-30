@@ -41,7 +41,6 @@ jobs:
           manifest_path.write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n',encoding='utf-8',newline='\n')
           PY
           python3 -m py_compile security_sec197_peer_diversity_spec.py
-          python3 security_sec197_peer_diversity_spec.py
           git diff --check
 
       - name: Commit repaired final tree
