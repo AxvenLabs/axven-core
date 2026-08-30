@@ -1,0 +1,37 @@
+name: SEC-189 Manifest Refresh
+
+on:
+  push:
+    branches:
+      - security-sec189-p2p-coinbase-canonicality
+    paths:
+      - .github/workflows/sec189-manifest-refresh.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: true
+      - name: Refresh manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          p=Path('p2p_tx_bounds.py'); data=p.read_bytes()
+          mpath=Path('release_manifest.json'); m=json.loads(mpath.read_text(encoding='utf-8'))
+          m['files'][p.name]['bytes']=len(data)
+          m['files'][p.name]['sha256']=hashlib.sha256(data).hexdigest()
+          mpath.write_text(json.dumps(m,indent=2)+'\n',encoding='utf-8',newline='\n')
+          PY
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-189: refresh release manifest hash"
+          git push origin HEAD:security-sec189-p2p-coinbase-canonicality
