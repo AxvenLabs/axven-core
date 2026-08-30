@@ -125,8 +125,8 @@
       "sha256": "4eb34e9a095719eb3e4919b59790ffa579ad5c69a28d812d86bdbbf32fc49f36"
     },
     "axven.py": {
-      "bytes": 74632,
-      "sha256": "9b89e9aaa294e7acbe92c0e10e21e0f664e7c7fd4fb504ebd63407b5a45e3456"
+      "bytes": 74737,
+      "sha256": "9e7063f3eae04e091426fe0eda628b7f8d253816dce0bb60f7ab7417244f6cb8"
     },
     "axven_cli.py": {
       "bytes": 10505,
@@ -1041,12 +1041,20 @@
       "sha256": "22eb4fd30017bd8a6f1c0fbd9f41be27c3aee1e11e355076ad7554fdc432a35c"
     },
     "security_sec187_mldsa_wallet_signer_migration_spec.py": {
-      "bytes": 4971,
-      "sha256": "188ad74b3deeda6620c0b9a26834a8a88f0e11c0bccb9f54ef9cab1d237ef883"
+      "bytes": 5629,
+      "sha256": "95f25ce23d37e28916770fc4cb90825797695528769ca112e9874841669c601a"
     },
     "security_sec188_legacy_mldsa_recovery_isolation_spec.py": {
       "bytes": 3017,
       "sha256": "b50673d1f9888e7a898d1d3c6143f51125100aa05c12097b99c8360efa8e2686"
+    },
+    "security_sec190_legacy_mldsa_recovery_only_spec.py": {
+      "bytes": 2196,
+      "sha256": "9de41267f3d7e1771a1defbee5408364e8c6f8dea672fc2cf6b632ec8f662edb"
+    },
+    "security_sec190_legacy_mldsa_signing_disabled_spec.py": {
+      "bytes": 2349,
+      "sha256": "d6c32c253ad35a1d636a87dd6c400ee81314f61f28b526843e20aadd184a428a"
     },
     "setup.cmd": {
       "bytes": 172,
@@ -1097,8 +1105,8 @@
       "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
     },
     "wallet.py": {
-      "bytes": 18855,
-      "sha256": "cda110d68bc037663bb11ed437750d10ff04ee8a515117417013f4aa2d1f28f0"
+      "bytes": 19335,
+      "sha256": "1643199c2abc65507d4a843625fc1ce51defe630bef8a64c061d737c00ee79e9"
     },
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,

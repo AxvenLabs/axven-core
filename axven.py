@@ -164,7 +164,10 @@ class MLDSAWallet:
     def sign(self,sh):
         if self._private is not None:
             return self._private.sign(sh)
-        return _mldsa().sign(self._secret,sh)
+        raise RuntimeError(
+            "legacy ML-DSA expanded keys are recovery-only; "
+            "migrate to a seed key before signing"
+        )
     def sign_input(self,tx,i):
         inp=tx._in()[i]; return {"prev_txid":inp.prev_txid,"index":inp.index,"scheme":SCHEME_ML_DSA,"signature":_b64e(self.sign(tx.sighash())),"public_key":_b64e(self.public_key)}
 class HybridWallet:
