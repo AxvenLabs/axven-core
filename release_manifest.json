@@ -1085,8 +1085,8 @@
       "sha256": "621e9c235acbd8c93e92209cbf0ff63e82308ad07dcb25058ba222fc416f0b42"
     },
     "security_sec197_peer_diversity_spec.py": {
-      "bytes": 6150,
-      "sha256": "f9a8259bf3e443025ab6792a0e8d5ab18f169b94c620f4a77cb3f7ada381f958"
+      "bytes": 6079,
+      "sha256": "b0b32889dabe13be4836178b3d874797bee41121421271dbf50fde3c1d5423c4"
     },
     "setup.cmd": {
       "bytes": 172,
