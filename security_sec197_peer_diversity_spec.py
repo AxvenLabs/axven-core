@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import inspect
 import json
 import os
 import tempfile
@@ -152,16 +151,17 @@ def main():
             dd.load_peers() == good,
         )
 
-    add_src=inspect.getsource(AxvenCore.add_outbound_peer)
-    save_src=inspect.getsource(DataDir.save_peers)
-    load_src=inspect.getsource(DataDir.load_peers)
+    same_ip=AxvenCore()
+    for port in range(26001,26005):
+        same_ip.add_outbound_peer(("8.8.4.4",port))
+    same_ip_before=list(same_ip.outbound_peers)
     green(
-        "diversity gates precede runtime mutation and persistence publication",
-        "_validate_peer_diversity" in add_src
-        and add_src.index("_validate_peer_diversity")
-            < add_src.index("self.outbound_peers.append(addr)")
-        and "_validate_peer_diversity" in save_src
-        and "_validate_peer_diversity" in load_src,
+        "different ports on one IP still consume distinct Sybil group slots",
+        expect_value_error(
+            lambda: same_ip.add_outbound_peer(("8.8.4.4",26005)),
+            "configured peer diversity limit exceeded",
+        )
+        and same_ip.outbound_peers == same_ip_before,
     )
 
     green(
