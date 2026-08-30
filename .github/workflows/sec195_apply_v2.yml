@@ -1,0 +1,207 @@
+name: SEC-195 apply v2
+
+on:
+  push:
+    branches:
+      - security-sec195-manual-sync-work-budget
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13.15'
+      - name: Apply and verify SEC-195
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          @'
+          from pathlib import Path
+          import ast, hashlib, json, textwrap
+
+          core_path=Path('core.py')
+          src=core_path.read_text(encoding='utf-8')
+          tree=ast.parse(src)
+          funcs=[]
+          for node in tree.body:
+              if isinstance(node,ast.ClassDef) and node.name=='AxvenCore':
+                  funcs=[child for child in node.body if isinstance(child,(ast.FunctionDef,ast.AsyncFunctionDef)) and child.name=='sync_peer']
+          if len(funcs)!=1:
+              raise SystemExit(f'sync_peer AST count={len(funcs)}')
+          fn=funcs[0]
+          lines=src.splitlines(keepends=True)
+          old=''.join(lines[fn.lineno-1:fn.end_lineno])
+          if 'block_work_gate' in old or 'block_signature_work_gate' in old:
+              raise SystemExit('manual sync already gated unexpectedly')
+          new='''    def sync_peer(self, host, port, batch=128):
+              batch=self._validate_service_int(batch,"sync batch",1,128)
+              addr = self._parse_peer((host, port))
+              source_host=addr[0]
+              block_gate=lambda: (
+                  self._outbound_sync_block_work_limiter.consume(source_host)
+              )
+              signature_gate=lambda cost: (
+                  self._outbound_sync_block_signature_work_limiter.consume(
+                      source_host,cost
+                  )
+              )
+              return p2p.sync_to_peer(
+                  addr, p2p.PeerSession(self.chain, self.mempool),
+                  limit=batch,
+                  block_work_gate=block_gate,
+                  block_signature_work_gate=signature_gate,
+              )'''
+          lines[fn.lineno-1:fn.end_lineno]=[new+'\n']
+          patched=''.join(lines)
+          if patched==src or patched.count('def sync_peer(self, host, port, batch=128):')!=1:
+              raise SystemExit('core patch did not produce one changed sync_peer')
+          core_path.write_text(patched,encoding='utf-8',newline='\n')
+
+          sec121_path=Path('security_sec121_outbound_sync_work_budget_spec.py')
+          sec121=sec121_path.read_text(encoding='utf-8')
+          replacements={
+              '"production wiring meters only automatic configured-peer catch-up"':'"production wiring meters configured and manual peer catch-up"',
+              'and "block_work_gate" not in manual_sync_src':'and "_outbound_sync_block_work_limiter.consume(source_host)" in manual_sync_src\n        and "block_work_gate=block_gate" in manual_sync_src',
+              'and "block_signature_work_gate" not in manual_sync_src':'and "_outbound_sync_block_signature_work_limiter.consume" in manual_sync_src\n        and "block_signature_work_gate=signature_gate" in manual_sync_src',
+          }
+          for old_text,new_text in replacements.items():
+              if sec121.count(old_text)!=1:
+                  raise SystemExit(f'SEC-121 anchor mismatch: {old_text}')
+              sec121=sec121.replace(old_text,new_text)
+          sec121_path.write_text(sec121,encoding='utf-8',newline='\n')
+
+          spec=textwrap.dedent(r'''#!/usr/bin/env python3
+          """SEC-195: meter explicit/manual peer sync with persistent outbound work budgets."""
+          from __future__ import annotations
+          import inspect
+          import axven
+          import core as core_module
+          import p2p
+
+          class FakeClock:
+              def __init__(self): self.now=1000.0
+              def __call__(self): return self.now
+
+          def install_tiny_budgets(core,clock):
+              core._outbound_sync_block_work_limiter=p2p._OutboundSyncBlockWorkLimiter(
+                  clock=clock,global_rate=1,global_burst=2,
+                  per_host_rate=1,per_host_burst=2,max_hosts=4,
+              )
+              core._outbound_sync_block_signature_work_limiter=p2p._OutboundSyncBlockSignatureWorkLimiter(
+                  clock=clock,global_rate=1,global_burst=2,
+                  per_host_rate=1,per_host_burst=2,max_hosts=4,
+              )
+
+          def main():
+              checks=[]
+              def green(name,condition=True):
+                  assert condition,name
+                  checks.append(name); print('[GREEN]',name)
+
+              manual=core_module.AxvenCore(); clock=FakeClock(); install_tiny_budgets(manual,clock)
+              block_id=id(manual._outbound_sync_block_work_limiter)
+              sig_id=id(manual._outbound_sync_block_signature_work_limiter)
+              calls=[]; original=p2p.sync_to_peer
+              def fake_sync(address,session,**kwargs):
+                  bg=kwargs.get('block_work_gate'); sg=kwargs.get('block_signature_work_gate')
+                  assert callable(bg) and callable(sg)
+                  b=bg(); s=sg(1); calls.append((address,b,s)); return int(b and s)
+              p2p.sync_to_peer=fake_sync
+              try:
+                  first=manual.sync_peer('198.51.100.7',18444,128)
+                  second=manual.sync_peer('198.51.100.7',18444,128)
+                  third=manual.sync_peer('198.51.100.7',18444,128)
+              finally:p2p.sync_to_peer=original
+              green('manual sync wires persistent block and signature gates',
+                    [r[1:] for r in calls]==[(True,True),(True,True),(False,False)])
+              green('manual reconnects preserve limiter instances',
+                    id(manual._outbound_sync_block_work_limiter)==block_id and
+                    id(manual._outbound_sync_block_signature_work_limiter)==sig_id)
+              green('manual sync stops at exhausted persistent budget',(first,second,third)==(1,1,0))
+
+              shared=core_module.AxvenCore(); peer=shared.add_outbound_peer(('203.0.113.9',18444))
+              shared_clock=FakeClock(); install_tiny_budgets(shared,shared_clock); rows=[]
+              def fake_shared(address,session,**kwargs):
+                  b=kwargs['block_work_gate'](); s=kwargs['block_signature_work_gate'](1)
+                  rows.append((address,b,s)); return int(b and s)
+              p2p.sync_to_peer=fake_shared
+              try:
+                  explicit=shared.sync_peer(peer[0],peer[1],128)
+                  configured=shared.sync_outbound_peer(peer)
+                  explicit_again=shared.sync_peer(peer[0],peer[1],128)
+              finally:p2p.sync_to_peer=original
+              green('manual and configured sync share one per-host budget',
+                    (explicit,configured['accepted'],explicit_again)==(1,1,0) and
+                    [r[1:] for r in rows]==[(True,True),(True,True),(False,False)])
+              green('configured peer remains healthy at shared budget edge',
+                    configured['ok'] is True and shared.peer_last_error.get(peer) is None)
+
+              manual_src=inspect.getsource(core_module.AxvenCore.sync_peer)
+              auto_src=inspect.getsource(core_module.AxvenCore.sync_outbound_peer)
+              green('production manual sync reuses core-owned limiters',
+                    '_outbound_sync_block_work_limiter.consume(source_host)' in manual_src and
+                    '_outbound_sync_block_signature_work_limiter.consume' in manual_src and
+                    'block_work_gate=block_gate' in manual_src and
+                    'block_signature_work_gate=signature_gate' in manual_src and
+                    '_OutboundSyncBlockWorkLimiter(' not in manual_src)
+              green('automatic configured sync budget wiring remains present',
+                    '_outbound_sync_block_work_limiter.consume(source_host)' in auto_src and
+                    '_outbound_sync_block_signature_work_limiter.consume' in auto_src)
+              green('p2p catch-up remains caller-gated with bounded default rounds',
+                    inspect.signature(p2p.sync_to_peer).parameters['max_rounds'].default==100 and
+                    inspect.signature(p2p.sync_to_peer).parameters['limit'].default==128)
+              green('SEC-195 preserves canonical chain and PQ identity',
+                    axven.CHAIN_ID=='axven-devnet-2' and
+                    axven.CONFIG_FINGERPRINT=='ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae' and
+                    axven.CHAIN_CONFIG['pq_hybrid_activation_height']==2000 and
+                    axven.CHAIN_CONFIG['pq_pure_activation_height']==5000 and
+                    axven.Blockchain().tip.hash()=='a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3')
+              assert len(checks)==9
+              print('SEC-195 manual sync work budget: 9/9 GREEN')
+
+          if __name__=='__main__': main()
+          ''')
+          spec_path=Path('security_sec195_manual_sync_work_budget_spec.py')
+          spec_path.write_text(spec,encoding='utf-8',newline='\n')
+
+          # Verify the intended patch before touching the manifest.
+          final_core=core_path.read_text(encoding='utf-8')
+          if 'block_work_gate=block_gate' not in final_core[final_core.index('    def sync_peer('):]:
+              raise SystemExit('manual sync gate verification failed')
+
+          manifest_path=Path('release_manifest.json')
+          manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
+          for path in ('core.py','security_sec121_outbound_sync_work_budget_spec.py','security_sec195_manual_sync_work_budget_spec.py'):
+              data=Path(path).read_bytes()
+              manifest['files'][path]={'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+          manifest_path.write_text(json.dumps(manifest,indent=2,ensure_ascii=False)+'\n',encoding='utf-8',newline='\n')
+          '@ | Set-Content -Encoding utf8 apply_sec195_v2.py
+          python apply_sec195_v2.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m py_compile core.py security_sec121_outbound_sync_work_budget_spec.py security_sec195_manual_sync_work_budget_spec.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python security_sec195_manual_sync_work_budget_spec.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Remove-Item apply_sec195_v2.py
+          git config user.name 'AxvenLabs'
+          git config user.email 'actions@users.noreply.github.com'
+          git rm .github/workflows/sec195_apply_v2.yml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git add core.py security_sec121_outbound_sync_work_budget_spec.py security_sec195_manual_sync_work_budget_spec.py release_manifest.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $changed = git diff --cached --name-only
+          if ($changed -notcontains 'core.py' -or $changed -notcontains 'security_sec195_manual_sync_work_budget_spec.py' -or $changed -notcontains 'release_manifest.json') { throw 'required SEC-195 diff missing' }
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git commit -m 'SEC-195: Meter manual outbound sync work'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git push origin HEAD:security-sec195-manual-sync-work-budget
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
