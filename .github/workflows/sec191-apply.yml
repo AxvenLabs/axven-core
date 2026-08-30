@@ -1,0 +1,384 @@
+name: SEC-191 Wallet KDF Apply
+
+on:
+  push:
+    branches:
+      - security-sec191-wallet-kdf-strength
+    paths:
+      - .github/workflows/sec191-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13.15'
+      - name: Apply SEC-191 and refresh manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one patch anchor, found {count}")
+              p.write_text(text.replace(old, new), encoding="utf-8", newline="\n")
+
+          replace_once(
+              "wallet.py",
+              '''BACKUP_VERSION = 1
+          _SCRYPT_N = 1 << 14
+          _SCRYPT_R = 8
+          _SCRYPT_P = 1
+          _SCRYPT_DKLEN = 32
+          _SCRYPT_PARAMS = {"n": _SCRYPT_N, "r": _SCRYPT_R, "p": _SCRYPT_P, "dklen": _SCRYPT_DKLEN}
+          ''',
+              '''BACKUP_VERSION = 1
+          _SCRYPT_LEGACY_N = 1 << 14
+          _SCRYPT_N = 1 << 17
+          _SCRYPT_R = 8
+          _SCRYPT_P = 1
+          _SCRYPT_DKLEN = 32
+          _SCRYPT_MAXMEM = 256 * 1024 * 1024
+          _SCRYPT_PARAMS = {"n": _SCRYPT_N, "r": _SCRYPT_R, "p": _SCRYPT_P, "dklen": _SCRYPT_DKLEN}
+          _SCRYPT_LEGACY_PARAMS = {"n": _SCRYPT_LEGACY_N, "r": _SCRYPT_R, "p": _SCRYPT_P, "dklen": _SCRYPT_DKLEN}
+          ''',
+          )
+
+          replace_once(
+              "wallet.py",
+              '''def _validated_scrypt_params(value):
+              if type(value) is not dict or set(value) != set(_SCRYPT_PARAMS):
+                  raise BackupError("unsupported scrypt parameters")
+              for name, expected in _SCRYPT_PARAMS.items():
+                  if type(value[name]) is not int or value[name] != expected:
+                      raise BackupError("unsupported scrypt parameters")
+              return _SCRYPT_PARAMS
+          ''',
+              '''def _validated_scrypt_params(value):
+              if type(value) is not dict or set(value) != set(_SCRYPT_PARAMS):
+                  raise BackupError("unsupported scrypt parameters")
+              for name in _SCRYPT_PARAMS:
+                  if type(value[name]) is not int:
+                      raise BackupError("unsupported scrypt parameters")
+              if value == _SCRYPT_PARAMS:
+                  return dict(_SCRYPT_PARAMS)
+              if value == _SCRYPT_LEGACY_PARAMS:
+                  return dict(_SCRYPT_LEGACY_PARAMS)
+              raise BackupError("unsupported scrypt parameters")
+          ''',
+          )
+
+          replace_once(
+              "wallet.py",
+              '''    key = hashlib.scrypt(passphrase.encode(), salt=salt, n=_SCRYPT_N,
+                               r=_SCRYPT_R, p=_SCRYPT_P, dklen=_SCRYPT_DKLEN)
+          ''',
+              '''    key = hashlib.scrypt(passphrase.encode(), salt=salt, n=_SCRYPT_N,
+                               r=_SCRYPT_R, p=_SCRYPT_P, dklen=_SCRYPT_DKLEN,
+                               maxmem=_SCRYPT_MAXMEM)
+          ''',
+          )
+
+          replace_once(
+              "wallet.py",
+              '''        key = hashlib.scrypt(passphrase.encode(), salt=salt, n=kp["n"],
+                                   r=kp["r"], p=kp["p"], dklen=kp["dklen"])
+          ''',
+              '''        key = hashlib.scrypt(passphrase.encode(), salt=salt, n=kp["n"],
+                                   r=kp["r"], p=kp["p"], dklen=kp["dklen"],
+                                   maxmem=_SCRYPT_MAXMEM)
+          ''',
+          )
+
+          sec077 = r'''#!/usr/bin/env python3
+          """SEC-077 wallet backup KDF resource bounds contract."""
+          from __future__ import annotations
+
+          from copy import deepcopy
+
+          import wallet
+
+
+          def expect_rejected_before_scrypt(backup, label):
+              original = wallet.hashlib.scrypt
+              calls = []
+
+              def forbidden(*args, **kwargs):
+                  calls.append((args, kwargs))
+                  raise AssertionError("scrypt must not run for rejected backup parameters")
+
+              wallet.hashlib.scrypt = forbidden
+              try:
+                  try:
+                      wallet.restore_backup(backup, "sec077-passphrase")
+                  except wallet.BackupError:
+                      pass
+                  else:
+                      raise AssertionError(label + " accepted")
+              finally:
+                  wallet.hashlib.scrypt = original
+              assert not calls, label + " reached scrypt"
+              print("[GREEN]", label, "rejected before scrypt")
+
+
+          def main():
+              checks = 0
+              current = {"n": 1 << 17, "r": 8, "p": 1, "dklen": 32}
+              legacy = {"n": 1 << 14, "r": 8, "p": 1, "dklen": 32}
+              assert wallet._SCRYPT_PARAMS == current
+              checks += 1
+              print("[GREEN] current scrypt parameters pinned to strengthened profile")
+
+              assert wallet._SCRYPT_LEGACY_PARAMS == legacy
+              assert wallet._validated_scrypt_params(dict(legacy)) == legacy
+              checks += 1
+              print("[GREEN] exact legacy scrypt profile retained for restore only")
+
+              identity = wallet.WalletIdentity()
+              backup = wallet.export_backup(identity, "sec077-passphrase")
+              assert backup["kdf_params"] == current
+              restored = wallet.restore_backup(deepcopy(backup), "sec077-passphrase")
+              assert restored.address_n == identity.address_n
+              assert restored.address_m == identity.address_m
+              assert restored.address_h == identity.address_h
+              checks += 1
+              print("[GREEN] strengthened canonical backup round-trip preserved")
+
+              bad_cases = []
+
+              b = deepcopy(backup)
+              b["kdf_params"] = None
+              bad_cases.append(("non-object kdf_params", b))
+
+              b = deepcopy(backup)
+              del b["kdf_params"]["n"]
+              bad_cases.append(("missing kdf parameter", b))
+
+              b = deepcopy(backup)
+              b["kdf_params"]["extra"] = 1
+              bad_cases.append(("unknown kdf parameter", b))
+
+              b = deepcopy(backup)
+              b["kdf_params"]["n"] = str(1 << 17)
+              bad_cases.append(("string scrypt n", b))
+
+              b = deepcopy(backup)
+              b["kdf_params"]["n"] = True
+              bad_cases.append(("boolean scrypt n", b))
+
+              b = deepcopy(backup)
+              b["kdf_params"]["r"] = 8.0
+              bad_cases.append(("float scrypt r", b))
+
+              b = deepcopy(backup)
+              b["kdf_params"]["n"] = 1 << 15
+              bad_cases.append(("intermediate unapproved scrypt n", b))
+
+              b = deepcopy(backup)
+              b["kdf_params"]["n"] = 1 << 20
+              bad_cases.append(("oversized scrypt n", b))
+
+              b = deepcopy(backup)
+              b["kdf_params"]["r"] = 9
+              bad_cases.append(("noncanonical scrypt r", b))
+
+              b = deepcopy(backup)
+              b["kdf_params"]["p"] = 2
+              bad_cases.append(("noncanonical scrypt p", b))
+
+              b = deepcopy(backup)
+              b["kdf_params"]["dklen"] = 64
+              bad_cases.append(("noncanonical scrypt dklen", b))
+
+              for label, candidate in bad_cases:
+                  expect_rejected_before_scrypt(candidate, label)
+                  checks += 1
+
+              assert checks == 14
+              print(f"SEC-077 wallet backup KDF resource bounds: {checks}/14 GREEN")
+
+
+          if __name__ == "__main__":
+              main()
+          '''
+          # Remove YAML indentation from the embedded source.
+          import textwrap
+          Path("security_sec077_wallet_kdf_resource_bounds_spec.py").write_text(
+              textwrap.dedent(sec077), encoding="utf-8", newline="\n")
+
+          sec191 = r'''#!/usr/bin/env python3
+          """SEC-191: strengthen wallet backup scrypt while preserving exact legacy restore."""
+          from __future__ import annotations
+
+          import base64
+          import hashlib
+          import json
+          from copy import deepcopy
+
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+          import axven
+          import wallet
+
+
+          def make_legacy_backup(identity, passphrase):
+              material = {
+                  "ed_private": base64.b64encode(wallet._raw_ed_private(identity)).decode("ascii"),
+                  "ml_public": base64.b64encode(identity.ml_public_key).decode("ascii"),
+                  "ml_secret": base64.b64encode(identity.ml_secret_key).decode("ascii"),
+              }
+              plain = json.dumps(material, sort_keys=True, separators=(",", ":")).encode()
+              salt = b"L" * 16
+              nonce = b"N" * 12
+              key = hashlib.scrypt(
+                  passphrase.encode(),
+                  salt=salt,
+                  n=1 << 14,
+                  r=8,
+                  p=1,
+                  dklen=32,
+                  maxmem=wallet._SCRYPT_MAXMEM,
+              )
+              cipher = AESGCM(key).encrypt(nonce, plain, b"axven-wallet-backup-v1")
+              return {
+                  "version": wallet.BACKUP_VERSION,
+                  "kdf": "scrypt",
+                  "kdf_params": {"n": 1 << 14, "r": 8, "p": 1, "dklen": 32},
+                  "cipher": "aes-256-gcm",
+                  "salt": base64.b64encode(salt).decode("ascii"),
+                  "nonce": base64.b64encode(nonce).decode("ascii"),
+                  "ciphertext": base64.b64encode(cipher).decode("ascii"),
+                  "checksum": hashlib.sha256(cipher).hexdigest(),
+              }
+
+
+          def main():
+              checks = []
+
+              def green(name, condition=True):
+                  assert condition, name
+                  checks.append(name)
+                  print(f"[GREEN] {name}")
+
+              current = {"n": 1 << 17, "r": 8, "p": 1, "dklen": 32}
+              legacy = {"n": 1 << 14, "r": 8, "p": 1, "dklen": 32}
+              green("new backups pin the strengthened scrypt profile", wallet._SCRYPT_PARAMS == current)
+              green("legacy restore profile remains exact", wallet._SCRYPT_LEGACY_PARAMS == legacy)
+              green("scrypt memory ceiling is fixed at 256 MiB", wallet._SCRYPT_MAXMEM == 256 * 1024 * 1024)
+
+              identity = wallet.WalletIdentity()
+              new_backup = wallet.export_backup(identity, "sec191-new-pass")
+              green("new export advertises only the strengthened profile", new_backup["kdf_params"] == current)
+              restored = wallet.restore_backup(deepcopy(new_backup), "sec191-new-pass")
+              green(
+                  "strengthened backup round-trip preserves identity",
+                  restored.address_n == identity.address_n
+                  and restored.address_m == identity.address_m
+                  and restored.address_h == identity.address_h,
+              )
+
+              legacy_backup = make_legacy_backup(identity, "sec191-legacy-pass")
+              legacy_restored = wallet.restore_backup(legacy_backup, "sec191-legacy-pass")
+              green(
+                  "exact legacy backup remains restorable",
+                  legacy_restored.address_n == identity.address_n
+                  and legacy_restored.address_m == identity.address_m
+                  and legacy_restored.address_h == identity.address_h,
+              )
+
+              candidate = deepcopy(new_backup)
+              candidate["kdf_params"]["n"] = 1 << 15
+              original = wallet.hashlib.scrypt
+              calls = []
+
+              def forbidden(*args, **kwargs):
+                  calls.append((args, kwargs))
+                  raise AssertionError("unapproved KDF parameters reached scrypt")
+
+              wallet.hashlib.scrypt = forbidden
+              try:
+                  try:
+                      wallet.restore_backup(candidate, "sec191-new-pass")
+                  except wallet.BackupError:
+                      pass
+                  else:
+                      raise AssertionError("intermediate scrypt profile accepted")
+              finally:
+                  wallet.hashlib.scrypt = original
+              green("unapproved KDF profile rejects before scrypt", not calls)
+
+              real_scrypt = wallet.hashlib.scrypt
+              tracked = []
+
+              def tracking_scrypt(password, **kwargs):
+                  tracked.append(dict(kwargs))
+                  return real_scrypt(password, **kwargs)
+
+              wallet.hashlib.scrypt = tracking_scrypt
+              try:
+                  tracked_backup = wallet.export_backup(identity, "sec191-maxmem-pass")
+                  wallet.restore_backup(tracked_backup, "sec191-maxmem-pass")
+              finally:
+                  wallet.hashlib.scrypt = real_scrypt
+              green(
+                  "export and restore enforce the fixed scrypt memory ceiling",
+                  len(tracked) == 2
+                  and all(call.get("maxmem") == wallet._SCRYPT_MAXMEM for call in tracked)
+                  and all(call.get("n") == 1 << 17 for call in tracked),
+              )
+
+              green(
+                  "chain identity and PQ activation semantics unchanged",
+                  axven.CHAIN_ID == "axven-devnet-2"
+                  and axven.CONFIG_FINGERPRINT == "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae"
+                  and axven.CHAIN_CONFIG["pq_hybrid_activation_height"] == 2000
+                  and axven.CHAIN_CONFIG["pq_pure_activation_height"] == 5000,
+              )
+
+              print(f"SEC-191 wallet KDF strength: {len(checks)}/{len(checks)} GREEN")
+
+
+          if __name__ == "__main__":
+              main()
+          '''
+          Path("security_sec191_wallet_kdf_strength_spec.py").write_text(
+              textwrap.dedent(sec191), encoding="utf-8", newline="\n")
+
+          manifest_path = Path("release_manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          names = [
+              "wallet.py",
+              "security_sec077_wallet_kdf_resource_bounds_spec.py",
+              "security_sec191_wallet_kdf_strength_spec.py",
+          ]
+          for name in names:
+              data = Path(name).read_bytes()
+              manifest["files"][name] = {
+                  "bytes": len(data),
+                  "sha256": hashlib.sha256(data).hexdigest(),
+              }
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+              newline="\n",
+          )
+          PY
+          git diff --check
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add wallet.py security_sec077_wallet_kdf_resource_bounds_spec.py security_sec191_wallet_kdf_strength_spec.py release_manifest.json
+          git diff --cached --quiet && { echo "SEC-191 patch produced no changes"; exit 1; }
+          git commit -m "SEC-191: strengthen wallet backup scrypt profile"
+          git push origin HEAD:security-sec191-wallet-kdf-strength
