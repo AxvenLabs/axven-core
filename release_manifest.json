@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 39350,
-      "sha256": "64803d42aa7a5756e720b7f8a9e672b10f320428a03bf016e13ad3558706c4bf"
+      "bytes": 39749,
+      "sha256": "46f88fa7461b837105403ba04b083b12cf1d71cf8c14831b4bd24b42d46e68c8"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5864,
@@ -781,8 +781,8 @@
       "sha256": "d533ec8b43916573370a0d88a3436b0de2e416e2a7226cfa548b3c163a339e4f"
     },
     "security_sec121_outbound_sync_work_budget_spec.py": {
-      "bytes": 9270,
-      "sha256": "9e672197566e8013cdd368f457515321450033bb745c651476238a479a4adf0c"
+      "bytes": 9457,
+      "sha256": "1bf5066281001c24df3bbaf284ab74f3431d742534dbf76907d87665fcc68a82"
     },
     "security_sec122_p2p_inflight_frame_budget_spec.py": {
       "bytes": 7261,
@@ -1143,6 +1143,10 @@
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
       "sha256": "0826cd7f03dca3bfa679c0052ae749d2adb0195eea8c065fa8ebb197b9a54804"
+    },
+    "security_sec195_manual_sync_work_budget_spec.py": {
+      "bytes": 4648,
+      "sha256": "59835abf56cf192b0cf101a86403e6cfa5e674f89c0aac2f38c610fd1e26c12e"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
