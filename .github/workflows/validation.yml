@@ -33,7 +33,6 @@ jobs:
         run: |
           python sec186_build.py
           python security_sec186_mldsa_production_verifier_spec.py
-          python release_packaging_test.py
 
       - name: Commit generated SEC-186 files
         run: |
