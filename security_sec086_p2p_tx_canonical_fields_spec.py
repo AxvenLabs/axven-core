@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SEC-086 rejects unknown top-level fields in P2P transaction payloads."""
+"""SEC-086 rejects unknown and semantically misplaced fields in P2P transactions."""
 
 import axven
 import p2p
@@ -63,10 +63,12 @@ def main():
         {"type": "tx", "tx": {"inputs": [], "outputs": []}}
     )
     assert reply == {"type": "accepted", "kind": "tx", "id": "sec086"}
-    checks.append("canonical tx fields preserved")
-    print("[GREEN] canonical tx fields preserved")
+    checks.append("canonical regular tx fields preserved")
+    print("[GREEN] canonical regular tx fields preserved")
 
-    reply = session.handle(
+    rejected(
+        "coinbase_height rejected on regular transaction",
+        session,
         {
             "type": "tx",
             "tx": {
@@ -74,11 +76,29 @@ def main():
                 "outputs": [],
                 "coinbase_height": 1,
             },
+        },
+    )
+
+    reply = session.handle(
+        {
+            "type": "tx",
+            "tx": {
+                "inputs": [
+                    {
+                        "prev_txid": "0" * 64,
+                        "index": 0xFFFFFFFF,
+                        "signature": "",
+                        "public_key": "",
+                    }
+                ],
+                "outputs": [],
+                "coinbase_height": 1,
+            },
         }
     )
     assert reply == {"type": "accepted", "kind": "tx", "id": "sec086"}
-    checks.append("known optional tx field preserved")
-    print("[GREEN] known optional tx field preserved")
+    checks.append("coinbase_height preserved on canonical coinbase")
+    print("[GREEN] coinbase_height preserved on canonical coinbase")
 
     print(f"SEC-086 canonical P2P tx fields: {len(checks)}/{len(checks)} GREEN")
 
