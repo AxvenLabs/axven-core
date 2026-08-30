@@ -1,0 +1,124 @@
+name: SEC-197 Apply
+
+on:
+  push:
+    branches:
+      - security-sec197-outbound-peer-diversity
+    paths:
+      - .github/workflows/sec197-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13.15'
+      - name: Install pinned Axven toolchain
+        shell: bash
+        run: |
+          python -m pip install "pip==26.2.1" "setuptools==84.0.0" "wheel==0.48.0" "packaging==26.3"
+          python -m pip install -e ".[legacy-mldsa-recovery]"
+          python -m pip check
+      - name: Prove fail-first and apply SEC-197
+        shell: python
+        run: |
+          from pathlib import Path
+          import hashlib
+          import json
+          import subprocess
+
+          fail = subprocess.run(
+              ["python", "security_sec197_outbound_peer_diversity_spec.py"],
+              text=True,
+          )
+          if fail.returncode == 0:
+              raise SystemExit("SEC-197 fail-first unexpectedly passed before hardening")
+          print("[GREEN] SEC-197 fail-first reproduced outbound peer concentration gap")
+
+          core = Path("core.py")
+          text = core.read_text(encoding="utf-8")
+
+          old = "from typing import Optional, Tuple\nimport math\nimport threading\n"
+          new = "from typing import Optional, Tuple\nimport ipaddress\nimport math\nimport threading\n"
+          if text.count(old) != 1:
+              raise SystemExit(f"core import anchor count: {text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = "    MAX_CONFIGURED_PEERS = 256\n    PEER_HEALTH_INCIDENT_HISTORY_LIMIT = 64\n"
+          new = (
+              "    MAX_CONFIGURED_PEERS = 256\n"
+              "    # Prevent one host/routed subnet from monopolizing configured\n"
+              "    # outbound slots.  Two peers per bucket preserves redundancy while\n"
+              "    # forcing a 256-peer set to span independent network identities.\n"
+              "    MAX_OUTBOUND_PEERS_PER_NETGROUP = 2\n"
+              "    PEER_HEALTH_INCIDENT_HISTORY_LIMIT = 64\n"
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"core constant anchor count: {text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = "        return (host,port)\n\n    @staticmethod\n    def _peer_health_timestamp():\n"
+          new = '''        return (host,port)\n\n    @staticmethod\n    def _peer_diversity_key(host):\n        """Return a deterministic no-DNS netgroup key for outbound policy."""\n        if type(host) is not str or not host:\n            raise ValueError("peer host required")\n        literal=host\n        if literal.startswith("[") and literal.endswith("]"):\n            literal=literal[1:-1]\n        # Scope identifiers are interface-local aliases, not independent IPv6\n        # routing identities.  Ignore the scope only for diversity bucketing.\n        address_text=literal.split("%",1)[0]\n        try:\n            address=ipaddress.ip_address(address_text)\n        except ValueError:\n            # Do not resolve DNS here: admission must remain deterministic and\n            # must never create network I/O.  Fold common textual aliases only.\n            return ("dns",host.rstrip(".").casefold())\n\n        if isinstance(address,ipaddress.IPv6Address) and address.ipv4_mapped:\n            address=address.ipv4_mapped\n        if address.is_loopback:\n            # Local multi-node rehearsals commonly use several loopback ports;\n            # loopback cannot represent an Internet Sybil routing identity.\n            return None\n        prefix=24 if address.version==4 else 64\n        network=ipaddress.ip_network(f"{address}/{prefix}",strict=False)\n        return (f"ipv{address.version}/{prefix}",str(network.network_address))\n\n    @staticmethod\n    def _peer_health_timestamp():\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"core diversity helper anchor count: {text.count(old)}")
+          text = text.replace(old, new, 1)
+
+          old = '''    @_peer_locked\n    def add_outbound_peer(self, peer):\n        addr=self._parse_peer(peer)\n        if addr not in self.outbound_peers:\n            if len(self.outbound_peers) >= self.MAX_CONFIGURED_PEERS:\n                raise ValueError("configured peer limit exceeded")\n            self.outbound_peers.append(addr)\n            self.peer_health_current_state[addr]=self.peer_health_state(addr)\n            if self.peer_persist_callback is not None:\n                self.peer_persist_callback(list(self.outbound_peers))\n        return addr\n'''
+          new = '''    @_peer_locked\n    def add_outbound_peer(self, peer):\n        addr=self._parse_peer(peer)\n        if addr not in self.outbound_peers:\n            if len(self.outbound_peers) >= self.MAX_CONFIGURED_PEERS:\n                raise ValueError("configured peer limit exceeded")\n            diversity_key=self._peer_diversity_key(addr[0])\n            if diversity_key is not None:\n                same_netgroup=sum(\n                    1\n                    for host,_ in self.outbound_peers\n                    if self._peer_diversity_key(host) == diversity_key\n                )\n                if same_netgroup >= self.MAX_OUTBOUND_PEERS_PER_NETGROUP:\n                    raise ValueError("outbound peer diversity limit exceeded")\n            self.outbound_peers.append(addr)\n            self.peer_health_current_state[addr]=self.peer_health_state(addr)\n            if self.peer_persist_callback is not None:\n                self.peer_persist_callback(list(self.outbound_peers))\n        return addr\n'''
+          if text.count(old) != 1:
+              raise SystemExit(f"core add peer anchor count: {text.count(old)}")
+          core.write_text(text.replace(old, new, 1), encoding="utf-8", newline="\n")
+
+          targets = (
+              "checkpoint39_peer_management_spec.py",
+              "checkpoint40_peer_removal_spec.py",
+              "checkpoint41_peer_persistence_spec.py",
+              "checkpoint42_peer_reconnect_spec.py",
+              "security_sec049_peer_host_bounds_spec.py",
+              "security_sec050_sync_peer_host_bounds_spec.py",
+              "security_sec103_peer_retry_snapshot_atomicity_spec.py",
+              "security_sec143_peer_host_type_domain_spec.py",
+              "security_sec144_peer_port_type_domain_spec.py",
+              "security_sec156_peer_config_entry_canonicality_spec.py",
+              "security_sec177_peer_config_file_integrity_spec.py",
+              "security_sec197_outbound_peer_diversity_spec.py",
+          )
+          subprocess.run(["python", "-m", "py_compile", "core.py", *targets], check=True)
+          for script in targets:
+              subprocess.run(["python", script], check=True)
+
+          manifest_path = Path("release_manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          for name in ("core.py", "security_sec197_outbound_peer_diversity_spec.py"):
+              raw = Path(name).read_bytes()
+              manifest["files"][name] = {
+                  "bytes": len(raw),
+                  "sha256": hashlib.sha256(raw).hexdigest(),
+              }
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8", newline="\n",
+          )
+
+          subprocess.run(["git", "config", "user.name", "AxvenLabs"], check=True)
+          subprocess.run(["git", "config", "user.email", "dogacan432@gmail.com"], check=True)
+          subprocess.run([
+              "git", "add", "core.py",
+              "security_sec197_outbound_peer_diversity_spec.py",
+              "release_manifest.json",
+          ], check=True)
+          subprocess.run([
+              "git", "commit", "-m",
+              "SEC-197: enforce outbound peer netgroup diversity",
+          ], check=True)
+          subprocess.run([
+              "git", "push", "origin",
+              "HEAD:security-sec197-outbound-peer-diversity",
+          ], check=True)
