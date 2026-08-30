@@ -74,10 +74,12 @@ def main():
         importlib.metadata.version("packaging") == PACKAGING,
     )
     runtime_dependencies=pyproject["project"]["dependencies"]
+    recovery_dependencies=pyproject["project"]["optional-dependencies"]["legacy-mldsa-recovery"]
     green(
         "original runtime security pins remain present",
         "cryptography==50.0.1" in runtime_dependencies
-        and "dilithium-py==1.4.0" in runtime_dependencies,
+        and "dilithium-py==1.4.0" not in runtime_dependencies
+        and recovery_dependencies == ["dilithium-py==1.4.0"],
     )
     green(
         "packaging hardening leaves canonical chain identity unchanged",

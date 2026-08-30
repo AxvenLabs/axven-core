@@ -97,11 +97,18 @@ class Wallet:
         inp=tx._in()[i]; return {"prev_txid":inp.prev_txid,"index":inp.index,"signature":_b64e(self.sign(tx.sighash())),"public_key":_b64e(self.public_key)}
 _ML=None
 def _mldsa():
+    """Load the legacy expanded-key recovery backend only on explicit use."""
     global _ML
     if _ML is not None:return _ML
-    try: from dilithium_py.ml_dsa import ML_DSA_44
-    except Exception:
-        from dilithium_py.ml_dsa.default_parameters import ML_DSA_44
+    try:
+        try: from dilithium_py.ml_dsa import ML_DSA_44
+        except Exception:
+            from dilithium_py.ml_dsa.default_parameters import ML_DSA_44
+    except Exception as exc:
+        raise RuntimeError(
+            "legacy ML-DSA recovery backend unavailable; "
+            "install axven-core[legacy-mldsa-recovery]"
+        ) from exc
     _ML=ML_DSA_44; return _ML
 
 def _verify_mldsa44_signature(public_key, message, signature):
