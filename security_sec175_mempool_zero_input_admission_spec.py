@@ -34,17 +34,31 @@ def main():
     ok("zero-input rejection leaves mempool empty", not mp.txs and mp.total_bytes == 0)
     ok("zero-input junk consumes no crypto budget", gate_calls == [])
 
-    # Public P2P still accepts the canonical wire envelope but the real
-    # mempool policy fails closed instead of publishing an accepted ack.
+    # Public relay fails closed even earlier under SEC-189 when a regular
+    # zero-input alias carries coinbase_height.  If a canonical zero-input
+    # form reaches policy instead, the mempool's input-domain guard still
+    # rejects it.  Neither path may publish an accepted transaction.
     p2p_chain=axven.Blockchain(); p2p_mp=axven.Mempool(p2p_chain)
     msg={"type":"tx","tx":junk[0].to_dict()}
+    p2p_rejected=False
     try:
         p2p.PeerSession(p2p_chain,p2p_mp).handle(msg,tx_work_gate=lambda cost: True)
+    except p2p.ProtocolError as exc:
+        p2p_rejected="coinbase height forbidden on regular tx" in str(exc)
     except ValueError as exc:
         p2p_rejected="at least one input" in str(exc)
-    else:
-        p2p_rejected=False
     ok("public relay cannot admit zero-input tx", p2p_rejected and not p2p_mp.txs)
+
+    canonical_zero={"type":"tx","tx":{"inputs":[],"outputs":[]}}
+    try:
+        p2p.PeerSession(p2p_chain,p2p_mp).handle(
+            canonical_zero, tx_work_gate=lambda cost: True
+        )
+    except ValueError as exc:
+        canonical_zero_rejected="at least one input" in str(exc)
+    else:
+        canonical_zero_rejected=False
+    ok("canonical zero-input relay still fails at mempool policy", canonical_zero_rejected and not p2p_mp.txs)
 
     # Healthy spend admission remains unchanged.
     healthy_chain=axven.Blockchain(); healthy_mp=axven.Mempool(healthy_chain); w=axven.Wallet()

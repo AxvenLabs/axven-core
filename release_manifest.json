@@ -309,8 +309,8 @@
       "sha256": "8eabbba61e473b69051ea8e106ac572ea62bd3c83d5e8d67182015c01d2cf05b"
     },
     "p2p_tx_bounds.py": {
-      "bytes": 2261,
-      "sha256": "19726529e14962fb9a0ba0a8d6202e130d7a2e1f5287639645a29beea6b71985"
+      "bytes": 3630,
+      "sha256": "6d056abd7b94ff9f6debce4231ea8665ed07549ba388e2b3841f583785653608"
     },
     "post_activation_audit.py": {
       "bytes": 1283,
@@ -577,8 +577,8 @@
       "sha256": "7248a31237e4792ce8baac0319bb66880819ecafd165a98b2477dd35379a5993"
     },
     "security_sec067_p2p_tx_numeric_types_spec.py": {
-      "bytes": 4016,
-      "sha256": "2355bd8fefd2fe7ca8afd2a99125805991746a527ca3eaee05a6457f12167777"
+      "bytes": 3958,
+      "sha256": "f12ea564698445bd9ece6c0c34ae7fda018f0805c3b97ac824977c79f5724634"
     },
     "security_sec068_p2p_tx_string_types_spec.py": {
       "bytes": 4678,
@@ -637,8 +637,8 @@
       "sha256": "0456e008b3eeee9c23db1c6ff3feeb25f688f2847ef9985489468d4bee30adb4"
     },
     "security_sec086_p2p_tx_canonical_fields_spec.py": {
-      "bytes": 2202,
-      "sha256": "c9eb8a18561c00a08f8a604f85dee624514e0af6175f2b1626f023f23f010442"
+      "bytes": 2769,
+      "sha256": "22bb4c0657d4304a7e87d331ee90ced99ee5b441e0f28b1b9dced5fa388c03d2"
     },
     "security_sec087_p2p_tx_envelope_fields_spec.py": {
       "bytes": 1796,
@@ -701,8 +701,8 @@
       "sha256": "1d4d62ff3548f7b2f57a5b7993f4095b53aa9d911eeef5b715d9a6c0d44003ae"
     },
     "security_sec102_p2p_tx_input_fields_spec.py": {
-      "bytes": 2991,
-      "sha256": "d16550492f81f94b580b0e37efbf5eec69e892e5aee18b3d6f5877bd0c4591d0"
+      "bytes": 3036,
+      "sha256": "afd6a53c3bfbef35e7cdbfcc8af54364e2d50a042ac17472a73a34510b72b544"
     },
     "security_sec103_peer_retry_snapshot_atomicity_spec.py": {
       "bytes": 3778,
@@ -993,8 +993,8 @@
       "sha256": "68d2ea22f17b3b43694163304a6ab97835a2a7718ec1470b30beeb05e91056f7"
     },
     "security_sec175_mempool_zero_input_admission_spec.py": {
-      "bytes": 3372,
-      "sha256": "64e7f4b4b8480970b3c58f43d6ab1db92518797e6074bcd1be80dbf54e6fddde"
+      "bytes": 4065,
+      "sha256": "d8620d76f9432bb9a5b6e81e517ffb387563e88f8dd80b214395deb103a3aa72"
     },
     "security_sec176_wallet_backup_file_integrity_spec.py": {
       "bytes": 4442,

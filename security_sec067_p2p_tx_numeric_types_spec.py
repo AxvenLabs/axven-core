@@ -111,8 +111,19 @@ def main():
             checks += 1
             print(f"[GREEN] non-integer tx coinbase_height rejected: {value!r}")
 
+        regular_with_height = raw_tx()
+        regular_with_height["coinbase_height"] = 1
+        expect_reject(
+            session,
+            regular_with_height,
+            "coinbase height forbidden on regular tx",
+            deserialize_calls,
+            mempool,
+        )
+        checks += 1
+        print("[GREEN] integer coinbase_height rejected on regular transaction")
+
         canonical = raw_tx()
-        canonical["coinbase_height"] = 1
         reply = session.handle({"type": "tx", "tx": canonical})
         assert reply == {
             "type": "accepted",
@@ -122,19 +133,7 @@ def main():
         assert deserialize_calls[0] == 1
         assert mempool.add_calls == 1
         checks += 1
-        print("[GREEN] canonical integer transaction fields reach mempool")
-
-        legacy_optional = raw_tx()
-        reply = session.handle({"type": "tx", "tx": legacy_optional})
-        assert reply == {
-            "type": "accepted",
-            "kind": "tx",
-            "id": "a" * 64,
-        }
-        assert deserialize_calls[0] == 2
-        assert mempool.add_calls == 2
-        checks += 1
-        print("[GREEN] omitted optional coinbase_height remains compatible")
+        print("[GREEN] canonical regular transaction omits coinbase_height")
 
     finally:
         p2p.axven.Transaction.from_dict = original_from_dict
