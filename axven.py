@@ -1681,6 +1681,14 @@ def _read_secure_chain_state_file(path):
             raise ValueError("chain state file changed during open")
         if getattr(current, "st_nlink", 1) != 1:
             raise ValueError("unsafe chain state hardlink count")
+        if os.name == "posix":
+            # Chain contents are public, so read permission is not sensitive.
+            # Integrity is: reject metadata that lets another local account
+            # modify the active persisted state in place after path binding.
+            if current.st_mode & 0o022:
+                raise ValueError("chain state file must not be group/world writable")
+            if hasattr(os, "getuid") and current.st_uid != os.getuid():
+                raise ValueError("chain state file owner mismatch")
         with os.fdopen(fd, "rb") as f:
             fd = None
             return f.read()

@@ -125,8 +125,8 @@
       "sha256": "4eb34e9a095719eb3e4919b59790ffa579ad5c69a28d812d86bdbbf32fc49f36"
     },
     "axven.py": {
-      "bytes": 70287,
-      "sha256": "7935b3a74f2ec553fc36fe49e9660b649b33ad97d52fa4b450cea4f65954215d"
+      "bytes": 70815,
+      "sha256": "a89e7f5b8b5773504a0d05d59b1dfa80d64a059d2d9e5e5e2c84ed9e04bf0681"
     },
     "axven_cli.py": {
       "bytes": 10505,
@@ -1023,6 +1023,10 @@
     "security_sec182_wallet_recipient_canonicality_spec.py": {
       "bytes": 2570,
       "sha256": "b5fc486418306e3fcd5550205262555224d22b5c3702f9425df58e47cdb7ec61"
+    },
+    "security_sec183_chain_state_owner_permissions_spec.py": {
+      "bytes": 2367,
+      "sha256": "a8e77deda3fd0d2ba0a1e70b23e2dee9013244f4a7b5ff86e3703e3da216a38a"
     },
     "setup.cmd": {
       "bytes": 172,
