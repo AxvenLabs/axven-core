@@ -1,0 +1,56 @@
+name: SEC-198 Manifest Repair
+
+on:
+  push:
+    branches:
+      - security-sec198-dependency-artifact-hashes
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.13.15"
+
+      - name: Refresh changed release manifest pins
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          targets = [
+              ".github/workflows/validation.yml",
+              "requirements-ci-toolchain.lock",
+              "requirements-ci-runtime-windows.lock",
+              "security_sec172_python_packaging_toolchain_pins_spec.py",
+              "security_sec178_dependency_closure_pins_spec.py",
+              "security_sec198_dependency_artifact_hashes_spec.py",
+          ]
+          path = Path("release_manifest.json")
+          manifest = json.loads(path.read_text(encoding="utf-8"))
+          for name in targets:
+              data = Path(name).read_bytes()
+              manifest["files"][name] = {
+                  "bytes": len(data),
+                  "sha256": hashlib.sha256(data).hexdigest(),
+              }
+          path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-198: refresh release manifest pins"
+          git push
