@@ -21,12 +21,17 @@ def main():
     checks = 0
 
     coinbase = {
-        "inputs": [{"prev_txid": NULL_TXID, "index": COINBASE_INDEX}],
+        "inputs": [{
+            "prev_txid": NULL_TXID,
+            "index": COINBASE_INDEX,
+            "signature": "",
+            "public_key": "",
+        }],
         "outputs": [{"amount": 1, "recipient": "M" + "0" * 40}],
         "coinbase_height": 1,
     }
     validate_tx_string_bounds(coinbase)
-    print("[GREEN] canonical coinbase wire accepted")
+    print("[GREEN] canonical legacy coinbase wire accepted")
     checks += 1
 
     witness_coinbase = {
@@ -38,7 +43,20 @@ def main():
             "public_key": "AAAA",
         }],
     }
-    expect_reject("coinbase witness aliases rejected", witness_coinbase)
+    expect_reject("non-empty coinbase witness aliases rejected", witness_coinbase)
+    checks += 1
+
+    coinbase_extra = {
+        **coinbase,
+        "inputs": [{
+            "prev_txid": NULL_TXID,
+            "index": COINBASE_INDEX,
+            "signature": "",
+            "public_key": "",
+            "scheme": "ed25519",
+        }],
+    }
+    expect_reject("extra coinbase witness scheme alias rejected", coinbase_extra)
     checks += 1
 
     regular = {
