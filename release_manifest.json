@@ -265,8 +265,8 @@
       "sha256": "e3e5c65cc41f968e7cacacf2d0aa62ddd53f145a1c17b86ab9dd56d9ce3cd3e2"
     },
     "datadir.py": {
-      "bytes": 14742,
-      "sha256": "f651f18377fbbfcca15d0ff09385e78d9802162011046a52bbbe14aa6b28b9d4"
+      "bytes": 16207,
+      "sha256": "f9f0da1f090de6067d562f1b746bd7bce484488aa1a0545107d64f3185134490"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -797,8 +797,8 @@
       "sha256": "65b5ade89a39a43ed11ca60814fb5346984c36fb914b65ad719663c90ddf7b3e"
     },
     "security_sec126_peer_config_resource_bounds_spec.py": {
-      "bytes": 6499,
-      "sha256": "d68deaec1244fff438bac32613e203c4210be42a032fed37f275f6b402b6927a"
+      "bytes": 6653,
+      "sha256": "46e5b52dedf226fe919baf97dfb780db623ba4c2c4038630fc8f4b572c29923c"
     },
     "security_sec127_rpc_json_preparse_depth_spec.py": {
       "bytes": 5890,
@@ -999,6 +999,10 @@
     "security_sec176_wallet_backup_file_integrity_spec.py": {
       "bytes": 4442,
       "sha256": "b0460482908082ab228d4761e7836ee7186b2de4ec560190831830e0727bbf1c"
+    },
+    "security_sec177_peer_config_file_integrity_spec.py": {
+      "bytes": 4868,
+      "sha256": "38615ae4bb788e492ecdd19b2c56c62fbdaf9b0228d5c7aa36ca43203026a34c"
     },
     "setup.cmd": {
       "bytes": 172,

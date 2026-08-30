@@ -139,11 +139,13 @@ def main():
     )
 
     load_src=inspect.getsource(DataDir.load_peers)
+    secure_read_src=inspect.getsource(datadir._read_secure_peer_config_file)
     save_src=inspect.getsource(DataDir.save_peers)
     core_src=(Path(__file__).resolve().parent / "core.py").read_text(encoding="utf-8")
     green(
         "production persistence path bounds read count save count and payload bytes",
-        "f.read(MAX_PEER_CONFIG_BYTES + 1)" in load_src
+        "_read_secure_peer_config_file(self.peer_file)" in load_src
+        and "f.read(MAX_PEER_CONFIG_BYTES+1)" in secure_read_src
         and "len(raw) > AxvenCore.MAX_CONFIGURED_PEERS" in load_src
         and "len(normalized) >= AxvenCore.MAX_CONFIGURED_PEERS" in save_src
         and "len(payload) > MAX_PEER_CONFIG_BYTES" in save_src,
