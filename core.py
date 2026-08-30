@@ -7,6 +7,7 @@ changing consensus.  RPC is layered on top in rpc.py.
 from __future__ import annotations
 from contextlib import nullcontext
 from typing import Optional, Tuple
+import ipaddress
 import math
 import threading
 from datetime import datetime, timezone
@@ -36,6 +37,12 @@ class AxvenCore:
     # configuration. Bound operator-controlled cardinality so local RPC or
     # a corrupt config cannot grow those structures without limit.
     MAX_CONFIGURED_PEERS = 256
+    # SEC-197: one routable IP network group or canonical DNS host must not
+    # occupy an arbitrary fraction of the configured outbound set.  This
+    # is local peering policy only; loopback remains exempt for devnet labs.
+    MAX_CONFIGURED_PEERS_PER_DIVERSITY_GROUP = 4
+    PEER_DIVERSITY_IPV4_PREFIX = 24
+    PEER_DIVERSITY_IPV6_PREFIX = 48
     PEER_HEALTH_INCIDENT_HISTORY_LIMIT = 64
     PEER_HEALTH_HISTORY_LIMIT = 64
 
@@ -518,6 +525,65 @@ class AxvenCore:
         return (host,port)
 
     @staticmethod
+    def _peer_diversity_group(host):
+        """Return a stable Sybil/eclipsing group for one configured host."""
+        if type(host) is not str:
+            raise ValueError("peer host must be string")
+        normalized=host.strip().casefold()
+        while normalized.endswith("."):
+            normalized=normalized[:-1]
+        if not normalized:
+            raise ValueError("peer host required")
+
+        ip_text=normalized
+        if ip_text.startswith("[") and ip_text.endswith("]"):
+            ip_text=ip_text[1:-1]
+        try:
+            ip=ipaddress.ip_address(ip_text)
+        except ValueError:
+            # The existing peer parser deliberately permits non-ASCII host
+            # tokens.  Do not invent IDNA canonicalization in this SEC; ASCII
+            # DNS names are grouped case/trailing-dot insensitively.
+            if not normalized.isascii():
+                return None
+            if normalized == "localhost" or normalized.endswith(".localhost"):
+                return None
+            return ("dns",normalized)
+
+        # Local loopback/link-local test fabrics are intentionally exempt;
+        # private/ULA/public unicast addresses still receive prefix grouping.
+        if ip.is_loopback or ip.is_link_local or ip.is_unspecified or ip.is_multicast:
+            return None
+        prefix=(
+            AxvenCore.PEER_DIVERSITY_IPV4_PREFIX
+            if ip.version == 4
+            else AxvenCore.PEER_DIVERSITY_IPV6_PREFIX
+        )
+        network=ipaddress.ip_network((ip,prefix),strict=False)
+        return (f"ipv{ip.version}",network.with_prefixlen)
+
+    @classmethod
+    def _validate_peer_diversity(cls, peers):
+        """Normalize peers and fail closed when one network group dominates."""
+        normalized=[]
+        seen=set()
+        groups={}
+        for peer in peers:
+            addr=cls._parse_peer(peer)
+            normalized.append(addr)
+            if addr in seen:
+                continue
+            seen.add(addr)
+            group=cls._peer_diversity_group(addr[0])
+            if group is None:
+                continue
+            count=groups.get(group,0)+1
+            if count > cls.MAX_CONFIGURED_PEERS_PER_DIVERSITY_GROUP:
+                raise ValueError("configured peer diversity limit exceeded")
+            groups[group]=count
+        return normalized
+
+    @staticmethod
     def _peer_health_timestamp():
         return datetime.now(timezone.utc).isoformat().replace("+00:00","Z")
 
@@ -531,6 +597,9 @@ class AxvenCore:
         if addr not in self.outbound_peers:
             if len(self.outbound_peers) >= self.MAX_CONFIGURED_PEERS:
                 raise ValueError("configured peer limit exceeded")
+            # Reject a fifth distinct endpoint from the same routable prefix
+            # or canonical DNS host before mutating memory or persistence.
+            self._validate_peer_diversity([*self.outbound_peers,addr])
             self.outbound_peers.append(addr)
             self.peer_health_current_state[addr]=self.peer_health_state(addr)
             if self.peer_persist_callback is not None:

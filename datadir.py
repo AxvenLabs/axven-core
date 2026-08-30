@@ -429,7 +429,7 @@ class DataDir:
                     raise ValueError("unknown peer entry field")
                 peer=(peer["host"],peer["port"])
             peers.append(AxvenCore._parse_peer(peer))
-        return peers
+        return AxvenCore._validate_peer_diversity(peers)
 
     def save_peers(self,peers):
         import json
@@ -438,8 +438,12 @@ class DataDir:
             if len(normalized) >= AxvenCore.MAX_CONFIGURED_PEERS:
                 raise ValueError("too many configured peers")
             host,port=AxvenCore._parse_peer(peer)
-            normalized.append({"host":host,"port":port})
-        payload=(json.dumps(normalized,indent=2,sort_keys=True)+"\n").encode("utf-8")
+            normalized.append((host,port))
+        normalized=AxvenCore._validate_peer_diversity(normalized)
+        payload=(json.dumps(
+            [{"host":host,"port":port} for host,port in normalized],
+            indent=2,sort_keys=True,
+        )+"\n").encode("utf-8")
         if len(payload) > MAX_PEER_CONFIG_BYTES:
             raise ValueError("peer config too large")
         fd=None
