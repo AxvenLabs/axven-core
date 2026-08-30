@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 55032,
-      "sha256": "fa92eb5102741e2424255b4686d2e3b7123cc7f58827954060f4abe8dedb5df0"
+      "bytes": 55359,
+      "sha256": "57cbbdc219dd9b4048f5a2afa976bc6adb6575dc387e47f7bd052461447b8c04"
     },
     "p2p_tx_bounds.py": {
       "bytes": 3630,
@@ -1072,6 +1072,10 @@
       "bytes": 5973,
       "sha256": "f8f7610695b4ea100ee6026c2e3d50700db0cb134192253e12388ea63733c4de"
     },
+    "security_sec194_outbound_status_validation_spec.py": {
+      "bytes": 4137,
+      "sha256": "06dcc259f24973f441b0c4cfe51a9b0a150696c69dec4ed9a3e6ba3d29446403"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -1105,16 +1109,16 @@
       "sha256": "bc129a2164928f7457e489e4c35770ed27eeccde6144e6953859b5b548881011"
     },
     "tools/peer_probe.py": {
-      "bytes": 921,
-      "sha256": "531352a417501ec89ff1cfb8ff0ce699a82ed6d796335ae58cf0ff367f089879"
+      "bytes": 906,
+      "sha256": "fc7de6ec691c3c83fea31073dc2d0492e10bdbd79cec50813145d9c6c0027c4f"
     },
     "tools/public_peer_acceptance.py": {
-      "bytes": 1204,
-      "sha256": "80cb4ecd1840f5e3a324ec03046c5b3a2557dc75f9789ec815419834fa37fb53"
+      "bytes": 1189,
+      "sha256": "b613b84a83023b2d385a79dcd003e0d8939383531ad1d7444b85de3c3e583fd6"
     },
     "tools/seed_health.py": {
-      "bytes": 1744,
-      "sha256": "3792193e76be3cd02808c77db979f8383e6b6ba9ac1f9767734137c72d48760c"
+      "bytes": 1729,
+      "sha256": "d7a3e8f3edf725e5a6166237989c9b098773272e0b3f9126ee1b31c151bd4041"
     },
     "ux_spec_test.py": {
       "bytes": 2263,

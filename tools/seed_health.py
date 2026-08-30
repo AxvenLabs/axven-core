@@ -17,7 +17,7 @@ def main():
     t0=time.time()
     sock,ident=p2p.connect_with_identity((a.host,a.port),timeout=a.timeout)
     try:
-        status=p2p.request(sock,{"type":"get_status"})
+        status=p2p.request_status(sock)
     finally:
         sock.close()
     checks={

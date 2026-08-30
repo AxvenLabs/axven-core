@@ -14,7 +14,7 @@ def main():
     s,remote_identity=p2p.connect_with_identity((a.host,a.port),timeout=8)
     try:
         checks.append("identity-bound handshake")
-        reply=p2p.request(s,{"type":"get_status"})
+        reply=p2p.request_status(s)
         assert reply.get("type")=="status"
         assert isinstance(reply.get("height"),int)
         assert isinstance(reply.get("chainwork"),int)
