@@ -813,8 +813,8 @@
       "sha256": "121e7089a96a3ad11525c2a213621c61a4a1d6a37fe0d31997b03c85c2c8ef4c"
     },
     "security_sec129_wallet_inner_material_canonicality_spec.py": {
-      "bytes": 8815,
-      "sha256": "0308feae52383171221f4987539d5d743b0f09cdf1c85337635e0f9c5a4869cf"
+      "bytes": 8853,
+      "sha256": "7e8c965259e4508fb9c03ff504a8495583cf3a1764e14d6443bca52ff1ea6d6d"
     },
     "security_sec130_rpc_json_preparse_complexity_spec.py": {
       "bytes": 7209,
