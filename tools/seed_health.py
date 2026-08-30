@@ -15,17 +15,16 @@ def main():
     ap.add_argument("--min-height",type=int,default=0)
     a=ap.parse_args()
     t0=time.time()
-    sock=p2p.connect((a.host,a.port),timeout=a.timeout)
+    sock,ident=p2p.connect_with_identity((a.host,a.port),timeout=a.timeout)
     try:
         status=p2p.request(sock,{"type":"get_status"})
     finally:
         sock.close()
-    ident=p2p.local_identity()
     checks={
         "chain_id": ident.get("chain_id")==EXPECTED_CHAIN_ID,
         "fingerprint": ident.get("config_fingerprint")==EXPECTED_FINGERPRINT,
         "genesis": ident.get("genesis_hash")==EXPECTED_GENESIS,
-        "protocol_version": ident.get("protocol_version")==1,
+        "protocol_version": ident.get("protocol_version")==p2p.PROTOCOL_VERSION,
         "status_type": status.get("type")=="status",
         "height": isinstance(status.get("height"),int) and status["height"]>=a.min_height,
         "chainwork": isinstance(status.get("chainwork"),int) and status["chainwork"]>0,

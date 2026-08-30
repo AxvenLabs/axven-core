@@ -11,7 +11,7 @@ def main():
     a=ap.parse_args()
     checks=[]
 
-    s=p2p.connect((a.host,a.port),timeout=8)
+    s,remote_identity=p2p.connect_with_identity((a.host,a.port),timeout=8)
     try:
         checks.append("identity-bound handshake")
         reply=p2p.request(s,{"type":"get_status"})
@@ -32,7 +32,7 @@ def main():
         "ok":True,
         "checks":checks,
         "peer":f"{a.host}:{a.port}",
-        "canonical_identity":p2p.local_identity()
+        "canonical_identity":remote_identity
     },indent=2,sort_keys=True))
 
 if __name__=="__main__":
