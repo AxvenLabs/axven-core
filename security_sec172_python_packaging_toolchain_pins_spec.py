@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.metadata
+import re
 import tomllib
 from pathlib import Path
 
@@ -14,6 +15,11 @@ WHEEL = "0.48.0"
 PACKAGING = "26.3"
 
 
+def _locked_versions(path):
+    text=Path(path).read_text(encoding="utf-8")
+    return dict(re.findall(r"(?m)^([A-Za-z0-9_.-]+)==([^ \\]+)",text))
+
+
 def main():
     checks=[]
 
@@ -23,6 +29,8 @@ def main():
         print(f"[GREEN] {name}")
 
     workflow=Path(".github/workflows/validation.yml").read_text(encoding="utf-8")
+    toolchain_lock=Path("requirements-ci-toolchain.lock").read_text(encoding="utf-8")
+    locked=_locked_versions("requirements-ci-toolchain.lock")
     pyproject=tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
     build_requires=pyproject["build-system"]["requires"]
 
@@ -39,14 +47,17 @@ def main():
         all(">=" not in item and "~=" not in item and ">" not in item
             for item in build_requires),
     )
-    pinned_install=(
-        f'python -m pip install "pip=={PIP}" '
-        f'"setuptools=={SETUPTOOLS}" "wheel=={WHEEL}" '
-        f'"packaging=={PACKAGING}"'
-    )
     green(
-        "validation CI installs an exact packaging toolchain closure",
-        pinned_install in workflow,
+        "validation CI installs the exact packaging toolchain from the hash lock",
+        locked == {
+            "pip": PIP,
+            "setuptools": SETUPTOOLS,
+            "wheel": WHEEL,
+            "packaging": PACKAGING,
+        }
+        and toolchain_lock.count("--hash=sha256:") == 4
+        and "requirements-ci-toolchain.lock" in workflow
+        and "--require-hashes" in workflow,
     )
     green(
         "validation CI never upgrades pip to an ambient latest release",

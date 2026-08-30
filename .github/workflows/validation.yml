@@ -29,11 +29,12 @@ jobs:
         run: |
           chcp 65001
 
-      - name: Install pinned packaging toolchain
+      - name: Install hash-locked packaging toolchain
         shell: pwsh
         run: |
-          python -m pip install "pip==26.2.1" "setuptools==84.0.0" "wheel==0.48.0" "packaging==26.3"
-          python -m pip install -e ".[legacy-mldsa-recovery]"
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-toolchain.lock
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-windows.lock
+          python -m pip install --no-build-isolation --no-deps -e ".[legacy-mldsa-recovery]"
           python -m pip check
 
       - name: Full validation

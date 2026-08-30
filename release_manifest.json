@@ -21,8 +21,8 @@
   "explorer_node2_port": 18455,
   "files": {
     ".github/workflows/validation.yml": {
-      "bytes": 1044,
-      "sha256": "bb132bb56bf633583b75584b7dffabad98e0282beb40119fd535cfdbb1828179"
+      "bytes": 1211,
+      "sha256": "7b61d51adc7cb84e628ff56d40fd551dad0c165aac90eab880e2565229911cf8"
     },
     "CANONICAL_OPERATIONS.md": {
       "bytes": 1434,
@@ -985,8 +985,8 @@
       "sha256": "6b7d89789b0f52357d9183c0d7916d9c72d571b4e0a6a1d4fecaf1c3084b125f"
     },
     "security_sec172_python_packaging_toolchain_pins_spec.py": {
-      "bytes": 3160,
-      "sha256": "9f4d53716731be731fb61f15010109e6253cebc7e6bbf4f565af938278bbca4d"
+      "bytes": 3590,
+      "sha256": "d042247fe95e56ff1238a2ed3b0b6909200ff1e2a2d52d2e5db6ebb1d9b17aa6"
     },
     "security_sec173_datadir_mutator_single_writer_spec.py": {
       "bytes": 4603,
@@ -1009,8 +1009,8 @@
       "sha256": "38615ae4bb788e492ecdd19b2c56c62fbdaf9b0228d5c7aa36ca43203026a34c"
     },
     "security_sec178_dependency_closure_pins_spec.py": {
-      "bytes": 2851,
-      "sha256": "8e83dfd3e174af5f929d48dd87e9e0832371f62564c0824e74c904ab2546d58a"
+      "bytes": 3899,
+      "sha256": "6015175d968b11bfd18fe6024a6267cb006daab9a023bd5bfd29b383bf6f1b96"
     },
     "security_sec179_datadir_directory_integrity_spec.py": {
       "bytes": 2871,
@@ -1155,6 +1155,18 @@
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
       "sha256": "0826cd7f03dca3bfa679c0052ae749d2adb0195eea8c065fa8ebb197b9a54804"
+    },
+    "requirements-ci-toolchain.lock": {
+      "bytes": 529,
+      "sha256": "bbfad10e572d3d7dd48979cef6163a81b695b7909c9c1faed7ab4eb224fa1446"
+    },
+    "requirements-ci-runtime-windows.lock": {
+      "bytes": 785,
+      "sha256": "846373307293dff5648ec5ca18b97e3c13dbaee342e05968f50ce69e4db9d6a9"
+    },
+    "security_sec198_dependency_artifact_hashes_spec.py": {
+      "bytes": 4594,
+      "sha256": "e356f88c2d3f00acac7522b7400ea9b5fbc99a912a22d8aa7f1eea103b1ed9bc"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",

@@ -1,0 +1,13 @@
+# SEC-198: immutable Windows x86-64 / CPython 3.13 validation artifacts.
+# cryptography publishes ABI3 wheels; both compatible Windows hashes are
+# admitted so pip may select the highest compatible ABI3 tag without falling
+# back to an sdist. cffi is pinned to the CPython 3.13 x86-64 wheel.
+cryptography==50.0.1 \
+    --hash=sha256:aed8db4f6d71c51efb89530e12d9464e7bf2923d46c3205dc794a2a93f8c0648 \
+    --hash=sha256:55d16b1ef3ee0958d893a977b19777887e546c9954ea81b200c3301a864013f2
+cffi==2.1.1 \
+    --hash=sha256:1aa5645c30469b09530c4ebca77ebf8f17618293c58f8549cb1a543a50236e7d
+pycparser==3.0 \
+    --hash=sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992
+dilithium-py==1.4.0 \
+    --hash=sha256:dda3ae43e6e3d212ae1fe1b30d5b6dffe5e25a1f389d1fea26faad4afdc33ff8
