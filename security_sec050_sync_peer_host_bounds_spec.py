@@ -28,7 +28,9 @@ def main():
     original = p2p.sync_to_peer
     calls = []
 
-    def fake_sync_to_peer(address, session, limit=128, max_rounds=100):
+    def fake_sync_to_peer(address, session, limit=128, max_rounds=100, **kwargs):
+        assert callable(kwargs.get("block_work_gate"))
+        assert callable(kwargs.get("block_signature_work_gate"))
         calls.append((address, limit))
         return 7
 

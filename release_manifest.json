@@ -501,8 +501,8 @@
       "sha256": "e2487447c7e1375d0b3933b269ee5f0ae0da4eb9a0be2664552284bea13b21f5"
     },
     "security_sec050_sync_peer_host_bounds_spec.py": {
-      "bytes": 2372,
-      "sha256": "2929c893aaa4e856dae55da916c7d4b6217678ba11c67ec9eb4c25880da933c7"
+      "bytes": 2502,
+      "sha256": "34b9c3e869c1824757e61e7a1b534ac2f8b485dd999db5f45c30bf819ce42359"
     },
     "security_sec051_p2p_listener_host_bounds_spec.py": {
       "bytes": 2165,
