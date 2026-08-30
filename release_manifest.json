@@ -129,8 +129,8 @@
       "sha256": "7935b3a74f2ec553fc36fe49e9660b649b33ad97d52fa4b450cea4f65954215d"
     },
     "axven_cli.py": {
-      "bytes": 7533,
-      "sha256": "3ec91f04accae3f924613a9125e8bb777f0f70db03afffe2bccdae36a030b760"
+      "bytes": 9910,
+      "sha256": "97bcf5f61cb1fffe546171615607ed218c0ea6a0c20d7b72a3d2d131e0b8c28d"
     },
     "axven_console.py": {
       "bytes": 3663,
@@ -1011,6 +1011,10 @@
     "security_sec179_datadir_directory_integrity_spec.py": {
       "bytes": 2871,
       "sha256": "d1d037346d2ce01cdf8d8992eeadd6ce2b2702d6b09afbaf75ab47809a154407"
+    },
+    "security_sec180_rpc_client_json_preparse_spec.py": {
+      "bytes": 4907,
+      "sha256": "1d88694c19379c91ce68c5a146a816fed43a18b623bf5bfb460bddfe960c3086"
     },
     "setup.cmd": {
       "bytes": 172,
