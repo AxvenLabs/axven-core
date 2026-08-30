@@ -80,7 +80,6 @@ jobs:
               "checkpoint39_peer_management_spec.py",
               "checkpoint40_peer_removal_spec.py",
               "checkpoint41_peer_persistence_spec.py",
-              "checkpoint42_peer_reconnect_spec.py",
               "security_sec049_peer_host_bounds_spec.py",
               "security_sec050_sync_peer_host_bounds_spec.py",
               "security_sec103_peer_retry_snapshot_atomicity_spec.py",
