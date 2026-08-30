@@ -125,8 +125,8 @@
       "sha256": "4eb34e9a095719eb3e4919b59790ffa579ad5c69a28d812d86bdbbf32fc49f36"
     },
     "axven.py": {
-      "bytes": 72768,
-      "sha256": "54f7b90cc519403a1ef60a080ff5b62fe2c176359521042cdcaeab898bf77b59"
+      "bytes": 74342,
+      "sha256": "015c2595bae9f665f069a95eaccc3f14cc9255133313d5ab537ad0048a2d74ca"
     },
     "axven_cli.py": {
       "bytes": 10505,
@@ -809,8 +809,8 @@
       "sha256": "eb80e493ed90d061dd42535f665e5bb16e9e5c78864d90e99d1c3447b68202ad"
     },
     "security_sec129_wallet_inner_material_canonicality_spec.py": {
-      "bytes": 8612,
-      "sha256": "62ae28e74229d3184a75f831bdbd0e9debd0da042a2dca0989e70d2ccd07d070"
+      "bytes": 8815,
+      "sha256": "0308feae52383171221f4987539d5d743b0f09cdf1c85337635e0f9c5a4869cf"
     },
     "security_sec130_rpc_json_preparse_complexity_spec.py": {
       "bytes": 7209,
@@ -1040,6 +1040,10 @@
       "bytes": 4068,
       "sha256": "22eb4fd30017bd8a6f1c0fbd9f41be27c3aee1e11e355076ad7554fdc432a35c"
     },
+    "security_sec187_mldsa_wallet_signer_migration_spec.py": {
+      "bytes": 4971,
+      "sha256": "188ad74b3deeda6620c0b9a26834a8a88f0e11c0bccb9f54ef9cab1d237ef883"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -1089,8 +1093,8 @@
       "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
     },
     "wallet.py": {
-      "bytes": 18529,
-      "sha256": "37274afdc9f513b836959c67c65010b7a8b7fc41cfbeb40952e1c266735ed632"
+      "bytes": 18855,
+      "sha256": "cda110d68bc037663bb11ed437750d10ff04ee8a515117417013f4aa2d1f28f0"
     },
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,

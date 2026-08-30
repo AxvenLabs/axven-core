@@ -172,7 +172,11 @@ MAX_BACKUP_CIPHERTEXT_BYTES = 16 * 1024
 MAX_BACKUP_JSON_NESTING_DEPTH = 32
 ED25519_PRIVATE_KEY_BYTES = 32
 ML_DSA_PUBLIC_KEY_BYTES = 1312
-ML_DSA_SECRET_KEY_BYTES = 2560
+ML_DSA_SEED_KEY_BYTES = 32
+ML_DSA_LEGACY_SECRET_KEY_BYTES = 2560
+# Historical alias retained for regressions/documentation that name the old expanded form.
+ML_DSA_SECRET_KEY_BYTES = ML_DSA_LEGACY_SECRET_KEY_BYTES
+_ML_DSA_ACCEPTED_PRIVATE_KEY_BYTES = frozenset({ML_DSA_SEED_KEY_BYTES, ML_DSA_LEGACY_SECRET_KEY_BYTES})
 _MAX_CIPHERTEXT_B64_CHARS = 4 * ((MAX_BACKUP_CIPHERTEXT_BYTES + 2) // 3)
 
 def _preflight_backup_json_nesting(raw):
@@ -278,7 +282,7 @@ def _validated_backup_material(material):
         raise BackupError("invalid Ed25519 private key length")
     if len(ml_pub) != ML_DSA_PUBLIC_KEY_BYTES:
         raise BackupError("invalid ML-DSA public key length")
-    if len(ml_sec) != ML_DSA_SECRET_KEY_BYTES:
+    if len(ml_sec) not in _ML_DSA_ACCEPTED_PRIVATE_KEY_BYTES:
         raise BackupError("invalid ML-DSA secret key length")
     return ed_raw, ml_pub, ml_sec
 
@@ -288,9 +292,9 @@ def _validate_mldsa_keypair(ml_pub, ml_sec):
         b"axven-wallet-backup-mldsa-keypair-v1|" + ml_pub
     ).digest()
     try:
-        scheme = axven._mldsa()
-        signature = scheme.sign(ml_sec, message)
-        valid = bool(scheme.verify(ml_pub, message, signature))
+        signer = axven.MLDSAWallet((ml_pub, ml_sec))
+        signature = signer.sign(message)
+        valid = axven._verify_mldsa44_signature(ml_pub, message, signature)
     except Exception as exc:
         raise BackupError("invalid ML-DSA keypair") from exc
     if not valid:
