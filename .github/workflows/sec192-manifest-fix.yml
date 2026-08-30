@@ -1,0 +1,53 @@
+name: SEC-192 Manifest Repair
+
+on:
+  push:
+    branches:
+      - security-sec192-wallet-passphrase-bounds
+    paths:
+      - .github/workflows/sec192-manifest-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.15"
+      - name: Verify SEC-192 syntax and refresh manifest
+        shell: bash
+        run: |
+          python -m py_compile security_sec192_wallet_passphrase_bounds_spec.py
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          name = "security_sec192_wallet_passphrase_bounds_spec.py"
+          data = Path(name).read_bytes()
+          manifest_path = Path("release_manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest["files"][name] = {
+              "bytes": len(data),
+              "sha256": hashlib.sha256(data).hexdigest(),
+          }
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+              newline="\n",
+          )
+          print(name, len(data), hashlib.sha256(data).hexdigest())
+          PY
+          git diff --check
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add release_manifest.json
+          git diff --cached --quiet && { echo "SEC-192 manifest already current"; exit 1; }
+          git commit -m "SEC-192: refresh passphrase bounds manifest entry"
+          git push origin HEAD:security-sec192-wallet-passphrase-bounds
