@@ -1,0 +1,141 @@
+name: SEC-192 Wallet Passphrase Bounds Apply V2
+
+on:
+  push:
+    branches:
+      - security-sec192-wallet-passphrase-bounds
+    paths:
+      - .github/workflows/sec192-apply-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.15"
+      - name: Apply SEC-192 robustly and refresh manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+          import textwrap
+
+          path = Path("wallet.py")
+          text = path.read_text(encoding="utf-8")
+
+          def replace_once(old, new, label):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected one anchor, found {count}")
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              "MAX_BACKUP_JSON_NESTING_DEPTH = 32\n",
+              "MAX_BACKUP_JSON_NESTING_DEPTH = 32\nMAX_BACKUP_PASSPHRASE_BYTES = 1024\n",
+              "passphrase budget",
+          )
+
+          # Patch the envelope's old check before inserting the new helper, so the
+          # helper's own exact-type check cannot collide with this anchor.
+          envelope_old = '''def _validated_backup_envelope(backup, passphrase):
+              if type(backup) is not dict:
+                  raise BackupError("backup must be an object")
+              if set(backup) != _BACKUP_ENVELOPE_FIELDS:
+                  raise BackupError("invalid backup envelope fields")
+              if type(passphrase) is not str or not passphrase:
+                  raise BackupError("non-empty passphrase required")
+          '''
+          envelope_new = '''def _validated_backup_envelope(backup, passphrase):
+              if type(backup) is not dict:
+                  raise BackupError("backup must be an object")
+              if set(backup) != _BACKUP_ENVELOPE_FIELDS:
+                  raise BackupError("invalid backup envelope fields")
+              _validated_passphrase_bytes(passphrase)
+          '''
+          replace_once(textwrap.dedent(envelope_old), textwrap.dedent(envelope_new), "envelope passphrase validation")
+
+          helper = '''def _validated_passphrase_bytes(passphrase):
+              if type(passphrase) is not str or not passphrase:
+                  raise BackupError("non-empty passphrase required")
+              try:
+                  encoded = passphrase.encode("utf-8")
+              except UnicodeEncodeError as exc:
+                  raise BackupError("invalid backup passphrase encoding") from exc
+              if len(encoded) > MAX_BACKUP_PASSPHRASE_BYTES:
+                  raise BackupError("backup passphrase too large")
+              return encoded
+
+          '''
+          helper = textwrap.dedent(helper)
+          replace_once(
+              "def _validated_backup_envelope(backup, passphrase):\n",
+              helper + "def _validated_backup_envelope(backup, passphrase):\n",
+              "passphrase helper insertion",
+          )
+
+          replace_once(
+              'def export_backup(identity, passphrase: str):\n    if not isinstance(passphrase, str) or not passphrase:\n        raise BackupError("non-empty passphrase required")\n',
+              'def export_backup(identity, passphrase: str):\n    passphrase_bytes = _validated_passphrase_bytes(passphrase)\n',
+              "export passphrase validation",
+          )
+          replace_once(
+              '    key = hashlib.scrypt(passphrase.encode(), salt=salt, n=_SCRYPT_N,\n',
+              '    key = hashlib.scrypt(passphrase_bytes, salt=salt, n=_SCRYPT_N,\n',
+              "export scrypt input",
+          )
+          replace_once(
+              'def restore_backup(backup, passphrase: str):\n    try:\n        kp, salt_text, nonce_text, cipher_text, checksum = _validated_backup_envelope(\n',
+              'def restore_backup(backup, passphrase: str):\n    try:\n        passphrase_bytes = _validated_passphrase_bytes(passphrase)\n        kp, salt_text, nonce_text, cipher_text, checksum = _validated_backup_envelope(\n',
+              "restore passphrase validation",
+          )
+          replace_once(
+              '        key = hashlib.scrypt(passphrase.encode(), salt=salt, n=kp["n"],\n',
+              '        key = hashlib.scrypt(passphrase_bytes, salt=salt, n=kp["n"],\n',
+              "restore scrypt input",
+          )
+          path.write_text(text, encoding="utf-8", newline="\n")
+
+          # Reuse the already-reviewed SEC-192 regression source embedded in V1.
+          v1 = Path(".github/workflows/sec192-apply.yml").read_text(encoding="utf-8")
+          start_marker = "          sec192 = r'''"
+          end_marker = "\n          '''\n          Path(\"security_sec192_wallet_passphrase_bounds_spec.py\")"
+          start = v1.find(start_marker)
+          end = v1.find(end_marker, start + len(start_marker))
+          if start < 0 or end < 0:
+              raise SystemExit("SEC-192 test template markers not found")
+          sec192 = v1[start + len(start_marker):end]
+          Path("security_sec192_wallet_passphrase_bounds_spec.py").write_text(
+              textwrap.dedent(sec192), encoding="utf-8", newline="\n"
+          )
+
+          manifest_path = Path("release_manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          for name in ("wallet.py", "security_sec192_wallet_passphrase_bounds_spec.py"):
+              data = Path(name).read_bytes()
+              manifest["files"][name] = {
+                  "bytes": len(data),
+                  "sha256": hashlib.sha256(data).hexdigest(),
+              }
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+              newline="\n",
+          )
+          PY
+          git diff --check
+          git config user.name "AxvenLabs Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add wallet.py security_sec192_wallet_passphrase_bounds_spec.py release_manifest.json
+          git diff --cached --quiet && { echo "SEC-192 patch produced no changes"; exit 1; }
+          git commit -m "SEC-192: bound wallet backup passphrase resources"
+          git push origin HEAD:security-sec192-wallet-passphrase-bounds
