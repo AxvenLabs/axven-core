@@ -257,16 +257,16 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 39749,
-      "sha256": "46f88fa7461b837105403ba04b083b12cf1d71cf8c14831b4bd24b42d46e68c8"
+      "bytes": 42691,
+      "sha256": "6ab024882a4195bacc1753ae8827edc4efb07cbd6fc7b4b48142496e9463203d"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5864,
       "sha256": "e3e5c65cc41f968e7cacacf2d0aa62ddd53f145a1c17b86ab9dd56d9ce3cd3e2"
     },
     "datadir.py": {
-      "bytes": 17335,
-      "sha256": "b30ec470d8d00779a4883f077cb99dd7f9eb95c2ff682049313bce41ed56c22c"
+      "bytes": 17504,
+      "sha256": "dc73c6f8c1ab4706edf8b7a30309bcef6e1490db32be143d9872e06ecfc044ca"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -1083,6 +1083,10 @@
     "security_sec196_timewarp_difficulty_spec.py": {
       "bytes": 3417,
       "sha256": "621e9c235acbd8c93e92209cbf0ff63e82308ad07dcb25058ba222fc416f0b42"
+    },
+    "security_sec197_peer_diversity_spec.py": {
+      "bytes": 6079,
+      "sha256": "b0b32889dabe13be4836178b3d874797bee41121421271dbf50fde3c1d5423c4"
     },
     "setup.cmd": {
       "bytes": 172,
