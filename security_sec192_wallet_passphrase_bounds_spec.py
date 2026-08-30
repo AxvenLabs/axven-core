@@ -157,8 +157,8 @@ def main():
         == "a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3",
     )
 
-    assert len(checks) == 10
-    print("SEC-192 wallet passphrase resource bounds: 10/10 GREEN")
+    assert len(checks) == 11
+    print("SEC-192 wallet passphrase resource bounds: 11/11 GREEN")
 
 
 if __name__ == "__main__":
