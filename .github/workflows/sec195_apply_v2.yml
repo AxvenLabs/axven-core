@@ -1,4 +1,4 @@
-name: SEC-195 apply v2
+name: SEC-195 apply v3
 
 on:
   push:
@@ -41,28 +41,33 @@ jobs:
           old=''.join(lines[fn.lineno-1:fn.end_lineno])
           if 'block_work_gate' in old or 'block_signature_work_gate' in old:
               raise SystemExit('manual sync already gated unexpectedly')
-          new='''    def sync_peer(self, host, port, batch=128):
-              batch=self._validate_service_int(batch,"sync batch",1,128)
-              addr = self._parse_peer((host, port))
-              source_host=addr[0]
-              block_gate=lambda: (
-                  self._outbound_sync_block_work_limiter.consume(source_host)
-              )
-              signature_gate=lambda cost: (
-                  self._outbound_sync_block_signature_work_limiter.consume(
-                      source_host,cost
-                  )
-              )
-              return p2p.sync_to_peer(
-                  addr, p2p.PeerSession(self.chain, self.mempool),
-                  limit=batch,
-                  block_work_gate=block_gate,
-                  block_signature_work_gate=signature_gate,
-              )'''
+
+          I=' '*4; B=' '*8; C=' '*12; D=' '*16
+          new='\n'.join([
+              I+'def sync_peer(self, host, port, batch=128):',
+              B+'batch=self._validate_service_int(batch,"sync batch",1,128)',
+              B+'addr = self._parse_peer((host, port))',
+              B+'source_host=addr[0]',
+              B+'block_gate=lambda: (',
+              C+'self._outbound_sync_block_work_limiter.consume(source_host)',
+              B+')',
+              B+'signature_gate=lambda cost: (',
+              C+'self._outbound_sync_block_signature_work_limiter.consume(',
+              D+'source_host,cost',
+              C+')',
+              B+')',
+              B+'return p2p.sync_to_peer(',
+              C+'addr, p2p.PeerSession(self.chain, self.mempool),',
+              C+'limit=batch,',
+              C+'block_work_gate=block_gate,',
+              C+'block_signature_work_gate=signature_gate,',
+              B+')',
+          ])
           lines[fn.lineno-1:fn.end_lineno]=[new+'\n']
           patched=''.join(lines)
           if patched==src or patched.count('def sync_peer(self, host, port, batch=128):')!=1:
               raise SystemExit('core patch did not produce one changed sync_peer')
+          ast.parse(patched)
           core_path.write_text(patched,encoding='utf-8',newline='\n')
 
           sec121_path=Path('security_sec121_outbound_sync_work_budget_spec.py')
@@ -76,6 +81,7 @@ jobs:
               if sec121.count(old_text)!=1:
                   raise SystemExit(f'SEC-121 anchor mismatch: {old_text}')
               sec121=sec121.replace(old_text,new_text)
+          ast.parse(sec121)
           sec121_path.write_text(sec121,encoding='utf-8',newline='\n')
 
           spec=textwrap.dedent(r'''#!/usr/bin/env python3
@@ -170,12 +176,16 @@ jobs:
           if __name__=='__main__': main()
           ''')
           spec_path=Path('security_sec195_manual_sync_work_budget_spec.py')
+          ast.parse(spec)
           spec_path.write_text(spec,encoding='utf-8',newline='\n')
 
-          # Verify the intended patch before touching the manifest.
           final_core=core_path.read_text(encoding='utf-8')
-          if 'block_work_gate=block_gate' not in final_core[final_core.index('    def sync_peer('):]:
-              raise SystemExit('manual sync gate verification failed')
+          manual_slice=final_core[final_core.index('    def sync_peer('):]
+          for marker in ('_outbound_sync_block_work_limiter.consume(source_host)',
+                         '_outbound_sync_block_signature_work_limiter.consume',
+                         'block_work_gate=block_gate','block_signature_work_gate=signature_gate'):
+              if marker not in manual_slice:
+                  raise SystemExit(f'manual sync gate verification failed: {marker}')
 
           manifest_path=Path('release_manifest.json')
           manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
@@ -183,14 +193,14 @@ jobs:
               data=Path(path).read_bytes()
               manifest['files'][path]={'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
           manifest_path.write_text(json.dumps(manifest,indent=2,ensure_ascii=False)+'\n',encoding='utf-8',newline='\n')
-          '@ | Set-Content -Encoding utf8 apply_sec195_v2.py
-          python apply_sec195_v2.py
+          '@ | Set-Content -Encoding utf8 apply_sec195_v3.py
+          python apply_sec195_v3.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python -m py_compile core.py security_sec121_outbound_sync_work_budget_spec.py security_sec195_manual_sync_work_budget_spec.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python security_sec195_manual_sync_work_budget_spec.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Remove-Item apply_sec195_v2.py
+          Remove-Item apply_sec195_v3.py
           git config user.name 'AxvenLabs'
           git config user.email 'actions@users.noreply.github.com'
           git rm .github/workflows/sec195_apply_v2.yml
