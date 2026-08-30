@@ -1711,10 +1711,37 @@ def _fsync_directory(directory):
         os.close(dir_fd)
 
 
+def _validate_chain_state_directory_metadata(metadata):
+    """Require the chain-state directory itself to be an integrity boundary."""
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise ValueError("unsafe chain state directory")
+    if os.name == "posix":
+        if metadata.st_mode & 0o022:
+            raise ValueError("chain state directory must not be group/world writable")
+        if hasattr(os, "getuid") and metadata.st_uid != os.getuid():
+            raise ValueError("chain state directory owner mismatch")
+    return metadata
+
+
+def _validate_chain_state_directory(path):
+    """Validate a chain directory without following a symlink path entry."""
+    metadata = os.lstat(os.fspath(path))
+    if stat.S_ISLNK(metadata.st_mode):
+        raise ValueError("unsafe chain state directory")
+    return _validate_chain_state_directory_metadata(metadata)
+
+
 class StateStore:
     def __init__(self, directory: str):
         self.directory = Path(directory)
-        self.directory.mkdir(parents=True, exist_ok=True)
+        try:
+            os.lstat(os.fspath(self.directory))
+        except FileNotFoundError:
+            # A concurrent path creator cannot bypass the check: exist_ok=True
+            # may observe the raced entry, but the lstat validation below then
+            # rejects symlinks, non-directories and unsafe POSIX metadata.
+            self.directory.mkdir(parents=True, exist_ok=True)
+        _validate_chain_state_directory(self.directory)
         self.path = self.directory / "chain.json"
 
     def persist(self, chain: Blockchain):

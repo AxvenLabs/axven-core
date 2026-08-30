@@ -125,8 +125,8 @@
       "sha256": "4eb34e9a095719eb3e4919b59790ffa579ad5c69a28d812d86bdbbf32fc49f36"
     },
     "axven.py": {
-      "bytes": 70815,
-      "sha256": "a89e7f5b8b5773504a0d05d59b1dfa80d64a059d2d9e5e5e2c84ed9e04bf0681"
+      "bytes": 72071,
+      "sha256": "8f065ccd4462ffc250836f6e9bf0c54ce7c9b437652eb6c9a20b0b8769999b96"
     },
     "axven_cli.py": {
       "bytes": 10505,
@@ -265,8 +265,8 @@
       "sha256": "e3e5c65cc41f968e7cacacf2d0aa62ddd53f145a1c17b86ab9dd56d9ce3cd3e2"
     },
     "datadir.py": {
-      "bytes": 17063,
-      "sha256": "fcdcba4f9630a531ab112ff85bcd7225a5ec91a7d06819099df782dabc032039"
+      "bytes": 17335,
+      "sha256": "b30ec470d8d00779a4883f077cb99dd7f9eb95c2ff682049313bce41ed56c22c"
     },
     "devnet_rehearsal.py": {
       "bytes": 5195,
@@ -1027,6 +1027,10 @@
     "security_sec183_chain_state_owner_permissions_spec.py": {
       "bytes": 2367,
       "sha256": "a8e77deda3fd0d2ba0a1e70b23e2dee9013244f4a7b5ff86e3703e3da216a38a"
+    },
+    "security_sec184_chain_directory_integrity_spec.py": {
+      "bytes": 5106,
+      "sha256": "15d032e5bf53d8f0e78c9ad5fd1d2305d65d0771e7a168c88c39369d7236f19b"
     },
     "setup.cmd": {
       "bytes": 172,
