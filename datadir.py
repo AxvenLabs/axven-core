@@ -127,6 +127,47 @@ def _read_secure_rpc_token_file(path):
     return raw
 
 
+def _read_secure_peer_config_file(path):
+    """Read peers.json without trusting path indirection or unsafe metadata."""
+    path=os.fspath(path)
+    try:
+        before=os.lstat(path)
+    except FileNotFoundError:
+        return None
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+        raise ValueError("unsafe peer config file")
+
+    flags=os.O_RDONLY
+    if hasattr(os,"O_BINARY"):
+        flags |= os.O_BINARY
+    if hasattr(os,"O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd=None
+    try:
+        try:
+            fd=os.open(path,flags)
+        except OSError as exc:
+            raise ValueError("unsafe peer config file") from exc
+        current=os.fstat(fd)
+        if not stat.S_ISREG(current.st_mode):
+            raise ValueError("unsafe peer config file")
+        if (before.st_dev,before.st_ino)!=(current.st_dev,current.st_ino):
+            raise ValueError("peer config file changed during open")
+        if getattr(current,"st_nlink",1)!=1:
+            raise ValueError("unsafe peer config hardlink count")
+        if os.name=="posix":
+            if current.st_mode & 0o077:
+                raise ValueError("peer config permissions must be owner-only")
+            if hasattr(os,"getuid") and current.st_uid!=os.getuid():
+                raise ValueError("peer config owner mismatch")
+        with os.fdopen(fd,"rb") as f:
+            fd=None
+            return f.read(MAX_PEER_CONFIG_BYTES+1)
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
 class DataDirBusyError(RuntimeError):
     """Raised when another Axven mutator owns the resolved datadir."""
 
@@ -335,11 +376,10 @@ class DataDir:
         axven.StateStore(str(self.chain_dir)).persist(chain)
 
     def load_peers(self):
-        if not self.peer_file.exists():
+        encoded=_read_secure_peer_config_file(self.peer_file)
+        if encoded is None:
             return []
         import json
-        with open(self.peer_file,"rb") as f:
-            encoded=f.read(MAX_PEER_CONFIG_BYTES + 1)
         if len(encoded) > MAX_PEER_CONFIG_BYTES:
             raise ValueError("peer config too large")
         _preflight_peer_config_json(encoded)
