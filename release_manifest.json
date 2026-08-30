@@ -309,8 +309,8 @@
       "sha256": "8eabbba61e473b69051ea8e106ac572ea62bd3c83d5e8d67182015c01d2cf05b"
     },
     "p2p_tx_bounds.py": {
-      "bytes": 3141,
-      "sha256": "67346e8aeb80b9f23342d24859d2cfb0e6a635986a2a4457e24d971c7d4be57e"
+      "bytes": 3630,
+      "sha256": "6d056abd7b94ff9f6debce4231ea8665ed07549ba388e2b3841f583785653608"
     },
     "post_activation_audit.py": {
       "bytes": 1283,
