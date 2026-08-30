@@ -125,8 +125,8 @@
       "sha256": "4eb34e9a095719eb3e4919b59790ffa579ad5c69a28d812d86bdbbf32fc49f36"
     },
     "axven.py": {
-      "bytes": 72071,
-      "sha256": "8f065ccd4462ffc250836f6e9bf0c54ce7c9b437652eb6c9a20b0b8769999b96"
+      "bytes": 72768,
+      "sha256": "54f7b90cc519403a1ef60a080ff5b62fe2c176359521042cdcaeab898bf77b59"
     },
     "axven_cli.py": {
       "bytes": 10505,
@@ -1035,6 +1035,10 @@
     "security_sec185_mldsa_backend_interoperability_spec.py": {
       "bytes": 4045,
       "sha256": "a6529d030f25bc6e303b1cb8bb40ebf9355065bdd86a38830ce8e6bf4b71cbe0"
+    },
+    "security_sec186_mldsa_production_verifier_spec.py": {
+      "bytes": 4068,
+      "sha256": "22eb4fd30017bd8a6f1c0fbd9f41be27c3aee1e11e355076ad7554fdc432a35c"
     },
     "setup.cmd": {
       "bytes": 172,

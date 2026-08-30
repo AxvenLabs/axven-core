@@ -6,6 +6,8 @@ from collections import OrderedDict
 from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric import mldsa
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from cryptography.hazmat.primitives import serialization
 
@@ -101,6 +103,22 @@ def _mldsa():
     except Exception:
         from dilithium_py.ml_dsa.default_parameters import ML_DSA_44
     _ML=ML_DSA_44; return _ML
+
+def _verify_mldsa44_signature(public_key, message, signature):
+    """Verify pure ML-DSA-44 with the pinned pyca/OpenSSL backend."""
+    if type(public_key) is not bytes or len(public_key) != 1312:
+        return False
+    if type(signature) is not bytes or len(signature) != 2420:
+        return False
+    if type(message) is not bytes:
+        return False
+    try:
+        verifier=mldsa.MLDSA44PublicKey.from_public_bytes(public_key)
+        verifier.verify(signature,message)
+        return True
+    except (InvalidSignature,ValueError,TypeError):
+        return False
+
 class MLDSAWallet:
     def __init__(self,keypair=None):
         if keypair is None:self.public_key,self._secret=_mldsa().keygen()
@@ -124,11 +142,11 @@ def verify_input(inp,utxo,sighash,height=0):
             Ed25519PublicKey.from_public_bytes(pub).verify(sig,sighash); return True
         if req==SCHEME_ML_DSA:
             pub=_b64d(_input_get(inp,"public_key")); sig=_b64d(_input_get(inp,"signature"));
-            return ml_address_from_pubkey(pub)==utxo["recipient"] and bool(_mldsa().verify(pub,sighash,sig))
+            return ml_address_from_pubkey(pub)==utxo["recipient"] and _verify_mldsa44_signature(pub,sighash,sig)
         if req==SCHEME_HYBRID:
             ep=_b64d(_input_get(inp,"ed_public_key")); es=_b64d(_input_get(inp,"ed_signature")); mp=_b64d(_input_get(inp,"ml_public_key")); ms=_b64d(_input_get(inp,"ml_signature"));
             if hybrid_address(ep,mp)!=utxo["recipient"]: return False
-            Ed25519PublicKey.from_public_bytes(ep).verify(es,sighash); return bool(_mldsa().verify(mp,sighash,ms))
+            Ed25519PublicKey.from_public_bytes(ep).verify(es,sighash); return _verify_mldsa44_signature(mp,sighash,ms)
         return False
     except Exception:return False
 def outpoint(txid,index): return f"{txid}:{index}"
