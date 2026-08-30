@@ -419,12 +419,19 @@ class AxvenCore:
 
     @staticmethod
     def _validate_recipient_bound(recipient):
-        # RPC recipients are textual address values. Reject JSON containers
-        # and scalar coercion aliases before wallet or transaction work.
+        # A wallet-originated payment must target one canonical Axven address.
+        # Consensus scheme classification intentionally remains a separate
+        # rule; this service boundary prevents malformed prefix aliases from
+        # producing outputs that no canonical key can ever spend.
         if type(recipient) is not str:
             raise ValueError("recipient address must be string")
-        if len(recipient) > 256:
-            raise ValueError("recipient address too long")
+        if (
+            len(recipient) != 41
+            or recipient[0] not in ("N", "M", "H")
+            or any(ch not in "0123456789abcdef" for ch in recipient[1:])
+        ):
+            raise ValueError("invalid recipient address")
+        return recipient
 
     def send(self, input_scheme, recipient, amount, fee):
         self._validate_scheme_bound(input_scheme)
