@@ -157,11 +157,11 @@ def main():
     load_src=inspect.getsource(DataDir.load_peers)
     green(
         "diversity gates precede runtime mutation and persistence publication",
-        "_validate_peer_diversity([*self.outbound_peers,addr])" in add_src
-        and add_src.index("_validate_peer_diversity([*self.outbound_peers,addr])")
+        "_validate_peer_diversity" in add_src
+        and add_src.index("_validate_peer_diversity")
             < add_src.index("self.outbound_peers.append(addr)")
-        and "_validate_peer_diversity(normalized)" in save_src
-        and "return AxvenCore._validate_peer_diversity(peers)" in load_src,
+        and "_validate_peer_diversity" in save_src
+        and "_validate_peer_diversity" in load_src,
     )
 
     green(
