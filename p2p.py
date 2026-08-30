@@ -11,7 +11,9 @@ from typing import Any, Dict, Optional
 import axven
 from p2p_tx_bounds import validate_tx_string_bounds
 
-PROTOCOL_VERSION = 2
+# v3 gates the SEC-196 future-timestamp consensus admission rule.
+# Refuse v2 peers so mixed validity rules cannot silently fork devnet.
+PROTOCOL_VERSION = 3
 MAX_MESSAGE_BYTES = 16 * 1024 * 1024
 MAX_HANDSHAKE_MESSAGE_BYTES = 4 * 1024
 INBOUND_PEER_TIMEOUT = 5.0

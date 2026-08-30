@@ -125,8 +125,8 @@
       "sha256": "4eb34e9a095719eb3e4919b59790ffa579ad5c69a28d812d86bdbbf32fc49f36"
     },
     "axven.py": {
-      "bytes": 74737,
-      "sha256": "9e7063f3eae04e091426fe0eda628b7f8d253816dce0bb60f7ab7417244f6cb8"
+      "bytes": 75225,
+      "sha256": "08db8e0f9148e4f284f523461760fa8650cbc415e7cc62240eabd05f7457237c"
     },
     "axven_cli.py": {
       "bytes": 10505,
@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 55359,
-      "sha256": "57cbbdc219dd9b4048f5a2afa976bc6adb6575dc387e47f7bd052461447b8c04"
+      "bytes": 55496,
+      "sha256": "18f607a6157a42e9053ebc4d20620ec930473ee6f62e1b6c93654f159cd6a1e8"
     },
     "p2p_tx_bounds.py": {
       "bytes": 3630,
@@ -557,8 +557,8 @@
       "sha256": "8576c310965cc93a7f120cd16507393498c022e333aec637ee1a01cb31553267"
     },
     "security_sec062_protocol_v2_compat_spec.py": {
-      "bytes": 2154,
-      "sha256": "869d9281262a504a085256ba44368673a9070bf9c166e743ab5697e61ec9a682"
+      "bytes": 2168,
+      "sha256": "3d621414ea67e821cbe7dd6acb9a59b5f97f5c032f0707ebe1c606898ba80163"
     },
     "security_sec063_p2p_sync_response_budget_spec.py": {
       "bytes": 4225,
@@ -1076,6 +1076,14 @@
       "bytes": 4137,
       "sha256": "06dcc259f24973f441b0c4cfe51a9b0a150696c69dec4ed9a3e6ba3d29446403"
     },
+    "security_sec195_manual_sync_work_budget_spec.py": {
+      "bytes": 4648,
+      "sha256": "59835abf56cf192b0cf101a86403e6cfa5e674f89c0aac2f38c610fd1e26c12e"
+    },
+    "security_sec196_timewarp_difficulty_spec.py": {
+      "bytes": 3417,
+      "sha256": "621e9c235acbd8c93e92209cbf0ff63e82308ad07dcb25058ba222fc416f0b42"
+    },
     "setup.cmd": {
       "bytes": 172,
       "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
@@ -1143,10 +1151,6 @@
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
       "sha256": "0826cd7f03dca3bfa679c0052ae749d2adb0195eea8c065fa8ebb197b9a54804"
-    },
-    "security_sec195_manual_sync_work_budget_spec.py": {
-      "bytes": 4648,
-      "sha256": "59835abf56cf192b0cf101a86403e6cfa5e674f89c0aac2f38c610fd1e26c12e"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
