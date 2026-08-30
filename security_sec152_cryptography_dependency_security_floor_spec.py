@@ -57,10 +57,12 @@ def main():
     checks+=1
     print("[GREEN] doctor fails closed on non-canonical cryptography release")
 
-    assert "dilithium-py==1.4.0" in req_lines
-    assert "dilithium-py==1.4.0" in deps
+    recovery=project["project"]["optional-dependencies"]["legacy-mldsa-recovery"]
+    assert "dilithium-py==1.4.0" not in req_lines
+    assert "dilithium-py==1.4.0" not in deps
+    assert recovery==["dilithium-py==1.4.0"],recovery
     checks+=1
-    print("[GREEN] existing ML-DSA dependency pin unchanged")
+    print("[GREEN] legacy ML-DSA backend remains exactly pinned as optional recovery only")
 
     assert axven.CHAIN_ID=="axven-devnet-2"
     assert axven.CONFIG_FINGERPRINT=="ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae"

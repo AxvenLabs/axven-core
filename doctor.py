@@ -47,10 +47,11 @@ def run():
     if pq_import:
         try:pq_version=importlib.metadata.version("dilithium-py")
         except Exception as e:pq_detail=f"metadata error: {e}"
-    pq_ok=pq_import and pq_version=="1.4.0"
-    checks["dilithium_py"]={
-        "ok":pq_ok,"import_ok":pq_import,"version":pq_version,
-        "required":"1.4.0","detail":pq_detail if not pq_ok else "ok"
+    pq_ok=(not pq_import) or pq_version=="1.4.0"
+    checks["legacy_mldsa_recovery"]={
+        "ok":pq_ok,"available":pq_import,"version":pq_version,
+        "required":"optional:1.4.0",
+        "detail":("not installed (optional)" if not pq_import else ("ok" if pq_ok else pq_detail)),
     }
 
     cffi_import,cffi_detail=check_module("cffi")

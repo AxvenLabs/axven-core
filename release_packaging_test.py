@@ -26,16 +26,19 @@ def main():
         ok("hash "+name,hashlib.sha256(data).hexdigest()==meta["sha256"])
         ok("size "+name,len(data)==meta["bytes"])
 
-    # Doctor must truthfully reflect dependency state.  In this sandbox PQ
-    # dependency is absent, so it MUST fail overall rather than fake success.
+    # Doctor must truthfully reflect dependency state.  The educational
+    # dilithium-py backend is recovery-only: absence is healthy for normal
+    # production, while an installed recovery backend must match its exact pin.
     d=doctor.run()
     ok("doctor python",d["checks"]["python"]["ok"])
     ok("doctor cryptography",d["checks"]["cryptography"]["ok"])
-    pq=d["checks"]["dilithium_py"]["ok"]
-    if pq:
-        ok("doctor full pass",d["ok"])
+    recovery=d["checks"]["legacy_mldsa_recovery"]
+    ok("doctor legacy recovery state",recovery["ok"])
+    if recovery["available"]:
+        ok("doctor legacy recovery exact pin",recovery["version"]=="1.4.0")
     else:
-        ok("doctor fails closed without PQ",not d["ok"])
+        ok("doctor healthy without legacy recovery",d["ok"])
+    ok("doctor full pass",d["ok"])
 
     # CLI help is runnable without creating a wallet.
     for script in ("axven_core.py","axven_cli.py","doctor.py"):
@@ -53,6 +56,6 @@ def main():
     ok("7MiB",axven.CHAIN_CONFIG["max_block_bytes"]==7*1024*1024)
 
     print(f"Release packaging: {len(c)}/{len(c)} GREEN")
-    print("pq_dependency_present=",pq)
+    print("legacy_mldsa_recovery_present=",recovery["available"])
 
 if __name__=="__main__":main()

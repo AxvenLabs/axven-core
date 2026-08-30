@@ -21,8 +21,8 @@
   "explorer_node2_port": 18455,
   "files": {
     ".github/workflows/validation.yml": {
-      "bytes": 1019,
-      "sha256": "634154bf5cacf3055b732c2c9623f5957a8624b57f99728a257f9af29e69907e"
+      "bytes": 1044,
+      "sha256": "bb132bb56bf633583b75584b7dffabad98e0282beb40119fd535cfdbb1828179"
     },
     "CANONICAL_OPERATIONS.md": {
       "bytes": 1434,
@@ -125,8 +125,8 @@
       "sha256": "4eb34e9a095719eb3e4919b59790ffa579ad5c69a28d812d86bdbbf32fc49f36"
     },
     "axven.py": {
-      "bytes": 74342,
-      "sha256": "015c2595bae9f665f069a95eaccc3f14cc9255133313d5ab537ad0048a2d74ca"
+      "bytes": 74632,
+      "sha256": "9b89e9aaa294e7acbe92c0e10e21e0f664e7c7fd4fb504ebd63407b5a45e3456"
     },
     "axven_cli.py": {
       "bytes": 10505,
@@ -273,8 +273,8 @@
       "sha256": "8fae69a3d5059742af03d44c4ff431a62918663d85e0a9968a14c4df3d59bba8"
     },
     "doctor.py": {
-      "bytes": 3750,
-      "sha256": "440f43b27134b9e5a6795927865bc76cae36f7e6a12cbc91f0830560aad21b58"
+      "bytes": 3832,
+      "sha256": "28698dd2dc7b7f0f160eac4186062b828c94a31ae96610d41d75c3bd6bc4efcc"
     },
     "explorer.py": {
       "bytes": 9267,
@@ -329,20 +329,20 @@
       "sha256": "4a4d485eedec4d982bb8abdf7505de483c07088c9e5a96bb254b39e6f0c084e6"
     },
     "pyproject.toml": {
-      "bytes": 704,
-      "sha256": "33538278dd2f3121779193ec7b9e71e5498f2e61ee22f4ec7bdec3aaed6047e1"
+      "bytes": 760,
+      "sha256": "b8880836fe4da2cd9ed08df561105f3b8c419a84784c8068a3d24e910d2264b6"
     },
     "rc_audit.py": {
       "bytes": 1256,
       "sha256": "41d0121c2da05cab318d71a5ecfb40e47407f418a7ae798e5e7c9ca5c4d68444"
     },
     "release_packaging_test.py": {
-      "bytes": 2551,
-      "sha256": "15e4743122ae79bfbe27c6645d8e86d3d7f107873662f1eff4f964634c1097ab"
+      "bytes": 2810,
+      "sha256": "63e52e173ffac755275163b37c65b722a08fc9199514e1eb2c50e477ea8409e9"
     },
     "requirements.txt": {
-      "bytes": 68,
-      "sha256": "25a689ca3907cb831ccfe6d07f80c512961479b1113669a2b38a7d0e10b92c3a"
+      "bytes": 48,
+      "sha256": "8e5e096382a35d55ea1105f989eac41e42c237db1e9324b3a065267246a816c0"
     },
     "rpc.py": {
       "bytes": 18929,
@@ -901,8 +901,8 @@
       "sha256": "6bbd66116606f8f93062f08f54a5674c1f94b365df63f314f83330addac030ae"
     },
     "security_sec152_cryptography_dependency_security_floor_spec.py": {
-      "bytes": 2639,
-      "sha256": "65e39bf982d4a14703d486a4dc34309c7c3e011b3565af5759d6337aeb628cea"
+      "bytes": 2813,
+      "sha256": "dc20e543c79e50d5b872ff704d8f348a9fc76e65e5a6724cc1e9e6703cec8f5c"
     },
     "security_sec153_chain_state_block_canonicality_spec.py": {
       "bytes": 4023,
@@ -973,16 +973,16 @@
       "sha256": "b1eb092d0fe526dc858ebed7e782a435a0d08bdab20c65aeec5f89f1b7f3faa7"
     },
     "security_sec170_python_runtime_security_floor_spec.py": {
-      "bytes": 2927,
-      "sha256": "d6db9b0128d0f26e50242ca9159e4b663f93ede1c91ee7159a2152da94ac6b90"
+      "bytes": 3089,
+      "sha256": "7e3040c6551ce22a4f5c50b3979e1188b2a7563087469f11f6fa75001d59c9f2"
     },
     "security_sec171_rpc_method_param_canonicality_spec.py": {
       "bytes": 4166,
       "sha256": "6b7d89789b0f52357d9183c0d7916d9c72d571b4e0a6a1d4fecaf1c3084b125f"
     },
     "security_sec172_python_packaging_toolchain_pins_spec.py": {
-      "bytes": 2998,
-      "sha256": "55d692ef9d3df84724f0df3cffbc225f4c516e43ead444f0b1a9da615be31e7b"
+      "bytes": 3160,
+      "sha256": "9f4d53716731be731fb61f15010109e6253cebc7e6bbf4f565af938278bbca4d"
     },
     "security_sec173_datadir_mutator_single_writer_spec.py": {
       "bytes": 4603,
@@ -1005,8 +1005,8 @@
       "sha256": "38615ae4bb788e492ecdd19b2c56c62fbdaf9b0228d5c7aa36ca43203026a34c"
     },
     "security_sec178_dependency_closure_pins_spec.py": {
-      "bytes": 3411,
-      "sha256": "92a835f69fa0e88c04a080f9f2d49eaf83554f6195796a705edb04e0b6430dbf"
+      "bytes": 2851,
+      "sha256": "8e83dfd3e174af5f929d48dd87e9e0832371f62564c0824e74c904ab2546d58a"
     },
     "security_sec179_datadir_directory_integrity_spec.py": {
       "bytes": 2871,
@@ -1043,6 +1043,10 @@
     "security_sec187_mldsa_wallet_signer_migration_spec.py": {
       "bytes": 4971,
       "sha256": "188ad74b3deeda6620c0b9a26834a8a88f0e11c0bccb9f54ef9cab1d237ef883"
+    },
+    "security_sec188_legacy_mldsa_recovery_isolation_spec.py": {
+      "bytes": 3017,
+      "sha256": "b50673d1f9888e7a898d1d3c6143f51125100aa05c12097b99c8360efa8e2686"
     },
     "setup.cmd": {
       "bytes": 172,

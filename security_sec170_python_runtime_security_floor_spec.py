@@ -64,10 +64,12 @@ def main():
         and doctor_result["checks"]["python"]["required"] == ">=3.13.15,<3.14",
     )
     runtime_dependencies=pyproject["project"]["dependencies"]
+    recovery_dependencies=pyproject["project"]["optional-dependencies"]["legacy-mldsa-recovery"]
     green(
         "runtime dependency security pins remain unchanged",
         "cryptography==50.0.1" in runtime_dependencies
-        and "dilithium-py==1.4.0" in runtime_dependencies,
+        and "dilithium-py==1.4.0" not in runtime_dependencies
+        and recovery_dependencies == ["dilithium-py==1.4.0"],
     )
     green(
         "Python runtime migration leaves canonical chain identity unchanged",
