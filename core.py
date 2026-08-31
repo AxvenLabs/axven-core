@@ -6,6 +6,7 @@ changing consensus.  RPC is layered on top in rpc.py.
 """
 from __future__ import annotations
 from contextlib import nullcontext
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Tuple
 import ipaddress
 import math
@@ -37,6 +38,10 @@ class AxvenCore:
     # configuration. Bound operator-controlled cardinality so local RPC or
     # a corrupt config cannot grow those structures without limit.
     MAX_CONFIGURED_PEERS = 256
+    # SEC-223: preserve full configured-peer propagation while bounding
+    # simultaneous outbound sockets/threads and eliminating serial latency
+    # amplification across the configured peer set.
+    MAX_PROPAGATION_WORKERS = 16
     # SEC-197: one routable IP network group or canonical DNS host must not
     # occupy an arbitrary fraction of the configured outbound set.  This
     # is local peering policy only; loopback remains exempt for devnet labs.
@@ -1046,33 +1051,45 @@ class AxvenCore:
             for addr in self.outbound_peer_addresses()
         ]
 
+    def _propagate_one_outbound(self, addr, payload, transport):
+        try:
+            def remote_host_gate(remote_host):
+                source_host=self._canonical_resolved_peer_host(remote_host)
+                return self._admit_resolved_peer_host(addr,source_host)
+            transport(addr,payload,remote_host_gate=remote_host_gate)
+            error=None
+        except Exception as e:
+            error=f"{type(e).__name__}: {e}"
+        with _peer_guard(self):
+            # SEC-101: a late worker must never recreate health state after an
+            # operator removes the configured peer while propagation is active.
+            if addr in self.outbound_peers:
+                self.peer_last_error[addr]=error
+
+    def _propagate_outbound(self, payload, transport):
+        peers=self.outbound_peer_addresses()
+        if not peers:
+            return
+        workers=min(self.MAX_PROPAGATION_WORKERS,len(peers))
+        with ThreadPoolExecutor(
+            max_workers=workers,
+            thread_name_prefix="axven-propagation",
+        ) as executor:
+            futures=[
+                executor.submit(self._propagate_one_outbound,addr,payload,transport)
+                for addr in peers
+            ]
+            # Every configured peer still receives one attempt. Waiting here
+            # preserves existing send/mine completion semantics while the fixed
+            # worker cap prevents serial per-peer timeout multiplication.
+            for future in futures:
+                future.result()
+
     def _propagate_block_outbound(self, block):
-        for addr in self.outbound_peer_addresses():
-            try:
-                def remote_host_gate(remote_host):
-                    source_host=self._canonical_resolved_peer_host(remote_host)
-                    return self._admit_resolved_peer_host(addr,source_host)
-                p2p.propagate_block(addr,block,remote_host_gate=remote_host_gate)
-                error=None
-            except Exception as e:
-                error=f"{type(e).__name__}: {e}"
-            with _peer_guard(self):
-                if addr in self.outbound_peers:
-                    self.peer_last_error[addr]=error
+        self._propagate_outbound(block,p2p.propagate_block)
 
     def _propagate_tx_outbound(self, tx):
-        for addr in self.outbound_peer_addresses():
-            try:
-                def remote_host_gate(remote_host):
-                    source_host=self._canonical_resolved_peer_host(remote_host)
-                    return self._admit_resolved_peer_host(addr,source_host)
-                p2p.propagate_tx(addr,tx,remote_host_gate=remote_host_gate)
-                error=None
-            except Exception as e:
-                error=f"{type(e).__name__}: {e}"
-            with _peer_guard(self):
-                if addr in self.outbound_peers:
-                    self.peer_last_error[addr]=error
+        self._propagate_outbound(tx,p2p.propagate_tx)
 
     def request_shutdown(self):
         self.shutdown_requested = True
