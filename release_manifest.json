@@ -1213,8 +1213,8 @@
       "sha256": "9eb51c8541753715a372d6f8ed85329d1e15e0fc0de686450f99645c2b6c0c30"
     },
     "security_sec208_legacy_release_provenance_spec.py": {
-      "bytes": 3974,
-      "sha256": "025225ff4f8fe1208da7f091605cbe679f1a41287b2717f08bf699ae6253fac9"
+      "bytes": 3979,
+      "sha256": "0c297af3f8383f358542117b52dbcb2af571615d67ccad964f0ed06a927ea55a"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
