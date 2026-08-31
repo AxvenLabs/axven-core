@@ -187,13 +187,15 @@ def main():
     checklist = Path("RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
     normalized_notes = " ".join(notes.split())
     normalized_checklist = " ".join(checklist.split())
+    plain_notes = normalized_notes.replace("`", "")
+    plain_checklist = normalized_checklist.replace("`", "")
     assert "v0.9.0-devnet" in notes and "MUST NOT be reused or moved" in normalized_notes
     assert "release commit SHA: <PASTE FINAL 40-HEX COMMIT SHA HERE>" in notes
     assert "release_manifest.json SHA-256: <PASTE FINAL 64-HEX SHA-256 HERE>" in notes
     assert "release_provenance.py prepare" in notes
     assert "release_provenance.py verify" in notes
-    assert "without --force" in normalized_notes
-    assert "v0.9.0-devnet" in checklist and "never reuse or move" in normalized_checklist
+    assert "without --force" in plain_notes
+    assert "v0.9.0-devnet" in checklist and "never reuse or move" in plain_checklist
     checks += 1
     print("[GREEN] release guidance requires fresh tag, exact commit, external manifest anchor, and no force move")
 
@@ -214,8 +216,8 @@ def main():
     checks += 1
     print("[GREEN] canonical chain identity unchanged")
 
-    assert checks == 11, checks
-    print("SEC-208 release tag provenance: 11/11 GREEN")
+    assert checks == 12, checks
+    print("SEC-208 release tag provenance: 12/12 GREEN")
 
 
 if __name__ == "__main__":

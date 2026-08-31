@@ -1149,8 +1149,8 @@
       "sha256": "d79436d98c407009936adb0043fdd7f41540934fc08925b7da318879ee660bf6"
     },
     "security_sec208_release_tag_provenance_spec.py": {
-      "bytes": 8162,
-      "sha256": "618e16a868fbaa0c643d7579f7bd05099d98c1f2617ed94c737f80759fa40e38"
+      "bytes": 8264,
+      "sha256": "30bf68f2dd15e97b905bac374947872d1e8a7df9e9d13e89e968ef8b3f52cd3a"
     },
     "setup.cmd": {
       "bytes": 326,
