@@ -1,0 +1,175 @@
+name: SEC-200 Apply
+
+on:
+  push:
+    branches:
+      - security-sec200-actions-node24-runtime
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+
+      - name: Apply SEC-200 regressions and canonical manifest pins
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          old_checkout = "11d5960a326750d5838078e36cf38b85af677262"
+          new_checkout = "3d3c42e5aac5ba805825da76410c181273ba90b1"
+          old_setup = "a26af69be951a213d495a4c3e4e4022e16d87065"
+          new_setup = "5fda3b95a4ea91299a34e894583c3862153e4b97"
+
+          p = Path("security_sec107_github_actions_immutable_pins_spec.py")
+          text = p.read_text(encoding="utf-8")
+          if text.count(old_checkout) != 1 or text.count(old_setup) != 1:
+              raise SystemExit("SEC-107 action pin anchors changed")
+          text = text.replace(old_checkout, new_checkout)
+          text = text.replace(old_setup, new_setup)
+          old_forbidden = 'forbidden = ("@main", "@master", "@v1", "@v2", "@v3", "@v4", "@v5", "@latest")'
+          new_forbidden = 'forbidden = ("@main", "@master", "@v1", "@v2", "@v3", "@v4", "@v5", "@v6", "@v7", "@latest")'
+          if old_forbidden not in text:
+              raise SystemExit("SEC-107 moving-ref anchor changed")
+          text = text.replace(old_forbidden, new_forbidden, 1)
+          p.write_text(text, encoding="utf-8")
+
+          p = Path("security_sec108_github_actions_least_privilege_spec.py")
+          text = p.read_text(encoding="utf-8")
+          if text.count(old_checkout) != 1 or text.count(old_setup) != 1:
+              raise SystemExit("SEC-108 action pin anchors changed")
+          text = text.replace(old_checkout, new_checkout)
+          text = text.replace(old_setup, new_setup)
+          p.write_text(text, encoding="utf-8")
+
+          spec = '''#!/usr/bin/env python3
+          """SEC-200: validation actions must use reviewed native Node 24 releases."""
+
+          import re
+          from pathlib import Path
+          import axven
+
+          WORKFLOW = Path(".github/workflows/validation.yml")
+          CHECKOUT_PIN = "3d3c42e5aac5ba805825da76410c181273ba90b1"
+          SETUP_PYTHON_PIN = "5fda3b95a4ea91299a34e894583c3862153e4b97"
+          OLD_NODE20_PINS = {
+              "11d5960a326750d5838078e36cf38b85af677262",
+              "a26af69be951a213d495a4c3e4e4022e16d87065",
+          }
+
+          def main():
+              checks = []
+              def green(name, condition=True):
+                  assert condition, name
+                  checks.append(name)
+                  print(f"[GREEN] {name}")
+
+              text = WORKFLOW.read_text(encoding="utf-8")
+              uses = re.findall(r"^\\s*-\\s+uses:\\s+([^\\s#]+)", text, re.MULTILINE)
+              parsed = dict(item.rsplit("@", 1) for item in uses)
+              green(
+                  "validation pins reviewed checkout/setup-python Node 24 releases",
+                  parsed == {
+                      "actions/checkout": CHECKOUT_PIN,
+                      "actions/setup-python": SETUP_PYTHON_PIN,
+                  },
+              )
+
+              green(
+                  "retired Node 20-era action commits are absent",
+                  all(pin not in text for pin in OLD_NODE20_PINS),
+              )
+
+              green(
+                  "reviewed upstream release provenance is documented in workflow",
+                  f"actions/checkout@{CHECKOUT_PIN} # v7.0.1" in text
+                  and f"actions/setup-python@{SETUP_PYTHON_PIN} # v7.0.0" in text,
+              )
+
+              permission_block = re.search(
+                  r"(?ms)^permissions:\\s*\\n((?:^[ \\t]+[^\\n]+\\n?)*)", text
+              )
+              entries = {}
+              if permission_block:
+                  for line in permission_block.group(1).splitlines():
+                      stripped = line.strip()
+                      if not stripped or stripped.startswith("#"):
+                          continue
+                      key, value = stripped.split(":", 1)
+                      entries[key.strip()] = value.strip()
+              green(
+                  "Node 24 migration preserves read-only checkout boundary",
+                  entries == {"contents": "read"}
+                  and "persist-credentials: false" in text
+                  and "pull_request_target" not in text
+                  and "workflow_run" not in text,
+              )
+
+              green(
+                  "runtime and hash-locked dependency policy remain pinned",
+                  'python-version: "3.13.15"' in text
+                  and text.count("--require-hashes") >= 2
+                  and text.count("--only-binary=:all:") >= 2
+                  and '--no-build-isolation --no-deps -e ".[legacy-mldsa-recovery]"' in text,
+              )
+
+              green(
+                  "SEC-200 leaves canonical chain and PQ activation identity unchanged",
+                  axven.CHAIN_ID == "axven-devnet-2"
+                  and axven.CONFIG_FINGERPRINT
+                  == "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae"
+                  and axven.CHAIN_CONFIG["pq_hybrid_activation_height"] == 2000
+                  and axven.CHAIN_CONFIG["pq_pure_activation_height"] == 5000
+                  and axven.Blockchain().tip.hash()
+                  == "a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3",
+              )
+
+              assert len(checks) == 6
+              print("SEC-200 GitHub Actions Node 24 runtime: 6/6 GREEN")
+
+          if __name__ == "__main__":
+              main()
+          '''
+          spec = "\n".join(line[10:] if line.startswith("          ") else line for line in spec.splitlines()) + "\n"
+          Path("security_sec200_github_actions_node24_runtime_spec.py").write_text(spec, encoding="utf-8")
+
+          targets = [
+              ".github/workflows/validation.yml",
+              "security_sec107_github_actions_immutable_pins_spec.py",
+              "security_sec108_github_actions_least_privilege_spec.py",
+              "security_sec200_github_actions_node24_runtime_spec.py",
+          ]
+          manifest_path = Path("release_manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          for name in targets:
+              data = Path(name).read_bytes()
+              manifest["files"][name] = {
+                  "bytes": len(data),
+                  "sha256": hashlib.sha256(data).hexdigest(),
+              }
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          PY
+
+          python security_sec107_github_actions_immutable_pins_spec.py
+          python security_sec108_github_actions_least_privilege_spec.py
+          python security_sec200_github_actions_node24_runtime_spec.py
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/validation.yml security_sec107_github_actions_immutable_pins_spec.py security_sec108_github_actions_least_privilege_spec.py security_sec200_github_actions_node24_runtime_spec.py release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-200: migrate validation actions to native Node 24"
+          git push
