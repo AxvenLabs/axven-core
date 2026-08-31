@@ -1,19 +1,35 @@
 # Axven Core — First-run runbook
 
 ## 1. Environment
-Recommended: Python 3.11+ in a fresh virtual environment.
+Axven validation requires exact Python 3.13.15. Do not bootstrap this checkout
+with ambient `pip`, `pip install --upgrade pip`, an unconstrained
+`pip install -e .`, or a manually activated unvalidated virtual environment.
+
+Windows first setup:
+
+```text
+run setup.cmd
+```
+
+`setup.cmd` delegates to the hardened Windows validator and stamps the runtime
+provenance receipt used by the Windows launchers.
+
+Linux/macOS first setup:
 
 ```bash
-python -m venv .venv
-# Linux/macOS
-source .venv/bin/activate
-# Windows PowerShell
-# .\.venv\Scripts\Activate.ps1
-
-python -m pip install --upgrade pip
-python -m pip install -e .
-axven-doctor
+bash validate_linux_macos.sh
 ```
+
+Before direct POSIX operator commands, run the fail-closed provenance gate:
+
+```bash
+bash ensure_runtime.sh
+```
+
+`ensure_runtime.sh` checks the exact `.venv` interpreter, release-manifest
+source integrity, platform-specific hash-lock inputs, the validated provenance
+receipt, and `doctor.py`. A missing or stale receipt is repaired only by the
+hardened POSIX validator.
 
 `axven-doctor` must pass before creating a wallet. In particular,
 `dilithium-py==1.4.0` is required for real ML-DSA-44 wallet creation/signing.
