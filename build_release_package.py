@@ -25,6 +25,13 @@ MAX_RELEASE_FILE_BYTES = 64 * 1024 * 1024
 MAX_RELEASE_TOTAL_BYTES = 256 * 1024 * 1024
 COPY_CHUNK_BYTES = 64 * 1024
 
+# SEC-212: release permissions are deterministic policy, not unauthenticated
+# working-tree metadata. The canonical Git tree contains no executable blobs,
+# so all staged regular files are read-only to group/other and non-executable.
+# Directories remain traversable but are never group/world writable.
+SAFE_RELEASE_FILE_MODE = 0o644
+SAFE_RELEASE_DIR_MODE = 0o755
+
 
 def _load_verified_sources():
     try:
@@ -92,9 +99,7 @@ def _load_verified_sources():
             raise RuntimeError(f"manifest source is not a regular non-symlink file: {name}")
         if metadata.st_size != expected_bytes:
             raise RuntimeError(f"manifest source size mismatch: {name}")
-        sources.append(
-            (pure, source, expected_bytes, expected_hash, stat.S_IMODE(metadata.st_mode))
-        )
+        sources.append((pure, source, expected_bytes, expected_hash))
 
     return manifest_bytes, sources
 
@@ -130,6 +135,27 @@ def _copy_verified_source(
         raise RuntimeError(f"manifest source hash mismatch: {source.name}")
 
 
+def _normalize_staged_permissions(output: Path) -> None:
+    """Apply deterministic, non-privileged permissions to the staged tree."""
+    try:
+        for entry in output.rglob("*"):
+            metadata = entry.lstat()
+            if stat.S_ISLNK(metadata.st_mode):
+                raise RuntimeError(f"unexpected symlink in staged release: {entry.relative_to(output)}")
+            if stat.S_ISDIR(metadata.st_mode):
+                entry.chmod(SAFE_RELEASE_DIR_MODE)
+            elif stat.S_ISREG(metadata.st_mode):
+                entry.chmod(SAFE_RELEASE_FILE_MODE)
+            else:
+                raise RuntimeError(f"unexpected special file in staged release: {entry.relative_to(output)}")
+        output.chmod(SAFE_RELEASE_DIR_MODE)
+    except OSError as exc:
+        if os.name != "nt":
+            raise RuntimeError(f"failed to normalize staged release permissions: {exc}") from exc
+        # Windows filesystems do not implement POSIX mode semantics. Content,
+        # path type, and exact inventory remain enforced by verify_release.
+
+
 def build(output_dir: Path) -> str:
     output = Path(output_dir).expanduser().resolve()
     if output.exists():
@@ -138,20 +164,16 @@ def build(output_dir: Path) -> str:
     manifest_bytes, sources = _load_verified_sources()
     output.mkdir(parents=True, exist_ok=False)
     try:
-        for pure, source, expected_bytes, expected_hash, mode in sources:
+        for pure, source, expected_bytes, expected_hash in sources:
             destination = output.joinpath(*pure.parts)
             destination.parent.mkdir(parents=True, exist_ok=True)
             _copy_verified_source(source, destination, expected_bytes, expected_hash)
-            try:
-                destination.chmod(mode)
-            except OSError:
-                # Windows filesystems may not preserve POSIX mode bits; content
-                # authenticity remains enforced by the manifest.
-                pass
 
         staged_manifest = output / "release_manifest.json"
         with staged_manifest.open("xb") as handle:
             handle.write(manifest_bytes)
+
+        _normalize_staged_permissions(output)
 
         digest = hashlib.sha256(manifest_bytes).hexdigest()
         original_root = verify_release.ROOT
