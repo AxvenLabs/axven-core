@@ -1,0 +1,57 @@
+name: SEC-214 one-shot manifest repair
+
+on:
+  push:
+    branches:
+      - security-sec214-windows-operator-runtime-provenance
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - name: Refresh SEC-214 manifest entries and remove helper
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          names = (
+              'axven-console.cmd',
+              'axven-console-node2.cmd',
+              'status-node1.cmd',
+              'status-node2.cmd',
+              'stop-node1.cmd',
+              'stop-node2.cmd',
+              'sync-node2-from-node1.cmd',
+              'canonical_node1_mine1.ps1',
+              'canonical_node1_status.ps1',
+              'canonical_node2_sync_node1.ps1',
+              'canonical_stop_all.ps1',
+              'security_sec214_windows_operator_runtime_provenance_spec.py',
+          )
+          manifest_path = Path('release_manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          for name in names:
+              data = Path(name).read_bytes()
+              manifest['files'][name] = {
+                  'bytes': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              }
+          manifest['files'] = dict(sorted(manifest['files'].items()))
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/sec214_manifest_repair.yml
+          git add release_manifest.json
+          git diff --cached --check
+          git commit -m 'SEC-214: refresh release manifest'
+          git push
