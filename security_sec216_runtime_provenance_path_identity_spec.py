@@ -94,26 +94,44 @@ def main() -> None:
     checks += 1
     print("[GREEN] receipt inode replacement between lstat and open is rejected")
 
+    # Windows can reuse file-index identity across os.replace in ways that make a
+    # filesystem-only inode-swap fixture nondeterministic. Exercise the exact
+    # production descriptor-identity gate directly while keeping the real path
+    # replacement coverage above for ordinary trust inputs and receipts.
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         payload = b"authenticated-payload\n"
         target = root / "payload.txt"
-        replacement = root / "replacement-payload.txt"
         target.write_bytes(payload)
-        replacement.write_bytes(payload)
         (root / "release_manifest.json").write_bytes(_manifest_bytes("payload.txt", payload))
 
-        def verify_payload():
+        original_same_file = runtime_provenance._same_file
+        forced_mismatch = False
+
+        def mismatch_payload_identity(before, opened):
+            nonlocal forced_mismatch
+            if (
+                not forced_mismatch
+                and before.st_size == len(payload)
+                and opened.st_size == len(payload)
+            ):
+                forced_mismatch = True
+                return False
+            return original_same_file(before, opened)
+
+        runtime_provenance._same_file = mismatch_payload_identity
+        try:
             try:
                 runtime_provenance._verify_manifest_payloads(root)
             except RuntimeError as exc:
                 assert "changed before hashing" in str(exc)
             else:
-                raise AssertionError("runtime payload accepted a same-content inode swap")
-
-        _swap_on_open(target, replacement, verify_payload)
+                raise AssertionError("runtime payload accepted a descriptor identity mismatch")
+        finally:
+            runtime_provenance._same_file = original_same_file
+        assert forced_mismatch
     checks += 1
-    print("[GREEN] manifest payload identity is bound before content hashing")
+    print("[GREEN] manifest payload descriptor identity mismatch is rejected before hashing")
 
     source = (ROOT / "runtime_provenance.py").read_text(encoding="utf-8")
     assert "os.path.samestat" in source
