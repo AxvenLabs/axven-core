@@ -247,11 +247,12 @@ def main():
     p2p_source = (ROOT / "p2p.py").read_text(encoding="utf-8")
     core_source = (ROOT / "core.py").read_text(encoding="utf-8")
     green(
-        "production propagation APIs and core call sites carry remote-host provenance",
+        "production propagation APIs and bounded core fanout carry remote-host provenance",
         "def propagate_tx(address,tx,remote_host_gate=None):" in p2p_source
         and "def propagate_block(address,block,remote_host_gate=None):" in p2p_source
-        and "p2p.propagate_tx(addr,tx,remote_host_gate=remote_host_gate)" in core_source
-        and "p2p.propagate_block(addr,block,remote_host_gate=remote_host_gate)" in core_source
+        and "transport(addr,payload,remote_host_gate=remote_host_gate)" in core_source
+        and "self._propagate_outbound(tx,p2p.propagate_tx)" in core_source
+        and "self._propagate_outbound(block,p2p.propagate_block)" in core_source
         and "remote_host_gate=self._admit_resolved_peer_host" not in core_source,
     )
 
