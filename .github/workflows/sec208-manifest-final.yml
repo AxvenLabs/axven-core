@@ -1,0 +1,41 @@
+name: SEC-208 Final Manifest Refresh
+on:
+  push:
+    branches:
+      - security-sec208-release-tag-provenance
+    paths:
+      - .github/workflows/sec208-manifest-final.yml
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: security-sec208-release-tag-provenance
+      - name: Refresh checklist manifest entry
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          name = 'RELEASE_CHECKLIST.md'
+          data = Path(name).read_bytes()
+          manifest_path = Path('release_manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          manifest['files'][name] = {
+              'bytes': len(data),
+              'sha256': hashlib.sha256(data).hexdigest(),
+          }
+          manifest['files'] = dict(sorted(manifest['files'].items()))
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
+          PY
+      - run: git rm .github/workflows/sec208-manifest-final.yml
+      - run: git diff --check
+      - run: git config user.name "Axven Security Automation"
+      - run: git config user.email "actions@users.noreply.github.com"
+      - run: git add RELEASE_CHECKLIST.md release_manifest.json
+      - run: 'git commit -m "SEC-208: preserve SEC-205 trust-anchor contract"'
+      - run: git push origin HEAD:security-sec208-release-tag-provenance
