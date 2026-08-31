@@ -50,6 +50,32 @@ On Linux, use `sha256sum release_manifest.json`; on macOS, use
 missing, malformed, or different from the downloaded manifest. A digest copied
 from inside the same release package is not an authenticity check.
 
+## Release payload inventory
+
+Do **not** publish a repository checkout, GitHub source archive, or an existing
+working directory as the verified Axven release asset. From the exact validated
+release commit, create a new staging directory with:
+
+`python build_release_package.py <NEW_EMPTY_OUTPUT_DIRECTORY>`
+
+The output directory must not already exist. The builder first verifies every
+source file against `release_manifest.json`, then copies only those authenticated
+files plus the manifest into a clean staging tree, and finally runs the release
+verifier on that tree. The SHA-256 printed by the builder is the manifest digest
+to publish in the canonical GitHub release body after independent comparison
+with the exact release commit.
+
+A downloader must run release verification **before setup, dependency
+installation, validation, or first launch**, from the freshly extracted staged
+release asset. The manifest defines the exact file inventory: a **single extra
+file**, symlink, or special filesystem entry causes verification to fail. There
+is no extension-based or documentation-based exception.
+
+This prevents an archive mirror or transport layer from appending an extra
+payload such as `sitecustomize.py`, a prebuilt `.venv`, a launcher, DLL/PYD, or
+`axven-data` configuration while leaving every authenticated Axven file and the
+external manifest digest unchanged.
+
 Important:
 - This is a **devnet preview**, not mainnet.
 - No independent third-party security audit has been completed.

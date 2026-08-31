@@ -57,8 +57,8 @@
       "sha256": "b32a3db30c2d0dcaed514a8c68c26c090bfcb7a3fb0c9e5c403cfe582dc0fcd7"
     },
     "GITHUB_RELEASE.md": {
-      "bytes": 2026,
-      "sha256": "a6b06203fa3541b264694f96d15c5f7cd37035c98f763dd4757e500169781820"
+      "bytes": 3401,
+      "sha256": "530a7876e863b35496a01aa4007907bcb61b69ddeb159fc726e0a359a36c3556"
     },
     "LICENSE": {
       "bytes": 1075,
@@ -81,8 +81,8 @@
       "sha256": "086c5bbd0944633d68b58f5ed3ad61bfc3e79d4931a312c7cc7e3d1691eff733"
     },
     "RELEASE_CHECKLIST.md": {
-      "bytes": 991,
-      "sha256": "3042d0ec9a8229cc914fd8de5afe54bb784623106dbb40a3466d84bf4e7f1fd7"
+      "bytes": 1261,
+      "sha256": "af0287770894eb11c17d8d0f924199b096236dfacd5dac5c4430a395acdf14d7"
     },
     "RELEASE_METADATA.json": {
       "bytes": 640,
@@ -1145,8 +1145,8 @@
       "sha256": "739219eb6f768efbd8582623b892134124b441b0c621f6e99fd165084b4572e4"
     },
     "verify_release.py": {
-      "bytes": 2884,
-      "sha256": "94aa2b3bff2457b94f1e06ce526fea9d8dff747dc222c54c3bd42dc8530cb03f"
+      "bytes": 5484,
+      "sha256": "a44d0dd9a477564a7ea38b343d24a3066e8abb811f2d2cb5910afd1e84cc5f08"
     },
     "wallet.py": {
       "bytes": 20159,
@@ -1197,12 +1197,20 @@
       "sha256": "712f92a7886e096dababfb100bb3e13926bb5d527e833c39dbd522313228c1d0"
     },
     "security_sec205_release_manifest_trust_anchor_spec.py": {
-      "bytes": 4900,
-      "sha256": "215b5ec5ad6406f51260739cb947184a79670448a98255d90bec26c62b213d79"
+      "bytes": 5343,
+      "sha256": "d9476e70025842cc7b53ac3d9909b0083253110b81a01cb22ca808a6d4b1ff4f"
     },
     "security_sec206_xml_parser_containment_spec.py": {
       "bytes": 4892,
       "sha256": "81d08732fb2c954b0c2af22b4aff7d4d9efd32c617cdf5f44688a9349b5a0bdf"
+    },
+    "security_sec207_release_unlisted_payload_containment_spec.py": {
+      "bytes": 5881,
+      "sha256": "d79436d98c407009936adb0043fdd7f41540934fc08925b7da318879ee660bf6"
+    },
+    "build_release_package.py": {
+      "bytes": 4377,
+      "sha256": "9eb51c8541753715a372d6f8ed85329d1e15e0fc0de686450f99645c2b6c0c30"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
