@@ -23,12 +23,13 @@ def main():
         text.index("requirements-ci-toolchain.lock"),
         text.index("requirements-ci-runtime-windows.lock"),
     )
-    runtime_probe=text.index("py -3.13 -c")
+    runtime_probe=text.index("py -3.13 -I -S -c")
     green(
-        "exact Python 3.13.15 is checked before any dependency installation",
+        "exact Python 3.13.15 is isolated and checked before any dependency installation",
         '$RequiredPython = "3.13.15"' in text
         and runtime_probe < first_install
-        and "platform.python_version() == '$RequiredPython'" in text,
+        and "platform.python_version() == '$RequiredPython'" in text
+        and "py -3.13 -I -S -m venv .venv" in text,
     )
 
     green(
@@ -67,9 +68,15 @@ def main():
         and "Axven security tail failed" in text,
     )
 
+    remove=text.index("Remove-Item -LiteralPath $VenvPath")
+    recreate=text.index("py -3.13 -I -S -m venv .venv")
+    first_package=text.index("& $Python -m pip")
     green(
-        "existing virtualenv runtime mismatch fails closed before package mutation",
-        "existing .venv is not Python $RequiredPython; remove it and rerun" in text
+        "stale Windows virtualenv state is removed before isolated reconstruction and package mutation",
+        "$ExistingVenv = Get-Item -LiteralPath $VenvPath -Force -ErrorAction SilentlyContinue" in text
+        and "[IO.FileAttributes]::ReparsePoint" in text
+        and remove < recreate < first_package
+        and "if (-not (Test-Path \".venv\"))" not in text
         and text.count("platform.python_version() == '$RequiredPython'") == 2,
     )
 
