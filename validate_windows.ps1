@@ -43,4 +43,8 @@ Write-Host "`n=== SEC-076+ SECURITY TAIL ===" -ForegroundColor Cyan
 & $Python security_tail_runner.py
 if ($LASTEXITCODE -ne 0) { throw "Axven security tail failed" }
 
+Write-Host "`n=== RUNTIME PROVENANCE RECEIPT ===" -ForegroundColor Cyan
+& $Python runtime_provenance.py stamp
+if ($LASTEXITCODE -ne 0) { throw "runtime provenance receipt failed" }
+
 Write-Host "`nALL AXVEN CHECKS GREEN" -ForegroundColor Green
