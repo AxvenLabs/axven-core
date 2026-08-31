@@ -20,5 +20,5 @@ jobs:
       - run: git config user.name "Axven Security Automation"
       - run: git config user.email "actions@users.noreply.github.com"
       - run: git add security_sec208_release_tag_provenance_spec.py release_manifest.json
-      - run: git commit -m "SEC-208: normalize final provenance regression"
+      - run: 'git commit -m "SEC-208: normalize final provenance regression"'
       - run: git push origin HEAD:security-sec208-release-tag-provenance
