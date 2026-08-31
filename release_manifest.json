@@ -97,12 +97,16 @@
       "sha256": "39f19f20810841164f6156dd06f78a0bf65c0f81b5c407a8ac1ab9cb90d5ebf0"
     },
     "RUNBOOK.md": {
-      "bytes": 1320,
-      "sha256": "fc2c93afb90dc71e8f01e908a879da4a6a18e77bb2c7d21cf06436f3524eb648"
+      "bytes": 1899,
+      "sha256": "f77625f4c887ebcfefa8b5644ec246d64b87d9390d414353d0fa4db69bf64c38"
     },
     "SECURITY.md": {
       "bytes": 975,
       "sha256": "b6f0da24d549ef176945565094d3da4ac8af761f982c2c528db7fcaf987ddde0"
+    },
+    "SEED_OPERATIONS.md": {
+      "bytes": 1362,
+      "sha256": "5a017c35266aef9af6d4a587c9422ac57577c18a19286e966f275f54b012d446"
     },
     "USER_GUIDE.md": {
       "bytes": 1556,
@@ -284,6 +288,10 @@
       "bytes": 851,
       "sha256": "ae182611d8d2614317f9f05c5b29007ed7f39a841c2fe9f6b756a2de5f7be9b5"
     },
+    "ensure_runtime.sh": {
+      "bytes": 565,
+      "sha256": "abbfe1fd7d9e2b0cd22fa073e18e319b9514160a83d2b424a14a3afc80ba437f"
+    },
     "explorer.py": {
       "bytes": 9267,
       "sha256": "bdbe169b4f9dff2150c69f65de424b089c4f07a4ed860f943c79376c943717e2"
@@ -373,8 +381,8 @@
       "sha256": "35f82cd5d9dfbb136eed077c0d8051c8fab758c65922328ee816fe748013c2b8"
     },
     "runtime_provenance.py": {
-      "bytes": 12711,
-      "sha256": "65e3bc0613e7e02117f92b01badb121da959410189938879d037242b77fd8ecd"
+      "bytes": 13781,
+      "sha256": "e1f67e826bea2a4a5975516d6d9bc5384fdafb752d3f92676022394d55164454"
     },
     "security_sec014_atomic_read_spec.py": {
       "bytes": 5624,
@@ -1192,6 +1200,10 @@
       "bytes": 2777,
       "sha256": "43e2ee1df3a283d49896deed2eb5ca95e65f96ee200a9042a93a6124f12802d0"
     },
+    "security_sec218_posix_operator_runtime_provenance_spec.py": {
+      "bytes": 5563,
+      "sha256": "b728fe7c488822c9c60005928337cc1b659ecceb1249fcaef5d6b7c9f893d098"
+    },
     "setup.cmd": {
       "bytes": 326,
       "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
@@ -1245,8 +1257,8 @@
       "sha256": "ae6c641c215cb8eacc94595a0fdb7d34b73ea836e0ce9842781520d68dcffd28"
     },
     "validate_linux_macos.sh": {
-      "bytes": 1572,
-      "sha256": "f13c9252cd5412741bb4a1094c987d24f964fab0c2fae04c47ba79900c422546"
+      "bytes": 1664,
+      "sha256": "a8d7ab7be5787803921fddad6fbd1a9c591a48e6675f09161629bb3ea05a8584"
     },
     "validate_windows.ps1": {
       "bytes": 2303,
