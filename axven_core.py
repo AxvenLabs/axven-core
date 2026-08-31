@@ -21,41 +21,49 @@ def _schedule_peer_retry_if_configured(core, peer, delay, base_interval):
         return True
 
 def _reschedule_peer_after_sync(core, peer, base_interval, cap=60.0):
-    """Atomically compute/publish retry state after an outbound sync."""
+    """Return/publish retry state atomically after an outbound sync."""
     addr=core._parse_peer(peer)
     with core._peer_lock:
         if addr not in core.outbound_peers:
             return None
+
+        # When daemon retry publication is configured, sync_outbound_peer()
+        # already published the authoritative observable schedule before the
+        # worker Future became done. Reuse that exact delay so the scheduler
+        # does not advance the public timestamp a second time.
+        if (
+            core._peer_retry_publication_base_interval is not None
+            and addr in core.peer_retry_delay_seconds
+        ):
+            return core.peer_retry_delay_seconds[addr]
+
+        # Preserve the helper's pre-SEC-225 atomic behavior for callers that
+        # have not enabled automatic retry publication (including SEC-103).
         retry_delay=core.peer_retry_delay(addr,base_interval,cap)
         core.set_peer_retry_schedule(addr,retry_delay,base_interval)
         core.record_peer_health_transition(addr)
         return retry_delay
 
+def _sync_outbound_peer_for_daemon(core, addr):
+    """Run one daemon retry through the canonical single-peer sync path."""
+    return core.sync_outbound_peer(addr)
+
 def _reap_completed_peer_syncs(
     core, peer_sync_futures, peer_next_sync, base_interval
 ):
-    """Consume completed daemon syncs without republishing retry metadata."""
+    """Consume completed daemon syncs and advance only private scheduling."""
     completed=0
     for future,addr in list(peer_sync_futures.items()):
         if not future.done():
             continue
         # sync_outbound_peer owns normal network-error containment and atomically
         # publishes health + observable retry metadata before its Future becomes
-        # done. Preserve that timestamp instead of publishing it a second time.
+        # done. The atomic helper below reuses that publication when enabled.
         future.result()
         peer_sync_futures.pop(future,None)
-        with core._peer_lock:
-            if addr not in core.outbound_peers:
-                retry_delay=None
-            else:
-                retry_delay=core.peer_retry_delay_seconds.get(addr)
-                # Helper-level tests or non-daemon callers may not have enabled
-                # retry publication. Compute only the local scheduler delay in
-                # that case; do not mutate observable retry metadata here.
-                if retry_delay is None:
-                    retry_delay=core.peer_retry_delay(
-                        addr,base_interval,60.0
-                    )
+        retry_delay=_reschedule_peer_after_sync(
+            core,addr,base_interval,60.0
+        )
         if retry_delay is None:
             peer_next_sync.pop(addr,None)
         else:
@@ -79,7 +87,7 @@ def _submit_due_peer_syncs(
             continue
         if now < peer_next_sync.get(addr,now):
             continue
-        future=executor.submit(core.sync_outbound_peer,addr)
+        future=executor.submit(_sync_outbound_peer_for_daemon,core,addr)
         peer_sync_futures[future]=addr
         active.add(addr)
         submitted+=1
