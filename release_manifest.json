@@ -141,8 +141,8 @@
       "sha256": "1e3c44f1d410386438e65fe45dacc80a7ca9bd8b5a8fb42978a33096d5eeb981"
     },
     "build_release_package.py": {
-      "bytes": 7393,
-      "sha256": "2fbdfcf32a43deaa37fcda30c64f0d09513b8e624d277005b4bd05fbf55b7279"
+      "bytes": 8547,
+      "sha256": "71c79bb2105d30e833e7f960abf2b79c95665b2c68252e1f9ae3421e19c46241"
     },
     "canonical_node1_mine1.ps1": {
       "bytes": 140,
@@ -1159,6 +1159,10 @@
     "security_sec211_release_builder_resource_bounds_spec.py": {
       "bytes": 5845,
       "sha256": "7e172ab89f5956484bf7caaf95c054c514674ec77d0e8383163a0b47f1f1a7b1"
+    },
+    "security_sec212_release_mode_sanitization_spec.py": {
+      "bytes": 4746,
+      "sha256": "d629c610d8d1b439a389cbfcbd52071e290a62bc6d6fcabe78e6510539e32471"
     },
     "setup.cmd": {
       "bytes": 326,
