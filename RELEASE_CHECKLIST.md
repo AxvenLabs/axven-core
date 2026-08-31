@@ -14,8 +14,10 @@
 - [ ] security contact / disclosure channel
 - [ ] independent security review
 - [ ] compute final `release_manifest.json` SHA-256 from the exact release commit
+- [ ] build a new exact-inventory staging directory with `python build_release_package.py <NEW_EMPTY_OUTPUT_DIRECTORY>`
+- [ ] confirm the staged release contains no file outside the authenticated manifest plus `release_manifest.json`
 - [ ] publish that 64-hex digest in the canonical GitHub release body, outside the downloadable release package/assets
-- [ ] verify a clean downloaded package with the externally published digest using `python verify_release.py <TRUSTED_RELEASE_MANIFEST_SHA256>`
+- [ ] verify a clean downloaded staged package with the externally published digest using `python verify_release.py <TRUSTED_RELEASE_MANIFEST_SHA256>` before setup or first launch
 - [ ] tagged GitHub release (package ready)
 - [ ] public project website
 - [ ] final whitepaper
