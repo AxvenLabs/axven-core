@@ -1,0 +1,56 @@
+name: SEC-220 Manifest Refresh
+
+on:
+  push:
+    branches:
+      - security-sec220-inbound-p2p-parse-byte-budget
+    paths:
+      - .github/workflows/sec220-manifest-refresh.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.event.head_commit.message == 'SEC-220 temporary manifest refresh helper'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: security-sec220-inbound-p2p-parse-byte-budget
+          persist-credentials: true
+
+      - name: Refresh exact manifest records
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path('.')
+          manifest_path = root / 'release_manifest.json'
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          files = manifest['files']
+          for name in ('p2p.py', 'security_sec220_p2p_parse_byte_budget_spec.py'):
+              raw = (root / name).read_bytes()
+              files[name] = {
+                  'bytes': len(raw),
+                  'sha256': hashlib.sha256(raw).hexdigest(),
+              }
+          manifest['files'] = dict(sorted(files.items()))
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False) + '\n',
+              encoding='utf-8',
+              newline='\n',
+          )
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add release_manifest.json
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "SEC-220: refresh release manifest pins"
+          git push origin HEAD:security-sec220-inbound-p2p-parse-byte-budget
