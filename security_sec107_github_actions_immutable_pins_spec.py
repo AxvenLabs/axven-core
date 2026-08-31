@@ -7,8 +7,8 @@ from pathlib import Path
 
 WORKFLOW = Path(".github/workflows/validation.yml")
 EXPECTED = {
-    "actions/checkout": "11d5960a326750d5838078e36cf38b85af677262",
-    "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
+    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/setup-python": "5fda3b95a4ea91299a34e894583c3862153e4b97",
 }
 
 
@@ -33,7 +33,7 @@ def main():
     )
     print("[GREEN] approved checkout/setup-python action commits pinned exactly")
 
-    forbidden = ("@main", "@master", "@v1", "@v2", "@v3", "@v4", "@v5", "@latest")
+    forbidden = ("@main", "@master", "@v1", "@v2", "@v3", "@v4", "@v5", "@v6", "@v7", "@latest")
     assert not any(token in text for token in forbidden), (
         "moving GitHub Actions ref reintroduced"
     )

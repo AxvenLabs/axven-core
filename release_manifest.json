@@ -21,8 +21,8 @@
   "explorer_node2_port": 18455,
   "files": {
     ".github/workflows/validation.yml": {
-      "bytes": 1211,
-      "sha256": "7b61d51adc7cb84e628ff56d40fd551dad0c165aac90eab880e2565229911cf8"
+      "bytes": 1219,
+      "sha256": "c2c9a033ee97c80f57408963c8755a75d92ba92c951d5bf006b8b97e75bdb34b"
     },
     "CANONICAL_OPERATIONS.md": {
       "bytes": 1434,
@@ -725,12 +725,12 @@
       "sha256": "48016de706594c4dbf47c11ea5aea0111ab789ff922cdf6651a5c6b198286ca3"
     },
     "security_sec107_github_actions_immutable_pins_spec.py": {
-      "bytes": 1546,
-      "sha256": "e20213ad3c6a4b0ab9614dc835bb6128c1dfdb4c67e4f8f15af3b76b9103ba7d"
+      "bytes": 1560,
+      "sha256": "2140b71ae450ba2e0fe9f58693d7c3e04cef0791634827b8fdced2c446beee57"
     },
     "security_sec108_github_actions_least_privilege_spec.py": {
       "bytes": 2183,
-      "sha256": "1c4020c834c99c87bf41642ebe6022b5c93352777363c4dc88c157f1888336d8"
+      "sha256": "43447f28e2082e0245fccf93418ed3c6c9667948bfba9b0d142b767628ee50ea"
     },
     "security_sec109_wallet_backup_atomic_file_spec.py": {
       "bytes": 2134,
@@ -1171,6 +1171,10 @@
     "security_sec199_resolved_peer_provenance_spec.py": {
       "bytes": 6591,
       "sha256": "de95c1a7b8ac4ce7f512ffd8d7b3537c18c0e67d376bf8a97a04b98e7c604dd1"
+    },
+    "security_sec200_github_actions_node24_runtime_spec.py": {
+      "bytes": 2462,
+      "sha256": "8ff47fead843673321ccaab72064f4d415e730a190368502fa09cbd4bd313418"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
