@@ -1,0 +1,28 @@
+name: SEC-220 apply v2
+
+on:
+  push:
+    branches:
+      - security-sec220-runtime-dependency-content-provenance
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - name: Apply SEC-220 patch
+        shell: bash
+        run: |
+          python sec220_apply_tmp.py
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm sec220_apply_tmp.py .github/workflows/sec220_apply_v2.yml
+          git add runtime_provenance.py release_manifest.json security_sec220_runtime_dependency_content_provenance_spec.py
+          git diff --cached --check
+          git commit -m 'SEC-220: bind runtime receipt to dependency contents'
+          git push
