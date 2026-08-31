@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Axven environment preflight / release doctor."""
 from __future__ import annotations
-import importlib, importlib.metadata, json, platform, sys
+import importlib, importlib.metadata, json, platform, re, sys
 
 def check_module(name):
     try:
@@ -14,12 +14,41 @@ PYTHON_MIN = (3, 13, 15)
 PYTHON_MAX_EXCLUSIVE = (3, 14, 0)
 PYTHON_REQUIRED = ">=3.13.15,<3.14"
 
+# OpenSSL's 2026-08-25 security release fixed multiple issues, including
+# CVE-2026-63072. Axven also requires an OpenSSL line with ML-DSA support.
+OPENSSL_SECURITY_FLOORS = {
+    (4, 0): (4, 0, 2),
+    (3, 6): (3, 6, 4),
+    (3, 5): (3, 5, 8),
+}
+OPENSSL_REQUIRED = (
+    "OpenSSL >=4.0.2 on 4.0.x, >=3.6.4 on 3.6.x, "
+    "or >=3.5.8 on 3.5.x"
+)
+_OPENSSL_VERSION_RE = re.compile(r"^OpenSSL (\d+)\.(\d+)\.(\d+)(?: [^\r\n]+)?$")
+
 
 def _python_runtime_supported(version_info=None):
     if version_info is None:
         version_info = sys.version_info
     current = tuple(version_info[:3])
     return PYTHON_MIN <= current < PYTHON_MAX_EXCLUSIVE
+
+
+def _openssl_backend_supported(version_text):
+    if type(version_text) is not str:
+        return False
+    match = _OPENSSL_VERSION_RE.fullmatch(version_text)
+    if not match:
+        return False
+    version = tuple(int(part) for part in match.groups())
+    floor = OPENSSL_SECURITY_FLOORS.get(version[:2])
+    return floor is not None and version >= floor
+
+
+def _openssl_backend_version_text():
+    from cryptography.hazmat.backends.openssl.backend import backend
+    return backend.openssl_version_text()
 
 
 def run():
@@ -40,6 +69,23 @@ def run():
     checks["cryptography"]={
         "ok":crypto_ok,"import_ok":crypto_import,"version":crypto_version,
         "required":"50.0.1","detail":crypto_detail if not crypto_ok else "ok"
+    }
+
+    openssl_version=None
+    openssl_detail="cryptography unavailable"
+    openssl_ok=False
+    if crypto_import:
+        try:
+            openssl_version=_openssl_backend_version_text()
+            openssl_ok=_openssl_backend_supported(openssl_version)
+            openssl_detail="ok" if openssl_ok else "unsupported or vulnerable OpenSSL backend"
+        except Exception as e:
+            openssl_detail=f"{type(e).__name__}: {e}"
+    checks["openssl_backend"]={
+        "ok":openssl_ok,
+        "version":openssl_version,
+        "required":OPENSSL_REQUIRED,
+        "detail":openssl_detail,
     }
 
     pq_import,pq_detail=check_module("dilithium_py")
