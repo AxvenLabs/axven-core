@@ -1199,6 +1199,10 @@
     "security_sec205_release_manifest_trust_anchor_spec.py": {
       "bytes": 4900,
       "sha256": "215b5ec5ad6406f51260739cb947184a79670448a98255d90bec26c62b213d79"
+    },
+    "security_sec206_expat_xml_reachability_containment_spec.py": {
+      "bytes": 4185,
+      "sha256": "8166d6fd21661e8524f4855b225188487b0960cb458715287f5eea7d48ff10e8"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
