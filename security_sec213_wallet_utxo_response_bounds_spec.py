@@ -33,9 +33,12 @@ def main() -> None:
 
     source = Path("core.py").read_text(encoding="utf-8")
     rpc_source = Path("rpc.py").read_text(encoding="utf-8")
+    cli_source = Path("axven_cli.py").read_text(encoding="utf-8")
     assert "MAX_LIST_UNSPENT_RESULTS = 1000" in source
     assert "list_unspent_page" in source
     assert '"list_unspent_page"' in rpc_source
+    assert '"list-unspent-page"' in cli_source
+    assert '"list_unspent_page"' in cli_source
     checks += 1
     print("[GREEN] wallet UTXO RPC surface has an explicit bounded paging contract")
 
@@ -108,6 +111,7 @@ def main() -> None:
 
     manifest = json.loads(Path("release_manifest.json").read_text(encoding="utf-8"))
     for name in (
+        "axven_cli.py",
         "core.py",
         "rpc.py",
         "security_sec213_wallet_utxo_response_bounds_spec.py",

@@ -242,6 +242,7 @@ def main():
     sp.add_parser("status"); sp.add_parser("overview"); sp.add_parser("addresses"); sp.add_parser("stop")
     b=sp.add_parser("balance"); b.add_argument("--scheme")
     u=sp.add_parser("list-unspent"); u.add_argument("scheme")
+    up=sp.add_parser("list-unspent-page"); up.add_argument("scheme"); up.add_argument("--offset",type=int,default=0); up.add_argument("--limit",type=int,default=100)
     m=sp.add_parser("mine"); m.add_argument("count",type=int,nargs="?",default=1); m.add_argument("--scheme")
     snd=sp.add_parser("send"); snd.add_argument("input_scheme"); snd.add_argument("recipient"); snd.add_argument("amount",type=int); snd.add_argument("fee",type=int)
     sync=sp.add_parser("sync-peer"); sync.add_argument("host"); sync.add_argument("port",type=int); sync.add_argument("--batch",type=int,default=128)
@@ -250,6 +251,7 @@ def main():
       "status":("get_status",{}),"overview":("get_overview",{}),"addresses":("get_addresses",{}),"stop":("stop",{}),
       "balance":("get_balance",{"scheme":getattr(a,"scheme",None)}),
       "list-unspent":("list_unspent",{"scheme":getattr(a,"scheme",None)}),
+      "list-unspent-page":("list_unspent_page",{"scheme":getattr(a,"scheme",None),"offset":getattr(a,"offset",0),"limit":getattr(a,"limit",100)}),
       "mine":("mine",{"count":getattr(a,"count",1),"scheme":getattr(a,"scheme",None)}),
       "send":("send",{"input_scheme":getattr(a,"input_scheme",None),"recipient":getattr(a,"recipient",None),"amount":getattr(a,"amount",None),"fee":getattr(a,"fee",None)}),
       "sync-peer":("sync_peer",{"host":getattr(a,"host",None),"port":getattr(a,"port",None),"batch":getattr(a,"batch",128)}),
