@@ -265,8 +265,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 46147,
-      "sha256": "e117b9bede3156a96c3d276e290b7dfe4d1383e083eadb932827ed905e12ea2c"
+      "bytes": 46717,
+      "sha256": "46887db8eb2654666db34b7ee8ba741bf8183bcd11f7ca19aaccf56ddfeee0e8"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5864,
@@ -1223,6 +1223,10 @@
     "security_sec223_bounded_propagation_fanout_spec.py": {
       "bytes": 3761,
       "sha256": "3f7ef81f467ebf745992efb33b14add98188858981f68f4e81fd1ec18763d828"
+    },
+    "security_sec224_bounded_bulk_sync_fanout_spec.py": {
+      "bytes": 2490,
+      "sha256": "125af5ed731b9dbee9c6d479e04d372be3ebe1ac3be04f6891fe1eba8a61483f"
     },
     "setup.cmd": {
       "bytes": 326,

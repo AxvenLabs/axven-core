@@ -42,6 +42,9 @@ class AxvenCore:
     # simultaneous outbound sockets/threads and eliminating serial latency
     # amplification across the configured peer set.
     MAX_PROPAGATION_WORKERS = 16
+    # SEC-224: bulk operator sync must retain full peer coverage without
+    # serially multiplying per-peer network latency across the configured set.
+    MAX_SYNC_WORKERS = 16
     # SEC-197: one routable IP network group or canonical DNS host must not
     # occupy an arbitrary fraction of the configured outbound set.  This
     # is local peering policy only; loopback remains exempt for devnet labs.
@@ -1046,10 +1049,15 @@ class AxvenCore:
                 "accepted":accepted}
 
     def sync_outbound_peers(self):
-        return [
-            self.sync_outbound_peer(addr)
-            for addr in self.outbound_peer_addresses()
-        ]
+        peers=self.outbound_peer_addresses()
+        if not peers:
+            return []
+        worker_count=min(self.MAX_SYNC_WORKERS,len(peers))
+        # ThreadPoolExecutor.map preserves the configured-peer result order,
+        # while sync_outbound_peer remains the sole owner of provenance gates,
+        # work budgets, timeouts and peer-health publication semantics.
+        with ThreadPoolExecutor(max_workers=worker_count) as executor:
+            return list(executor.map(self.sync_outbound_peer,peers))
 
     def _propagate_one_outbound(self, addr, payload, transport):
         try:
