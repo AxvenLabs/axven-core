@@ -1209,8 +1209,8 @@
       "sha256": "1cf02a6c81a9b6b6e2f1d6d5e46a02fd3924fc8df9e79e6eee5529299f4c3b5e"
     },
     "security_sec220_runtime_dependency_content_provenance_spec.py": {
-      "bytes": 6790,
-      "sha256": "fde541a28aaf223109f6de973470e43c94de311ed2221d2ec6ad2ade31d7b5af"
+      "bytes": 6729,
+      "sha256": "55de3209d94f173ab009d27b05c42bcabe4ebad0ed051a6f8fca1a88a8083f68"
     },
     "setup.cmd": {
       "bytes": 326,
