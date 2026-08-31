@@ -13,6 +13,13 @@ ROOT = Path(__file__).resolve().parent
 MANIFEST = ROOT / "release_manifest.json"
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 
+# SEC-209: the verifier runs on attacker-supplied downloaded bytes before those
+# bytes are trusted.  Keep memory use independent of archive-controlled file
+# sizes.  The authenticated manifest then supplies the exact byte budget for
+# each listed payload file.
+MAX_RELEASE_MANIFEST_BYTES = 1024 * 1024
+HASH_CHUNK_BYTES = 64 * 1024
+
 
 def fail(message: str) -> int:
     print(message, file=sys.stderr)
@@ -28,6 +35,39 @@ def _canonical_manifest_name(name: str) -> PurePosixPath | None:
     if any(part in ("", ".", "..") for part in pure.parts):
         return None
     return pure
+
+
+def _read_manifest_bounded(path: Path, metadata) -> bytes:
+    if metadata.st_size > MAX_RELEASE_MANIFEST_BYTES:
+        raise ValueError(
+            "release_manifest.json exceeds "
+            f"{MAX_RELEASE_MANIFEST_BYTES} byte verification budget"
+        )
+    with path.open("rb") as handle:
+        data = handle.read(MAX_RELEASE_MANIFEST_BYTES + 1)
+    if len(data) > MAX_RELEASE_MANIFEST_BYTES:
+        raise ValueError(
+            "release_manifest.json exceeds "
+            f"{MAX_RELEASE_MANIFEST_BYTES} byte verification budget"
+        )
+    return data
+
+
+def _hash_payload_exact_bounded(path: Path, expected_bytes: int) -> str | None:
+    """Hash at most the authenticated byte count plus one race-detection byte."""
+    digest = hashlib.sha256()
+    total = 0
+    with path.open("rb") as handle:
+        while total < expected_bytes:
+            chunk = handle.read(min(HASH_CHUNK_BYTES, expected_bytes - total))
+            if not chunk:
+                break
+            total += len(chunk)
+            digest.update(chunk)
+        extra = handle.read(1)
+    if total != expected_bytes or extra:
+        return None
+    return digest.hexdigest()
 
 
 def _release_inventory_violations(root: Path, manifest_names) -> list[str]:
@@ -79,8 +119,12 @@ def main(argv=None) -> int:
     if stat.S_ISLNK(manifest_metadata.st_mode) or not stat.S_ISREG(manifest_metadata.st_mode):
         return fail("release_manifest.json must be a regular non-symlink file")
 
+    try:
+        manifest_bytes = _read_manifest_bounded(MANIFEST, manifest_metadata)
+    except (OSError, ValueError) as exc:
+        return fail(str(exc))
+
     expected_manifest_sha256 = args[0].lower()
-    manifest_bytes = MANIFEST.read_bytes()
     actual_manifest_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
     if not hmac.compare_digest(actual_manifest_sha256, expected_manifest_sha256):
         return fail(
@@ -133,12 +177,21 @@ def main(argv=None) -> int:
             bad.append(f"missing or non-regular file: {name}")
             continue
 
-        data = candidate.read_bytes()
-        checked += 1
-        if len(data) != expected_bytes:
+        # The trusted manifest's exact size is the IO-work budget.  Reject an
+        # obvious oversized replacement before opening it, then stream at most
+        # that many bytes plus one byte to detect a path replacement race.
+        if metadata.st_size != expected_bytes:
             bad.append(f"size mismatch: {name}")
             continue
-        got = hashlib.sha256(data).hexdigest()
+        try:
+            got = _hash_payload_exact_bounded(candidate, expected_bytes)
+        except OSError:
+            bad.append(f"unreadable file: {name}")
+            continue
+        checked += 1
+        if got is None:
+            bad.append(f"size mismatch: {name}")
+            continue
         if not hmac.compare_digest(got, expected_hash.lower()):
             bad.append(f"hash mismatch: {name}")
 
