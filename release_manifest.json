@@ -1217,8 +1217,8 @@
       "sha256": "5ce7309b2655adde5e9614d997cd6f96484b8b1f062ee27bdbf8acc57eababf1"
     },
     "security_sec222_propagation_remote_provenance_spec.py": {
-      "bytes": 8884,
-      "sha256": "8138f8497990e66ae921fc4be2811dccf08511b8c4f3a1106a65f39b7df21742"
+      "bytes": 8947,
+      "sha256": "aca8fb45824756c49776e3e44fc648fb6beedd10293a1b11de79c20930fab41a"
     },
     "security_sec223_bounded_propagation_fanout_spec.py": {
       "bytes": 3761,
