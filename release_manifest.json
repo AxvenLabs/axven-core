@@ -273,8 +273,8 @@
       "sha256": "8fae69a3d5059742af03d44c4ff431a62918663d85e0a9968a14c4df3d59bba8"
     },
     "doctor.py": {
-      "bytes": 3832,
-      "sha256": "28698dd2dc7b7f0f160eac4186062b828c94a31ae96610d41d75c3bd6bc4efcc"
+      "bytes": 5381,
+      "sha256": "950bf9aa08618b893a40716978fd361e7c4ee32150f95271d285553d2193c1a7"
     },
     "explorer.py": {
       "bytes": 9267,
@@ -1179,6 +1179,10 @@
     "security_sec201_windows_validator_provenance_spec.py": {
       "bytes": 3060,
       "sha256": "ebcdabdf0a1bbc4919da94d5f05bb3cd9bd13de0675e1bb8b0a778e20a113eca"
+    },
+    "security_sec202_openssl_backend_floor_spec.py": {
+      "bytes": 2737,
+      "sha256": "f803df8b324cb0897818a90eebae99e6eacc643010ba5b96d2ef5942ef3a8dab"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
