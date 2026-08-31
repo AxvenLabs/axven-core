@@ -50,4 +50,7 @@ printf '\n=== FULL VALIDATION ===\n'
 printf '\n=== SEC-076+ SECURITY TAIL ===\n'
 "$venv_python" security_tail_runner.py
 
+printf '\n=== RUNTIME PROVENANCE RECEIPT ===\n'
+"$venv_python" runtime_provenance.py stamp
+
 echo "ALL AXVEN CHECKS GREEN"
