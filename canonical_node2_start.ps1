@@ -1,10 +1,7 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-if (-not (Test-Path ".venv")) {
-    py -3 -m venv .venv
-    & .\.venv\Scripts\python.exe -m pip install -e .
-}
+& (Join-Path $PSScriptRoot "ensure_runtime.ps1")
 
 $DataDir = Join-Path $PSScriptRoot "canonical-node2"
 if (-not (Test-Path (Join-Path $DataDir "wallet.json"))) {
