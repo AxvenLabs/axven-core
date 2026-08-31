@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
 import platform
 import stat
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parent
 REQUIRED_PYTHON = "3.13.15"
@@ -16,6 +17,11 @@ RECEIPT_SCHEMA = 2
 RECEIPT_NAME = ".axven-runtime-provenance.json"
 MAX_RECEIPT_BYTES = 32 * 1024
 MAX_TRUST_INPUT_BYTES = 2 * 1024 * 1024
+MAX_RELEASE_MANIFEST_BYTES = 1024 * 1024
+MAX_RELEASE_FILES = 4096
+MAX_RELEASE_FILE_BYTES = 64 * 1024 * 1024
+MAX_RELEASE_TOTAL_BYTES = 256 * 1024 * 1024
+HASH_CHUNK_BYTES = 64 * 1024
 TRUST_INPUTS = (
     "setup.cmd",
     "validate_windows.ps1",
@@ -48,6 +54,92 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _canonical_manifest_name(name: object) -> PurePosixPath | None:
+    if not isinstance(name, str) or not name or "\\" in name or "\x00" in name:
+        return None
+    pure = PurePosixPath(name)
+    if pure.is_absolute() or str(pure) != name:
+        return None
+    if any(part in {"", ".", ".."} for part in pure.parts):
+        return None
+    return pure
+
+
+def _verify_manifest_payloads(root: Path) -> None:
+    """Verify every release-manifest payload before a validated runtime is trusted."""
+    root = Path(root).resolve()
+    manifest_path = root / "release_manifest.json"
+    manifest_bytes = _read_trust_input(manifest_path, "release_manifest.json")
+    if len(manifest_bytes) > MAX_RELEASE_MANIFEST_BYTES:
+        raise RuntimeError("release manifest exceeds runtime verification size budget")
+    try:
+        manifest = json.loads(manifest_bytes.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError("release manifest is unreadable") from exc
+
+    files = manifest.get("files") if isinstance(manifest, dict) else None
+    if not isinstance(files, dict) or not files:
+        raise RuntimeError("release manifest files must be a non-empty object")
+    if len(files) > MAX_RELEASE_FILES:
+        raise RuntimeError("release manifest exceeds runtime file-count budget")
+
+    entries: list[tuple[str, PurePosixPath, str, int]] = []
+    total_bytes = 0
+    for name, meta in files.items():
+        pure = _canonical_manifest_name(name)
+        if pure is None or not isinstance(meta, dict):
+            raise RuntimeError(f"invalid release manifest entry: {name!r}")
+        expected_hash = meta.get("sha256")
+        expected_bytes = meta.get("bytes")
+        if (
+            not isinstance(expected_hash, str)
+            or len(expected_hash) != 64
+            or any(ch not in "0123456789abcdef" for ch in expected_hash)
+            or type(expected_bytes) is not int
+            or expected_bytes < 0
+        ):
+            raise RuntimeError(f"invalid release manifest metadata: {name}")
+        if expected_bytes > MAX_RELEASE_FILE_BYTES:
+            raise RuntimeError(f"release payload exceeds per-file runtime budget: {name}")
+        if total_bytes > MAX_RELEASE_TOTAL_BYTES - expected_bytes:
+            raise RuntimeError("release manifest exceeds aggregate runtime verification budget")
+        total_bytes += expected_bytes
+        entries.append((name, pure, expected_hash, expected_bytes))
+
+    for name, pure, expected_hash, expected_bytes in entries:
+        path = root.joinpath(*pure.parts)
+        try:
+            metadata = path.lstat()
+        except OSError as exc:
+            raise RuntimeError(f"missing release payload: {name}") from exc
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+            raise RuntimeError(f"release payload is not a regular non-symlink file: {name}")
+        if metadata.st_size != expected_bytes:
+            raise RuntimeError(f"release payload size mismatch: {name}")
+        try:
+            path.resolve().relative_to(root)
+        except ValueError as exc:
+            raise RuntimeError(f"release payload escapes runtime root: {name}") from exc
+
+        digest = hashlib.sha256()
+        read_bytes = 0
+        with path.open("rb") as handle:
+            opened = os.fstat(handle.fileno())
+            if not stat.S_ISREG(opened.st_mode) or opened.st_size != expected_bytes:
+                raise RuntimeError(f"release payload changed before hashing: {name}")
+            while read_bytes < expected_bytes:
+                chunk = handle.read(min(HASH_CHUNK_BYTES, expected_bytes - read_bytes))
+                if not chunk:
+                    break
+                digest.update(chunk)
+                read_bytes += len(chunk)
+            extra = handle.read(1)
+        if read_bytes != expected_bytes or extra:
+            raise RuntimeError(f"release payload changed while hashing: {name}")
+        if not hmac.compare_digest(digest.hexdigest(), expected_hash):
+            raise RuntimeError(f"release payload hash mismatch: {name}")
+
+
 def build_receipt(root: Path, *, python_version: str) -> dict:
     if python_version != REQUIRED_PYTHON:
         raise RuntimeError(f"Python {REQUIRED_PYTHON} is required")
@@ -75,6 +167,7 @@ def _assert_expected_interpreter(root: Path = ROOT) -> None:
 
 def stamp(root: Path = ROOT) -> None:
     _assert_expected_interpreter(root)
+    _verify_manifest_payloads(root)
     receipt = build_receipt(root, python_version=platform.python_version())
     path = receipt_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -115,6 +208,7 @@ def check(root: Path = ROOT) -> None:
         actual = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise RuntimeError("runtime provenance receipt is unreadable") from exc
+    _verify_manifest_payloads(root)
     expected = build_receipt(root, python_version=platform.python_version())
     if actual != expected:
         raise RuntimeError("runtime provenance receipt is stale or mismatched")
