@@ -117,12 +117,12 @@
       "sha256": "399e218e658d530f42570286115b12148f171d26d21ad0a99bf105050934c7d3"
     },
     "axven-console-node2.cmd": {
-      "bytes": 109,
-      "sha256": "cae74d69f5529441b1821f72ebf7265b05c91c06de9fd9e641f26c18f1ba373c"
+      "bytes": 217,
+      "sha256": "4eb1d22b8a747953b4a9bc17384e2a2a675552f52a4b555330ce188421f75d04"
     },
     "axven-console.cmd": {
-      "bytes": 109,
-      "sha256": "4eb34e9a095719eb3e4919b59790ffa579ad5c69a28d812d86bdbbf32fc49f36"
+      "bytes": 217,
+      "sha256": "63e8e9d9167448dbca81d68dfd2b1943425714ad7051da3e86b30678f96a7636"
     },
     "axven.py": {
       "bytes": 75225,
@@ -145,24 +145,24 @@
       "sha256": "83b13a1132be12018581e7b9785c2d947b0108cd54a72738c58a162f9426ea1e"
     },
     "canonical_node1_mine1.ps1": {
-      "bytes": 140,
-      "sha256": "5ea02e75b7d71e42f16e827c0f27fdda2d3dc734ce421bbcf7aac3b2493e93d1"
+      "bytes": 221,
+      "sha256": "f64c347f5c1f560a7d35362b55514e1b9c41a03abb160cacb6eae940ee5fa04f"
     },
     "canonical_node1_start.ps1": {
       "bytes": 656,
       "sha256": "0da7f69da4f2198ce8d25c95fafbdce3931853b658edc0fe1ff923eb353a3b10"
     },
     "canonical_node1_status.ps1": {
-      "bytes": 123,
-      "sha256": "5ec2a19638bca66aaa10ec5120e429694a454b5d5c68634c9cfd1d52469e8611"
+      "bytes": 204,
+      "sha256": "353bbcff0bf21eb139f2a244ae6f2a7b1ca800af8430c478b48d3e963af4fa0c"
     },
     "canonical_node2_start.ps1": {
       "bytes": 656,
       "sha256": "e1b8a590fd6ec69ee135555389ebe353b9ff835f36a102ec77617a5e82503841"
     },
     "canonical_node2_sync_node1.ps1": {
-      "bytes": 137,
-      "sha256": "49c5fb87d4969d91008649abf5c8419f283f6e484d47fbd32b5ffb7b93dcfabc"
+      "bytes": 218,
+      "sha256": "62783255216703da9db5f3c7ef48df20830827b612666436fc4f57b713826453"
     },
     "canonical_operation_audit.py": {
       "bytes": 921,
@@ -177,8 +177,8 @@
       "sha256": "6a051cb124ba17b0042c1c02969325206a8be4120835433753a76054dab16758"
     },
     "canonical_stop_all.ps1": {
-      "bytes": 279,
-      "sha256": "91aea6a116a249b07c81e3e9e61bd672804d01f199e7285b5de7f7d87e88df26"
+      "bytes": 360,
+      "sha256": "cac56f972f45a0df509acb5f68dd3e9cdf2a0cc5b0c597a5bda60f37d8195cbc"
     },
     "checkpoint42_peer_reconnect_spec.py": {
       "bytes": 6530,
@@ -1176,6 +1176,10 @@
       "bytes": 6190,
       "sha256": "af8659c814ad453411446baeb7e5bb1f06d14363bd32621e6ec2969a74fe855d"
     },
+    "security_sec214_windows_operator_runtime_provenance_spec.py": {
+      "bytes": 4011,
+      "sha256": "d66248e74892166c3b9494a11e1bb17b2b1a928f7d4f120b0be79e15e5802136"
+    },
     "setup.cmd": {
       "bytes": 326,
       "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
@@ -1193,24 +1197,24 @@
       "sha256": "76af2dc8ccfa0595196f5f49c1659263268cea949b895e3469cd341077e6b19f"
     },
     "status-node1.cmd": {
-      "bytes": 120,
-      "sha256": "ee0301bc0bce3905c3e48bcd128b58cb074551876b28ced14403d872ee853102"
+      "bytes": 228,
+      "sha256": "db58323c526f3ffe8401cd17567b59f0a83a4316135c5fb8ebd9e590a7e3b303"
     },
     "status-node2.cmd": {
-      "bytes": 120,
-      "sha256": "4b458d516f23344005261f1f1177da966ce8f1120ee525cc74d3fea8b6349873"
+      "bytes": 228,
+      "sha256": "a104cd292a87b679541dcf1e0fcd645aecc976f35e51150ef237da1626a88870"
     },
     "stop-node1.cmd": {
-      "bytes": 116,
-      "sha256": "dbe7e3eb76623d7c9ac5de0acc852d67343cf13abb7b257c6f33a508a0c087c3"
+      "bytes": 224,
+      "sha256": "139048b33bc7b9ec437006d41b0e7c2243293f2b221ef96469081a3106bd23d4"
     },
     "stop-node2.cmd": {
-      "bytes": 116,
-      "sha256": "61ab1afdd557a5600c1b78ee37dc37981c6acf1a4ed79032e24c84f2eb76554a"
+      "bytes": 224,
+      "sha256": "c0bddb8cef46edd8184df86b7cd6bb3480932193693dc14ae4a6dbc57d18c467"
     },
     "sync-node2-from-node1.cmd": {
-      "bytes": 137,
-      "sha256": "bc129a2164928f7457e489e4c35770ed27eeccde6144e6953859b5b548881011"
+      "bytes": 245,
+      "sha256": "9ba24ac69d932b345cc2b52f03b3dd713589008e0e156121b9542e71a2103952"
     },
     "tools/peer_probe.py": {
       "bytes": 906,
