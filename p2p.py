@@ -35,6 +35,17 @@ MAX_INBOUND_HANDSHAKE_HOSTS = 1024
 # JSON object overhead.  Bound post-handshake in-flight frame bytes across
 # the whole listener.  This is transport resource policy only.
 MAX_INBOUND_INFLIGHT_FRAME_BYTES = 64 * 1024 * 1024
+# SEC-122 bounds concurrent frame lifetime, but a source could still stream
+# successive near-16 MiB shallow frames and force repeated O(n) structural
+# scans plus json.loads work before the SEC-124 message-count gate. Charge the
+# completed raw body by bytes before any JSON parsing.  The gate intentionally
+# runs after body receipt so a 4-byte declared length cannot cheaply consume a
+# 16 MiB token reservation and amplify slowloris traffic.
+INBOUND_PARSE_BYTE_GLOBAL_RATE = 64 * 1024 * 1024
+INBOUND_PARSE_BYTE_GLOBAL_BURST = 128 * 1024 * 1024
+INBOUND_PARSE_BYTE_PER_HOST_RATE = 16 * 1024 * 1024
+INBOUND_PARSE_BYTE_PER_HOST_BURST = 32 * 1024 * 1024
+MAX_INBOUND_PARSE_BYTE_HOSTS = 1024
 # Public inbound block validation can otherwise drive full state-root work at
 # attacker-selected rates.  These are local ingress budgets, not consensus.
 INBOUND_BLOCK_WORK_GLOBAL_RATE = 2.0
@@ -343,6 +354,27 @@ class _InboundTxWorkLimiter:
                 "global_tokens": self._global_tokens,
                 "hosts": len(self._hosts),
             }
+
+
+class _InboundParseByteLimiter(_InboundTxWorkLimiter):
+    """Persistent global + source byte budget for raw inbound JSON parsing."""
+    def __init__(
+        self,
+        clock=time.monotonic,
+        global_rate=INBOUND_PARSE_BYTE_GLOBAL_RATE,
+        global_burst=INBOUND_PARSE_BYTE_GLOBAL_BURST,
+        per_host_rate=INBOUND_PARSE_BYTE_PER_HOST_RATE,
+        per_host_burst=INBOUND_PARSE_BYTE_PER_HOST_BURST,
+        max_hosts=MAX_INBOUND_PARSE_BYTE_HOSTS,
+    ):
+        super().__init__(
+            clock=clock,
+            global_rate=global_rate,
+            global_burst=global_burst,
+            per_host_rate=per_host_rate,
+            per_host_burst=per_host_burst,
+            max_hosts=max_hosts,
+        )
 
 
 class _InboundBlockSignatureWorkLimiter(_InboundTxWorkLimiter):
@@ -724,6 +756,7 @@ def _preflight_json_nesting(
 
 def _recv_message_with_lease(
     sock: socket.socket, deadline=None, max_bytes=None, frame_byte_budget=None,
+    parse_byte_gate=None,
 ):
     frame_limit=MAX_MESSAGE_BYTES if max_bytes is None else max_bytes
     if type(frame_limit) is not int or frame_limit <= 0:
@@ -740,6 +773,8 @@ def _recv_message_with_lease(
 
     try:
         raw=_recv_exact(sock,n,deadline)
+        if parse_byte_gate is not None and not parse_byte_gate(n):
+            raise ProtocolError("inbound parse byte budget exceeded")
         _preflight_json_nesting(raw)
         try:
             msg=json.loads(raw,object_pairs_hook=_reject_duplicate_json_keys)
@@ -759,6 +794,7 @@ def _recv_message_with_lease(
 def recv_message(sock: socket.socket,deadline=None,max_bytes=None) -> Dict[str, Any]:
     msg,lease=_recv_message_with_lease(
         sock,deadline=deadline,max_bytes=max_bytes,frame_byte_budget=None,
+        parse_byte_gate=None,
     )
     if lease is not None:
         lease.release()
@@ -1040,7 +1076,7 @@ class PeerSession:
 def serve_connection(
     sock, session:PeerSession, block_work_gate=None, tx_work_gate=None,
     block_signature_work_gate=None, frame_byte_budget=None,
-    sync_response_byte_reserve=None, message_gate=None,
+    sync_response_byte_reserve=None, message_gate=None, parse_byte_gate=None,
 ):
     try:
         handshake(sock,deadline=time.monotonic()+INBOUND_PEER_TIMEOUT)
@@ -1048,7 +1084,7 @@ def serve_connection(
         while True:
             lease=None
             try:
-                if frame_byte_budget is None:
+                if frame_byte_budget is None and parse_byte_gate is None:
                     msg=recv_message(
                         sock,
                         deadline=time.monotonic()+INBOUND_MESSAGE_DEADLINE,
@@ -1058,6 +1094,7 @@ def serve_connection(
                         sock,
                         deadline=time.monotonic()+INBOUND_MESSAGE_DEADLINE,
                         frame_byte_budget=frame_byte_budget,
+                        parse_byte_gate=parse_byte_gate,
                     )
                 sock.settimeout(INBOUND_PEER_TIMEOUT)
                 if message_gate is not None and not message_gate():
@@ -1126,6 +1163,7 @@ class NodeServer:
         self._tx_work_limiter=_InboundTxWorkLimiter()
         self._block_signature_work_limiter=_InboundBlockSignatureWorkLimiter()
         self._message_rate_limiter=_InboundMessageRateLimiter()
+        self._parse_byte_limiter=_InboundParseByteLimiter()
         self._frame_byte_budget=_InboundFrameByteBudget()
         self._sync_response_byte_limiter=_InboundSyncResponseByteLimiter()
 
@@ -1186,6 +1224,9 @@ class NodeServer:
                     message_gate=lambda: self._message_rate_limiter.consume(
                         source_host
                     )
+                    parse_byte_gate=lambda cost: self._parse_byte_limiter.consume(
+                        source_host,cost
+                    )
                     try:
                         serve_connection(
                             client,self.session,
@@ -1195,6 +1236,7 @@ class NodeServer:
                             frame_byte_budget=self._frame_byte_budget,
                             sync_response_byte_reserve=sync_response_byte_reserve,
                             message_gate=message_gate,
+                            parse_byte_gate=parse_byte_gate,
                         )
                     finally:
                         current=threading.current_thread()
