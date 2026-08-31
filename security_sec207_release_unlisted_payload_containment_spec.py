@@ -123,7 +123,7 @@ def main():
     assert "Release payload inventory" in notes
     assert "build_release_package.py" in notes
     assert "before setup" in notes
-    assert "single extra file" in notes
+    assert "single extra file" in " ".join(notes.split())
     assert "build_release_package.py" in checklist
     checks += 1
     print("[GREEN] release guidance requires clean manifest-defined staging before publication")
