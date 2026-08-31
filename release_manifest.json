@@ -57,8 +57,8 @@
       "sha256": "b32a3db30c2d0dcaed514a8c68c26c090bfcb7a3fb0c9e5c403cfe582dc0fcd7"
     },
     "GITHUB_RELEASE.md": {
-      "bytes": 3401,
-      "sha256": "530a7876e863b35496a01aa4007907bcb61b69ddeb159fc726e0a359a36c3556"
+      "bytes": 4447,
+      "sha256": "dc5a8228a8b87fa8a33cc4527b3042bdfbe4e08af79a64ee07a8a466b201b200"
     },
     "LICENSE": {
       "bytes": 1075,
@@ -81,12 +81,12 @@
       "sha256": "086c5bbd0944633d68b58f5ed3ad61bfc3e79d4931a312c7cc7e3d1691eff733"
     },
     "RELEASE_CHECKLIST.md": {
-      "bytes": 1261,
-      "sha256": "af0287770894eb11c17d8d0f924199b096236dfacd5dac5c4430a395acdf14d7"
+      "bytes": 2000,
+      "sha256": "e6e1f3eff710594ca0807ee5962e2b707cef0c391eb85fe9f73acaf25252cee3"
     },
     "RELEASE_METADATA.json": {
-      "bytes": 640,
-      "sha256": "0ede0905161c4105a5c077578ca2a47aa74d652a674026cf0cf254c9564d9fd2"
+      "bytes": 658,
+      "sha256": "2f50d394d7dc22744d526f95853cb49af1c3cce70d05608d77374669b215f007"
     },
     "RELEASE_NOTES_v0.9-devnet.md": {
       "bytes": 870,
@@ -109,8 +109,8 @@
       "sha256": "5471b9c47e89ffc64d7d5e76ab220c3c1fded378d4a18fccdf12566fdef8003c"
     },
     "VERSION": {
-      "bytes": 14,
-      "sha256": "fa81fe419c3e2e5f443a4bdc13a2e00c36181ad5e38fda0725714f23d8a3c9a6"
+      "bytes": 16,
+      "sha256": "b4a175cd7126fbae45324ede16f4105c93d948a64b84e81b097c34162b2d8465"
     },
     "activation_record_encoding_test.py": {
       "bytes": 305,
@@ -1211,6 +1211,10 @@
     "build_release_package.py": {
       "bytes": 4377,
       "sha256": "9eb51c8541753715a372d6f8ed85329d1e15e0fc0de686450f99645c2b6c0c30"
+    },
+    "security_sec208_legacy_release_provenance_spec.py": {
+      "bytes": 3974,
+      "sha256": "025225ff4f8fe1208da7f091605cbe679f1a41287b2717f08bf699ae6253fac9"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
@@ -1227,10 +1231,10 @@
   "public_mainnet": false,
   "real_windows_devnet_rehearsal": "21_OF_21_GREEN",
   "real_windows_validation": "ALL_AXVEN_CHECKS_GREEN",
-  "release": "axven-core-v0.9.0-devnet-github-ready-checkpoint26",
+  "release": "axven-core-v0.9.0-devnet.1-github-ready-checkpoint26",
   "release_integrity_verifier": "READY",
   "release_stage": "GITHUB_READY_RELEASE_BUNDLE",
-  "tag": "v0.9.0-devnet",
+  "tag": "v0.9.0-devnet.1",
   "ux_console": "READY",
   "validation_entrypoints": {
     "all": "run_full_validation.py",
@@ -1238,7 +1242,7 @@
     "pq": "pq_real_validation.py",
     "windows": "validate_windows.ps1"
   },
-  "version": "v0.9.0-devnet",
+  "version": "v0.9.0-devnet.1",
   "windows_cmd_launchers": "READY",
   "windows_full_validation": "ALL_AXVEN_CHECKS_GREEN",
   "windows_graceful_shutdown": "RPC_STOP"
