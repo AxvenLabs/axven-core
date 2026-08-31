@@ -34,18 +34,28 @@ def _reschedule_peer_after_sync(core, peer, base_interval, cap=60.0):
 def _reap_completed_peer_syncs(
     core, peer_sync_futures, peer_next_sync, base_interval
 ):
-    """Publish retry state for completed daemon syncs without blocking."""
+    """Consume completed daemon syncs without republishing retry metadata."""
     completed=0
     for future,addr in list(peer_sync_futures.items()):
         if not future.done():
             continue
-        # sync_outbound_peer owns normal network-error containment. Preserve
-        # fail-fast behavior for any unexpected programming/runtime exception.
+        # sync_outbound_peer owns normal network-error containment and atomically
+        # publishes health + observable retry metadata before its Future becomes
+        # done. Preserve that timestamp instead of publishing it a second time.
         future.result()
         peer_sync_futures.pop(future,None)
-        retry_delay=_reschedule_peer_after_sync(
-            core,addr,base_interval,60.0
-        )
+        with core._peer_lock:
+            if addr not in core.outbound_peers:
+                retry_delay=None
+            else:
+                retry_delay=core.peer_retry_delay_seconds.get(addr)
+                # Helper-level tests or non-daemon callers may not have enabled
+                # retry publication. Compute only the local scheduler delay in
+                # that case; do not mutate observable retry metadata here.
+                if retry_delay is None:
+                    retry_delay=core.peer_retry_delay(
+                        addr,base_interval,60.0
+                    )
         if retry_delay is None:
             peer_next_sync.pop(addr,None)
         else:
