@@ -71,16 +71,18 @@ def _hash_payload_exact_bounded(path: Path, expected_bytes: int) -> str | None:
 
 
 def _release_inventory_violations(root: Path, manifest_names) -> list[str]:
-    """Require an exact staged release inventory.
+    """Require an exact staged release inventory and final expected path types.
 
-    SEC-207 deliberately does not try to classify unmanifested files as
-    "probably inert".  A verified release asset is built from the authenticated
-    manifest, so every file/symlink/special entry other than the manifest itself
-    must be represented by an authenticated manifest entry.
+    SEC-207 rejects every unmanifested file/symlink/special entry. SEC-210 also
+    requires every authenticated expected path to remain present as a regular,
+    non-symlink file through the final inventory sweep, closing the post-hash
+    deletion/file-to-directory drift window that the earlier inventory pass did
+    not account for.
     """
     root = root.resolve()
     expected = set(manifest_names)
     expected.add("release_manifest.json")
+    seen_expected: set[str] = set()
     bad: list[str] = []
 
     for path in root.rglob("*"):
@@ -88,20 +90,37 @@ def _release_inventory_violations(root: Path, manifest_names) -> list[str]:
         try:
             metadata = path.lstat()
         except FileNotFoundError:
-            bad.append(f"release path changed during inventory: {relative}")
+            if relative in expected:
+                bad.append(f"missing verified release file after hashing: {relative}")
+            else:
+                bad.append(f"release path changed during inventory: {relative}")
+            continue
+
+        if relative in expected:
+            seen_expected.add(relative)
+            if stat.S_ISLNK(metadata.st_mode):
+                bad.append(f"expected release file became symlink: {relative}")
+            elif stat.S_ISREG(metadata.st_mode):
+                pass
+            elif stat.S_ISDIR(metadata.st_mode):
+                bad.append(f"expected release file became directory: {relative}")
+            else:
+                bad.append(f"expected release file became special file: {relative}")
             continue
 
         if stat.S_ISDIR(metadata.st_mode):
             continue
-        if relative not in expected:
-            if stat.S_ISLNK(metadata.st_mode):
-                bad.append(f"unexpected release symlink: {relative}")
-            elif stat.S_ISREG(metadata.st_mode):
-                bad.append(f"unexpected unmanifested release file: {relative}")
-            else:
-                bad.append(f"unexpected release special file: {relative}")
+        if stat.S_ISLNK(metadata.st_mode):
+            bad.append(f"unexpected release symlink: {relative}")
+        elif stat.S_ISREG(metadata.st_mode):
+            bad.append(f"unexpected unmanifested release file: {relative}")
+        else:
+            bad.append(f"unexpected release special file: {relative}")
 
-    return sorted(bad)
+    for relative in sorted(expected - seen_expected):
+        bad.append(f"missing verified release file after hashing: {relative}")
+
+    return sorted(set(bad))
 
 
 def main(argv=None) -> int:
