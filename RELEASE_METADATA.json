@@ -8,9 +8,9 @@
   "mainnet": false,
   "network": "axven-devnet-2",
   "project": "Axven Core",
-  "release_name": "Axven Core v0.9.0 Canonical Devnet",
+  "release_name": "Axven Core v0.9.0-devnet.1 — Canonical Devnet",
   "stage": "canonical-devnet-preview",
-  "tag": "v0.9.0-devnet",
-  "version": "v0.9.0-devnet",
+  "tag": "v0.9.0-devnet.1",
+  "version": "v0.9.0-devnet.1",
   "windows_full_validation": "ALL_AXVEN_CHECKS_GREEN"
 }

@@ -17,7 +17,14 @@ def main():
     ok("pyproject exists",(root/"pyproject.toml").exists())
     ok("runbook exists",(root/"RUNBOOK.md").exists())
     m=json.loads((root/"release_manifest.json").read_text())
-    ok("manifest release",m["release"]=="axven-core-v0.9.0-devnet-github-ready-checkpoint26")
+    release_tag="v0.9.0-devnet.1"
+    ok("manifest release",m["release"]=="axven-core-v0.9.0-devnet.1-github-ready-checkpoint26")
+    ok("manifest tag",m["tag"]==release_tag)
+    ok("manifest version",m["version"]==release_tag)
+    ok("VERSION tag",(root/"VERSION").read_text(encoding="utf-8").strip()==release_tag)
+    release_metadata=json.loads((root/"RELEASE_METADATA.json").read_text(encoding="utf-8"))
+    ok("release metadata tag",release_metadata["tag"]==release_tag)
+    ok("release metadata version",release_metadata["version"]==release_tag)
     ok("activation explicitly executed",m["activation"]=="EXECUTED")
 
     # Manifest hashes verify exact packaged sources.

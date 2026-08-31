@@ -9,10 +9,16 @@
 - [x] local read-only explorer
 - [x] README / license / contribution skeleton
 - [x] clean repository/package wheel-build smoke
+- [x] historical `v0.9.0-devnet` tag recorded as legacy/superseded at commit `2c144be2a1139cc3253ef98bac05d7acef2485b6`; never retarget/delete/reuse it
 - [ ] public P2P seed/discovery design
 - [ ] Internet-facing deployment hardening
 - [ ] security contact / disclosure channel
 - [ ] independent security review
+- [ ] choose a fresh previously-unused release tag; next planned tag is `v0.9.0-devnet.1`
+- [ ] before tag creation, verify it does not already exist with `git show-ref --verify --quiet refs/tags/v0.9.0-devnet.1` and stop if that command succeeds
+- [ ] record the exact fully validated release commit with `git rev-parse HEAD`
+- [ ] after tag creation, verify `git rev-parse 'v0.9.0-devnet.1^{commit}'` equals the recorded validated commit; never move an existing release tag to another commit
+- [ ] verify the GitHub release points to that exact immutable tag/commit before publication
 - [ ] compute final `release_manifest.json` SHA-256 from the exact release commit
 - [ ] build a new exact-inventory staging directory with `python build_release_package.py <NEW_EMPTY_OUTPUT_DIRECTORY>`
 - [ ] confirm the staged release contains no file outside the authenticated manifest plus `release_manifest.json`
