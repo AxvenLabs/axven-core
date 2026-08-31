@@ -1,0 +1,95 @@
+name: SEC-222 Apply Fix
+
+on:
+  push:
+    branches:
+      - security-sec222-propagation-remote-provenance
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - name: Apply SEC-222 production hardening and refresh manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          root = Path('.').resolve()
+
+          p2p_path = root / 'p2p.py'
+          p2p = p2p_path.read_text(encoding='utf-8')
+          replacements = [
+              (
+                  '''def propagate_tx(address,tx):\n    sock=connect(address)\n    try:\n        reply=request(sock,{"type":"tx","tx":tx.to_dict()})\n        return _validate_propagation_ack(reply,"tx",tx.txid())\n    finally:sock.close()\n''',
+                  '''def propagate_tx(address,tx,remote_host_gate=None):\n    if remote_host_gate is None:\n        sock=connect(address)\n    else:\n        sock=connect(address,remote_host_gate=remote_host_gate)\n    try:\n        reply=request(sock,{"type":"tx","tx":tx.to_dict()})\n        return _validate_propagation_ack(reply,"tx",tx.txid())\n    finally:sock.close()\n''',
+              ),
+              (
+                  '''def propagate_block(address,block):\n    sock=connect(address)\n    try:\n        reply=request(sock,{"type":"block","block":block.to_dict()})\n        return _validate_propagation_ack(reply,"block",block.hash())\n    finally:sock.close()\n''',
+                  '''def propagate_block(address,block,remote_host_gate=None):\n    if remote_host_gate is None:\n        sock=connect(address)\n    else:\n        sock=connect(address,remote_host_gate=remote_host_gate)\n    try:\n        reply=request(sock,{"type":"block","block":block.to_dict()})\n        return _validate_propagation_ack(reply,"block",block.hash())\n    finally:sock.close()\n''',
+              ),
+          ]
+          for old, new in replacements:
+              count = p2p.count(old)
+              if count == 1:
+                  p2p = p2p.replace(old, new)
+              elif new not in p2p:
+                  raise SystemExit(f'unexpected p2p.py replacement count: {count}')
+          p2p_path.write_text(p2p, encoding='utf-8')
+
+          core_path = root / 'core.py'
+          core = core_path.read_text(encoding='utf-8')
+          old_block = '''    def _propagate_block_outbound(self, block):\n        for addr in self.outbound_peer_addresses():\n            try:\n                p2p.propagate_block(addr,block)\n                error=None\n            except Exception as e:\n                error=f"{type(e).__name__}: {e}"\n            with _peer_guard(self):\n                if addr in self.outbound_peers:\n                    self.peer_last_error[addr]=error\n'''
+          new_block = '''    def _propagate_block_outbound(self, block):\n        for addr in self.outbound_peer_addresses():\n            try:\n                def remote_host_gate(remote_host):\n                    source_host=self._canonical_resolved_peer_host(remote_host)\n                    return self._admit_resolved_peer_host(addr,source_host)\n                p2p.propagate_block(addr,block,remote_host_gate=remote_host_gate)\n                error=None\n            except Exception as e:\n                error=f"{type(e).__name__}: {e}"\n            with _peer_guard(self):\n                if addr in self.outbound_peers:\n                    self.peer_last_error[addr]=error\n'''
+          old_tx = '''    def _propagate_tx_outbound(self, tx):\n        for addr in self.outbound_peer_addresses():\n            try:\n                p2p.propagate_tx(addr,tx)\n                error=None\n            except Exception as e:\n                error=f"{type(e).__name__}: {e}"\n            with _peer_guard(self):\n                if addr in self.outbound_peers:\n                    self.peer_last_error[addr]=error\n'''
+          new_tx = '''    def _propagate_tx_outbound(self, tx):\n        for addr in self.outbound_peer_addresses():\n            try:\n                def remote_host_gate(remote_host):\n                    source_host=self._canonical_resolved_peer_host(remote_host)\n                    return self._admit_resolved_peer_host(addr,source_host)\n                p2p.propagate_tx(addr,tx,remote_host_gate=remote_host_gate)\n                error=None\n            except Exception as e:\n                error=f"{type(e).__name__}: {e}"\n            with _peer_guard(self):\n                if addr in self.outbound_peers:\n                    self.peer_last_error[addr]=error\n'''
+          for old, new in ((old_block, new_block), (old_tx, new_tx)):
+              count = core.count(old)
+              if count == 1:
+                  core = core.replace(old, new)
+              elif new not in core:
+                  raise SystemExit(f'unexpected core.py replacement count: {count}')
+          core_path.write_text(core, encoding='utf-8')
+
+          manifest_path = root / 'release_manifest.json'
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          files = manifest['files']
+          for name in (
+              'p2p.py',
+              'core.py',
+              'security_sec222_propagation_remote_provenance_spec.py',
+          ):
+              raw = (root / name).read_bytes()
+              files[name] = {
+                  'bytes': len(raw),
+                  'sha256': hashlib.sha256(raw).hexdigest(),
+              }
+          manifest['files'] = dict(sorted(files.items()))
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2) + '\n', encoding='utf-8'
+          )
+          PY
+          git diff --check
+          git diff -- p2p.py core.py release_manifest.json
+
+      - name: Commit SEC-222 changes
+        shell: bash
+        run: |
+          if git diff --quiet -- p2p.py core.py release_manifest.json; then
+            echo 'SEC-222 production and manifest bytes already current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add p2p.py core.py release_manifest.json
+          git commit -m 'SEC-222: bind propagation to resolved peer provenance'
+          git push origin HEAD:${GITHUB_REF_NAME}
