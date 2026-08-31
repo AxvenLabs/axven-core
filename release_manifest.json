@@ -373,8 +373,8 @@
       "sha256": "35f82cd5d9dfbb136eed077c0d8051c8fab758c65922328ee816fe748013c2b8"
     },
     "runtime_provenance.py": {
-      "bytes": 12711,
-      "sha256": "65e3bc0613e7e02117f92b01badb121da959410189938879d037242b77fd8ecd"
+      "bytes": 13938,
+      "sha256": "59d32c1c19c05d477b6cc96b2f16ac5a888be74eb851923166e50b63d0b03d8d"
     },
     "security_sec014_atomic_read_spec.py": {
       "bytes": 5624,
@@ -1192,6 +1192,10 @@
       "bytes": 2777,
       "sha256": "43e2ee1df3a283d49896deed2eb5ca95e65f96ee200a9042a93a6124f12802d0"
     },
+    "security_sec218_posix_runtime_provenance_spec.py": {
+      "bytes": 5056,
+      "sha256": "f22e5d21394fb3086b9de5a70cf5ff07a3646edf479ffd19b98d85e78e7e4183"
+    },
     "setup.cmd": {
       "bytes": 326,
       "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
@@ -1245,8 +1249,8 @@
       "sha256": "ae6c641c215cb8eacc94595a0fdb7d34b73ea836e0ce9842781520d68dcffd28"
     },
     "validate_linux_macos.sh": {
-      "bytes": 1572,
-      "sha256": "f13c9252cd5412741bb4a1094c987d24f964fab0c2fae04c47ba79900c422546"
+      "bytes": 1664,
+      "sha256": "a8d7ab7be5787803921fddad6fbd1a9c591a48e6675f09161629bb3ea05a8584"
     },
     "validate_windows.ps1": {
       "bytes": 2303,
