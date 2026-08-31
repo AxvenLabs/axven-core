@@ -1,0 +1,52 @@
+name: SEC-208 Manifest Refresh
+
+on:
+  push:
+    branches:
+      - security-sec208-release-tag-provenance
+    paths:
+      - .github/workflows/sec208-manifest-refresh.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: security-sec208-release-tag-provenance
+      - name: Refresh SEC-208 manifest entries
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          names = [
+              'GITHUB_RELEASE.md',
+              'RELEASE_CHECKLIST.md',
+              'release_provenance.py',
+              'security_sec208_release_tag_provenance_spec.py',
+          ]
+          manifest_path = Path('release_manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          files = manifest['files']
+          for name in names:
+              data = Path(name).read_bytes()
+              files[name] = {
+                  'bytes': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              }
+          manifest['files'] = dict(sorted(files.items()))
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
+          PY
+          git rm .github/workflows/sec208-manifest-refresh.yml
+          git config user.name "Axven Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add GITHUB_RELEASE.md RELEASE_CHECKLIST.md release_provenance.py security_sec208_release_tag_provenance_spec.py release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-208: refresh authenticated release provenance manifest"
+          git push origin HEAD:security-sec208-release-tag-provenance
