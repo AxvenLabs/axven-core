@@ -373,8 +373,8 @@
       "sha256": "35f82cd5d9dfbb136eed077c0d8051c8fab758c65922328ee816fe748013c2b8"
     },
     "runtime_provenance.py": {
-      "bytes": 9096,
-      "sha256": "b00f39390df55bd05d4b0bdbe29e9db9cc3d0ec3df4dfa272d4284ce2aeb7044"
+      "bytes": 12711,
+      "sha256": "65e3bc0613e7e02117f92b01badb121da959410189938879d037242b77fd8ecd"
     },
     "security_sec014_atomic_read_spec.py": {
       "bytes": 5624,
@@ -1183,6 +1183,10 @@
     "security_sec215_runtime_source_integrity_spec.py": {
       "bytes": 7097,
       "sha256": "70b6c97ae670a8e572f161b190886c22b08135d1ee4b0309a8135408db5126e6"
+    },
+    "security_sec216_runtime_provenance_path_identity_spec.py": {
+      "bytes": 5199,
+      "sha256": "7e517b369f4b2b5f4a998d3cfd4599398890e4819d2a5196f5c01e11f5d1cfb7"
     },
     "setup.cmd": {
       "bytes": 326,
