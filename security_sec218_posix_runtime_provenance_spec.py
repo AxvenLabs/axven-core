@@ -49,9 +49,10 @@ def main() -> None:
             profile="windows",
         )
         assert set(win["inputs"]) == set(runtime_provenance.WINDOWS_TRUST_INPUTS)
-        assert set(win) == {"schema", "python_version", "inputs"}
+        assert set(win) == {"schema", "python_version", "inputs", "runtime_distributions"}
+        assert set(win["runtime_distributions"]) == set(runtime_provenance.RUNTIME_DISTRIBUTIONS)
     checks += 1
-    print("[GREEN] Windows receipt format and trust boundary remain unchanged")
+    print("[GREEN] Windows receipt keeps its trust inputs and adds dependency-content provenance")
 
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -62,6 +63,7 @@ def main() -> None:
             profile="posix",
         )
         assert set(first["inputs"]) == set(runtime_provenance.POSIX_TRUST_INPUTS)
+        assert set(first["runtime_distributions"]) == set(runtime_provenance.RUNTIME_DISTRIBUTIONS)
         validator = root / "validate_linux_macos.sh"
         validator.write_bytes(b"tampered validator\n")
         second = runtime_provenance.build_receipt(
