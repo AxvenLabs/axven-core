@@ -25,6 +25,24 @@ MAX_RELEASE_FILE_BYTES = 64 * 1024 * 1024
 MAX_RELEASE_TOTAL_BYTES = 256 * 1024 * 1024
 COPY_CHUNK_BYTES = 64 * 1024
 
+# SEC-212: release filesystem metadata is not covered by content hashes. The
+# current canonical release contains no tracked executable blobs, so stage every
+# payload/manifest as a non-executable owner-writable file and every generated
+# directory with a conventional non-privileged mode. Never propagate local
+# setuid/setgid bits from a release working tree.
+SAFE_RELEASE_FILE_MODE = 0o644
+SAFE_RELEASE_DIRECTORY_MODE = 0o755
+
+
+def _chmod_best_effort(path: Path, mode: int) -> None:
+    try:
+        path.chmod(mode)
+    except OSError:
+        # Windows filesystems do not expose full POSIX mode semantics. The
+        # verifier still rejects privilege-bearing bits wherever the platform
+        # reports them.
+        pass
+
 
 def _load_verified_sources():
     try:
@@ -33,6 +51,8 @@ def _load_verified_sources():
         raise RuntimeError("missing release_manifest.json") from exc
     if stat.S_ISLNK(manifest_metadata.st_mode) or not stat.S_ISREG(manifest_metadata.st_mode):
         raise RuntimeError("release_manifest.json must be a regular non-symlink file")
+    if verify_release._has_unsafe_release_permissions(manifest_metadata):
+        raise RuntimeError("unsafe source permission bits: release_manifest.json")
 
     try:
         manifest_bytes = verify_release._read_manifest_bounded(MANIFEST, manifest_metadata)
@@ -90,11 +110,11 @@ def _load_verified_sources():
             raise RuntimeError(f"missing manifest source: {name}") from exc
         if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
             raise RuntimeError(f"manifest source is not a regular non-symlink file: {name}")
+        if verify_release._has_unsafe_release_permissions(metadata):
+            raise RuntimeError(f"unsafe source permission bits: {name}")
         if metadata.st_size != expected_bytes:
             raise RuntimeError(f"manifest source size mismatch: {name}")
-        sources.append(
-            (pure, source, expected_bytes, expected_hash, stat.S_IMODE(metadata.st_mode))
-        )
+        sources.append((pure, source, expected_bytes, expected_hash))
 
     return manifest_bytes, sources
 
@@ -113,6 +133,8 @@ def _copy_verified_source(
         opened_metadata = os.fstat(source_handle.fileno())
         if not stat.S_ISREG(opened_metadata.st_mode) or opened_metadata.st_size != expected_bytes:
             raise RuntimeError(f"manifest source size/type changed during build: {source.name}")
+        if verify_release._has_unsafe_release_permissions(opened_metadata):
+            raise RuntimeError(f"unsafe source permission bits during build: {source.name}")
 
         with destination.open("xb") as destination_handle:
             while copied < expected_bytes:
@@ -137,21 +159,19 @@ def build(output_dir: Path) -> str:
 
     manifest_bytes, sources = _load_verified_sources()
     output.mkdir(parents=True, exist_ok=False)
+    _chmod_best_effort(output, SAFE_RELEASE_DIRECTORY_MODE)
     try:
-        for pure, source, expected_bytes, expected_hash, mode in sources:
+        for pure, source, expected_bytes, expected_hash in sources:
             destination = output.joinpath(*pure.parts)
             destination.parent.mkdir(parents=True, exist_ok=True)
+            _chmod_best_effort(destination.parent, SAFE_RELEASE_DIRECTORY_MODE)
             _copy_verified_source(source, destination, expected_bytes, expected_hash)
-            try:
-                destination.chmod(mode)
-            except OSError:
-                # Windows filesystems may not preserve POSIX mode bits; content
-                # authenticity remains enforced by the manifest.
-                pass
+            _chmod_best_effort(destination, SAFE_RELEASE_FILE_MODE)
 
         staged_manifest = output / "release_manifest.json"
         with staged_manifest.open("xb") as handle:
             handle.write(manifest_bytes)
+        _chmod_best_effort(staged_manifest, SAFE_RELEASE_FILE_MODE)
 
         digest = hashlib.sha256(manifest_bytes).hexdigest()
         original_root = verify_release.ROOT

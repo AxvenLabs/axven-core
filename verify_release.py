@@ -20,6 +20,12 @@ SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 MAX_RELEASE_MANIFEST_BYTES = 1024 * 1024
 HASH_CHUNK_BYTES = 64 * 1024
 
+# SEC-212: file content hashes do not authenticate filesystem metadata.  Never
+# accept privilege-bearing POSIX permission bits on release payloads or the
+# manifest, and repeat this check during the final inventory sweep so a mode
+# change after hashing also fails closed.
+UNSAFE_RELEASE_PERMISSION_BITS = stat.S_ISUID | stat.S_ISGID
+
 
 def fail(message: str) -> int:
     print(message, file=sys.stderr)
@@ -35,6 +41,10 @@ def _canonical_manifest_name(name: str) -> PurePosixPath | None:
     if any(part in ("", ".", "..") for part in pure.parts):
         return None
     return pure
+
+
+def _has_unsafe_release_permissions(metadata) -> bool:
+    return bool(metadata.st_mode & UNSAFE_RELEASE_PERMISSION_BITS)
 
 
 def _read_manifest_bounded(path: Path, metadata) -> bytes:
@@ -75,9 +85,8 @@ def _release_inventory_violations(root: Path, manifest_names) -> list[str]:
 
     SEC-207 rejects every unmanifested file/symlink/special entry. SEC-210 also
     requires every authenticated expected path to remain present as a regular,
-    non-symlink file through the final inventory sweep, closing the post-hash
-    deletion/file-to-directory drift window that the earlier inventory pass did
-    not account for.
+    non-symlink file through the final inventory sweep. SEC-212 additionally
+    rejects privilege-bearing permission bits both before and after hashing.
     """
     root = root.resolve()
     expected = set(manifest_names)
@@ -101,7 +110,8 @@ def _release_inventory_violations(root: Path, manifest_names) -> list[str]:
             if stat.S_ISLNK(metadata.st_mode):
                 bad.append(f"expected release file became symlink: {relative}")
             elif stat.S_ISREG(metadata.st_mode):
-                pass
+                if _has_unsafe_release_permissions(metadata):
+                    bad.append(f"unsafe release permission bits: {relative}")
             elif stat.S_ISDIR(metadata.st_mode):
                 bad.append(f"expected release file became directory: {relative}")
             else:
@@ -137,6 +147,8 @@ def main(argv=None) -> int:
         return fail("missing release_manifest.json")
     if stat.S_ISLNK(manifest_metadata.st_mode) or not stat.S_ISREG(manifest_metadata.st_mode):
         return fail("release_manifest.json must be a regular non-symlink file")
+    if _has_unsafe_release_permissions(manifest_metadata):
+        return fail("unsafe release permission bits: release_manifest.json")
 
     try:
         manifest_bytes = _read_manifest_bounded(MANIFEST, manifest_metadata)
@@ -195,8 +207,11 @@ def main(argv=None) -> int:
         if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
             bad.append(f"missing or non-regular file: {name}")
             continue
+        if _has_unsafe_release_permissions(metadata):
+            bad.append(f"unsafe release permission bits: {name}")
+            continue
 
-        # The trusted manifest's exact size is the IO-work budget.  Reject an
+        # The trusted manifest's exact size is the IO-work budget. Reject an
         # obvious oversized replacement before opening it, then stream at most
         # that many bytes plus one byte to detect a path replacement race.
         if metadata.st_size != expected_bytes:
