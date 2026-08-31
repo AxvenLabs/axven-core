@@ -17,6 +17,8 @@ def main() -> None:
     checks = 0
     notes = Path("GITHUB_RELEASE.md").read_text(encoding="utf-8")
     checklist = Path("RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
+    version = Path("VERSION").read_text(encoding="utf-8").strip()
+    metadata = json.loads(Path("RELEASE_METADATA.json").read_text(encoding="utf-8"))
     notes_flat = " ".join(notes.split())
     checklist_flat = " ".join(checklist.split())
     manifest = json.loads(Path("release_manifest.json").read_text(encoding="utf-8"))
@@ -64,14 +66,26 @@ def main() -> None:
     checks += 1
     print("[GREEN] planned release tag has one canonical spelling")
 
+    assert version == NEXT_TAG
+    assert metadata["tag"] == NEXT_TAG
+    assert metadata["version"] == NEXT_TAG
+    assert NEXT_TAG in metadata["release_name"]
+    assert manifest["tag"] == NEXT_TAG
+    assert manifest["version"] == NEXT_TAG
+    assert NEXT_TAG in manifest["release"]
+    checks += 1
+    print("[GREEN] VERSION, release metadata, and release manifest share the fresh tag identity")
+
     for name in (
         "GITHUB_RELEASE.md",
         "RELEASE_CHECKLIST.md",
+        "RELEASE_METADATA.json",
+        "VERSION",
         "security_sec208_legacy_release_provenance_spec.py",
     ):
         assert name in manifest["files"], name
     checks += 1
-    print("[GREEN] release manifest covers SEC-208 guidance and regression")
+    print("[GREEN] release manifest covers SEC-208 guidance, metadata, and regression")
 
     assert axven.CHAIN_ID == "axven-devnet-2"
     assert axven.CONFIG_FINGERPRINT == "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae"
