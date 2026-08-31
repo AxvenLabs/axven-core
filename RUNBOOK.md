@@ -1,54 +1,86 @@
-# Axven Core — First-run runbook
+# Axven Core — hardened operator runbook
 
-## 1. Environment
-Recommended: Python 3.11+ in a fresh virtual environment.
+## 1. Validated environment
 
-```bash
-python -m venv .venv
-# Linux/macOS
-source .venv/bin/activate
-# Windows PowerShell
-# .\.venv\Scripts\Activate.ps1
+Axven's supported runtime is **exact Python 3.13.15**. Do not bootstrap the
+operator environment with ambient dependency resolution, `pip install --upgrade
+pip`, an unconstrained `pip install -e .`, or a different Python runtime.
 
-python -m pip install --upgrade pip
-python -m pip install -e .
-axven-doctor
+Windows:
+
+```text
+1. install exact Python 3.13.15
+2. run setup.cmd
 ```
 
-`axven-doctor` must pass before creating a wallet. In particular,
-`dilithium-py==1.4.0` is required for real ML-DSA-44 wallet creation/signing.
-There is intentionally no fake PQ fallback.
+Linux/macOS:
 
-## 2. Create wallet
 ```bash
-axven-core --datadir ./axven-data create-wallet
-```
-You will be prompted for a passphrase twice.
-
-## 3. Run node
-```bash
-axven-core --datadir ./axven-data run --rpc-port 18443 --p2p-port 18444
+# exact Python 3.13.15 must be available as python3
+bash validate_linux_macos.sh
 ```
 
-## 4. Query node
-In another terminal:
+The hardened validator creates/updates `.venv`, installs only the reviewed
+hash-locked dependency artifacts, runs doctor + full validation + the SEC-076+
+security tail, and stamps the platform-specific runtime-provenance receipt.
+
+## 2. POSIX operator boundary
+
+On Linux/macOS, do not invoke `.venv/bin/python`, `axven-core`, `axven-cli`, or
+other Axven entrypoints directly for operator work. Use the attested launcher;
+it fails closed unless the current `.venv` and release tree still match the
+validated POSIX provenance receipt.
+
+Create a wallet:
+
 ```bash
-axven-cli status
-axven-cli addresses
-axven-cli balance --scheme ed25519
+bash axven-posix.sh core --datadir ./axven-data create-wallet
 ```
 
-## 5. Devnet mining
+Run a node:
+
 ```bash
-axven-cli mine 1 --scheme ed25519
+bash axven-posix.sh core --datadir ./axven-data run --rpc-port 18443 --p2p-port 18444
 ```
 
-## 6. Important current status
-This package is a pre-activation devnet rebuild checkpoint.
-CD-003 canonical activation is NOT executed.
-Do not present this package as a public mainnet release.
+Query the node from another terminal:
 
-## 7. Persistent state
+```bash
+bash axven-posix.sh cli status
+bash axven-posix.sh cli addresses
+bash axven-posix.sh cli balance --scheme ed25519
+```
+
+Mine one devnet block:
+
+```bash
+bash axven-posix.sh cli mine 1 --scheme ed25519
+```
+
+For the interactive console:
+
+```bash
+bash axven-posix.sh console
+```
+
+If provenance checking reports a missing, stale, or mismatched receipt, stop and
+rerun `bash validate_linux_macos.sh`; do not bypass the preflight.
+
+## 3. Windows operator boundary
+
+Use the repository's Windows launchers (`start-node1.cmd`, `start-node2.cmd`,
+`start-public-p2p-node.cmd`, `axven-console.cmd`, and the canonical PowerShell
+operator scripts). They run the Windows provenance preflight before using the
+validated `.venv` runtime.
+
+## 4. Current network status
+
+This repository is the canonical **Axven devnet**, not a production mainnet.
+Do not present the devnet package or its balances as a production/mainnet
+release.
+
+## 5. Persistent state
+
 - Chain: `<datadir>/chain/chain.json`
 - Wallet: `<datadir>/wallet.json`
 - Mempool: intentionally in-memory only in this version

@@ -43,9 +43,10 @@ def main() -> None:
     print("[GREEN] public bootstrap no longer provides an executable policy-bypass recipe")
 
     assert "Windows quick start" not in readme
-    assert "validated runtime-provenance receipt used by the Windows operator launchers" in readme_flat
+    assert "Both Windows and POSIX validation maintain platform-specific validated runtime-provenance receipts used by their operator launch paths." in readme_flat
+    assert "axven-posix.sh` checks that receipt before the first operator Python process" in readme_flat
     checks += 1
-    print("[GREEN] README does not present a provenance-blind quick-start path")
+    print("[GREEN] README does not present a provenance-blind Windows or POSIX quick-start path")
 
     files = manifest.get("files")
     assert isinstance(files, dict)

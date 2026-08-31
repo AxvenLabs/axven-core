@@ -16,7 +16,7 @@ Current stage: **canonical devnet / pre-public release hardening**.
 - wallet backup/persistence and PQ-aware change
 - JSON-RPC, CLI, TCP P2P, restart/replay and reorg handling
 - local read-only block explorer
-- Windows operator launchers
+- attested Windows and Linux/macOS operator runtime paths
 
 ## Canonical devnet identity
 
@@ -43,23 +43,33 @@ Windows:
 `setup.cmd` delegates to the hardened Windows validator. It does not require or
 request `Set-ExecutionPolicy ... Bypass`.
 
-Linux/macOS validation:
+Linux/macOS:
 
 ```bash
 # exact Python 3.13.15 is required
 bash validate_linux_macos.sh
+# operator commands must pass the POSIX provenance preflight
+bash axven-posix.sh core --datadir ./axven-data run --rpc-port 18443 --p2p-port 18444
+bash axven-posix.sh cli status
 ```
 
+`validate_linux_macos.sh` stamps the validated POSIX runtime receipt only after
+doctor, full validation, and the SEC-076+ security tail pass. `axven-posix.sh`
+checks that receipt before the first operator Python process. If the receipt is
+missing or stale, rerun the validator; do not bypass the preflight.
+
 Do not replace these paths with `pip install --upgrade pip`, `pip install -e .`,
-or another ambient dependency-resolution command.
+direct `.venv/bin/python` operator commands, or another ambient
+dependency-resolution command.
 
 The first node start creates an encrypted wallet and asks for a passphrase.
 
 ## Validation
 
 The hardened validators run dependency integrity checks, the Axven doctor, full
-validation, and the SEC-076+ security tail. Windows validation also maintains the
-validated runtime-provenance receipt used by the Windows operator launchers.
+validation, and the SEC-076+ security tail. Both Windows and POSIX validation
+maintain platform-specific validated runtime-provenance receipts used by their
+operator launch paths.
 
 The validation suite covers real ML-DSA, wallet integration, daemon lifecycle,
 TCP P2P, two-node reorg/reconnect, canonical activation records, consensus
