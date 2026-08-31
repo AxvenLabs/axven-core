@@ -1,0 +1,51 @@
+name: SEC-208 one-shot final manifest repair
+
+on:
+  push:
+    branches:
+      - security-sec208-legacy-release-provenance
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: true
+          fetch-depth: 1
+      - name: Refresh SEC-208 regression manifest entry
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          target = Path("security_sec208_legacy_release_provenance_spec.py")
+          data = target.read_bytes()
+          manifest_path = Path("release_manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest["files"][target.as_posix()] = {
+              "bytes": len(data),
+              "sha256": hashlib.sha256(data).hexdigest(),
+          }
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+              newline="\n",
+          )
+          PY
+      - name: Commit manifest and remove one-shot gate
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/sec208_final_manifest_repair.yml
+          git add release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-208: refresh final regression manifest"
+          git push
