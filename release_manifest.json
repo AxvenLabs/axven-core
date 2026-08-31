@@ -337,8 +337,8 @@
       "sha256": "41d0121c2da05cab318d71a5ecfb40e47407f418a7ae798e5e7c9ca5c4d68444"
     },
     "release_packaging_test.py": {
-      "bytes": 2810,
-      "sha256": "63e52e173ffac755275163b37c65b722a08fc9199514e1eb2c50e477ea8409e9"
+      "bytes": 3268,
+      "sha256": "c2a04eac89bc49efb193db51e3d0aeba094c8979764f13d00716f686694f57e5"
     },
     "requirements.txt": {
       "bytes": 48,
