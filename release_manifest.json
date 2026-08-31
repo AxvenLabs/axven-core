@@ -733,8 +733,8 @@
       "sha256": "1867654257dbb267b2752fd147a4c63f34a0f7d2eadc62f4041d52c652938323"
     },
     "security_sec101_peer_lifecycle_atomicity_spec.py": {
-      "bytes": 3706,
-      "sha256": "1d4d62ff3548f7b2f57a5b7993f4095b53aa9d911eeef5b715d9a6c0d44003ae"
+      "bytes": 3810,
+      "sha256": "63c255ae3ccdefea00af416eaa24ee51825db5410d66479c9797d67d25b78a70"
     },
     "security_sec102_p2p_tx_input_fields_spec.py": {
       "bytes": 3036,
