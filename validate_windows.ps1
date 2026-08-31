@@ -4,7 +4,7 @@ Set-Location $PSScriptRoot
 $RequiredPython = "3.13.15"
 
 # Fail closed on the exact validated runtime before creating a virtualenv or
-# performing any package installation.  The launcher may select a later 3.13
+# performing any package installation. The launcher may select a later 3.13
 # patch over time, so verify the concrete interpreter rather than trusting
 # the selector alone.
 py -3.13 -c "import platform,sys; raise SystemExit(0 if platform.python_version() == '$RequiredPython' else 2)"
@@ -42,5 +42,9 @@ if ($LASTEXITCODE -ne 0) { throw "Axven validation failed" }
 Write-Host "`n=== SEC-076+ SECURITY TAIL ===" -ForegroundColor Cyan
 & $Python security_tail_runner.py
 if ($LASTEXITCODE -ne 0) { throw "Axven security tail failed" }
+
+Write-Host "`n=== RUNTIME PROVENANCE RECEIPT ===" -ForegroundColor Cyan
+& $Python runtime_provenance.py stamp
+if ($LASTEXITCODE -ne 0) { throw "runtime provenance receipt failed" }
 
 Write-Host "`nALL AXVEN CHECKS GREEN" -ForegroundColor Green
