@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import threading
-import time
 
 import p2p
 from core import AxvenCore
@@ -38,7 +37,6 @@ def _exercise(method_name, transport_name, payload, base_port):
     active = 0
     peak = 0
     calls = []
-    gates = []
 
     original = getattr(p2p, transport_name)
 
@@ -49,7 +47,6 @@ def _exercise(method_name, transport_name, payload, base_port):
         assert gate(addr[0]) is True
         with lock:
             calls.append(addr)
-            gates.append(gate)
             active += 1
             peak = max(peak, active)
             if active >= 2:
@@ -91,6 +88,10 @@ def _exercise(method_name, transport_name, payload, base_port):
 def main():
     checks = 0
 
+    assert AxvenCore.MAX_PROPAGATION_WORKERS == 16
+    checks += 1
+    print("[GREEN] propagation worker cap pinned at 16")
+
     tx_peak = _exercise(
         "_propagate_tx_outbound", "propagate_tx", FakeTx(), 22300
     )
@@ -117,8 +118,8 @@ def main():
     checks += 1
     print("[GREEN] consensus and PQ activation identity unchanged")
 
-    assert checks == 3
-    print("SEC-223 bounded propagation fanout: 3/3 GREEN")
+    assert checks == 4
+    print("SEC-223 bounded propagation fanout: 4/4 GREEN")
 
 
 if __name__ == "__main__":
