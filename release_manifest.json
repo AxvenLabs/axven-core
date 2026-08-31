@@ -57,8 +57,8 @@
       "sha256": "b32a3db30c2d0dcaed514a8c68c26c090bfcb7a3fb0c9e5c403cfe582dc0fcd7"
     },
     "GITHUB_RELEASE.md": {
-      "bytes": 851,
-      "sha256": "6db9e1b423f4a3b41a2415af834413766e6173cc076ae44e2555e09de1efdb56"
+      "bytes": 2026,
+      "sha256": "a6b06203fa3541b264694f96d15c5f7cd37035c98f763dd4757e500169781820"
     },
     "LICENSE": {
       "bytes": 1075,
@@ -81,8 +81,8 @@
       "sha256": "086c5bbd0944633d68b58f5ed3ad61bfc3e79d4931a312c7cc7e3d1691eff733"
     },
     "RELEASE_CHECKLIST.md": {
-      "bytes": 646,
-      "sha256": "0a26f7ab2816e1275b0724d3796cae4ac2aead0b84de924f712b5bbb82ab866d"
+      "bytes": 991,
+      "sha256": "3042d0ec9a8229cc914fd8de5afe54bb784623106dbb40a3466d84bf4e7f1fd7"
     },
     "RELEASE_METADATA.json": {
       "bytes": 640,
@@ -1145,8 +1145,8 @@
       "sha256": "739219eb6f768efbd8582623b892134124b441b0c621f6e99fd165084b4572e4"
     },
     "verify_release.py": {
-      "bytes": 574,
-      "sha256": "e83d5da49bf0d4df75797fe840d929ec37a9ec948c4e6fcc9d206f1e35f57bca"
+      "bytes": 2884,
+      "sha256": "94aa2b3bff2457b94f1e06ce526fea9d8dff747dc222c54c3bd42dc8530cb03f"
     },
     "wallet.py": {
       "bytes": 20159,
@@ -1195,6 +1195,10 @@
     "security_sec204_windows_setup_provenance_spec.py": {
       "bytes": 2442,
       "sha256": "712f92a7886e096dababfb100bb3e13926bb5d527e833c39dbd522313228c1d0"
+    },
+    "security_sec205_release_manifest_trust_anchor_spec.py": {
+      "bytes": 4900,
+      "sha256": "215b5ec5ad6406f51260739cb947184a79670448a98255d90bec26c62b213d79"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
