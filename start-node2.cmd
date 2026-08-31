@@ -1,6 +1,7 @@
 @echo off
 cd /d "%~dp0"
-if not exist .venv\Scripts\python.exe call setup.cmd
+powershell.exe -NoLogo -NoProfile -NonInteractive -File "%~dp0ensure_runtime.ps1"
+if errorlevel 1 exit /b 1
 if not exist canonical-node2\wallet.json (
   echo Creating Node 2 wallet...
   .venv\Scripts\python.exe axven_core.py --datadir canonical-node2 create-wallet
