@@ -44,12 +44,12 @@ def main() -> None:
     assert "bash validate_linux_macos.sh" in runbook
     assert "bash axven-posix.sh core" in runbook
     assert "bash axven-posix.sh cli" in runbook
-    assert "pip install --upgrade pip" not in runbook_lower
-    assert "pip install -e ." not in runbook_lower
+    assert "python -m pip install --upgrade pip" not in runbook_lower
+    assert "python -m pip install -e ." not in runbook_lower
     assert "python 3.11+" not in runbook_lower
     assert "source .venv/bin/activate" not in runbook_lower
     checks += 1
-    print("[GREEN] runbook no longer advertises an ambient dependency/provenance bypass")
+    print("[GREEN] runbook no longer advertises an executable ambient dependency/provenance bypass")
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert "bash validate_linux_macos.sh" in readme
