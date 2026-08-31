@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create and verify the SEC-213 validated Windows runtime receipt."""
+"""Create and verify validated Axven runtime provenance receipts."""
 from __future__ import annotations
 
 import hashlib
@@ -22,6 +22,9 @@ MAX_RELEASE_FILES = 4096
 MAX_RELEASE_FILE_BYTES = 64 * 1024 * 1024
 MAX_RELEASE_TOTAL_BYTES = 256 * 1024 * 1024
 HASH_CHUNK_BYTES = 64 * 1024
+
+# Preserve the SEC-213 Windows trust-input contract for existing regressions and
+# callers. SEC-218 adds a platform-specific POSIX contract used by stamp/check.
 TRUST_INPUTS = (
     "setup.cmd",
     "validate_windows.ps1",
@@ -33,6 +36,25 @@ TRUST_INPUTS = (
     "doctor.py",
     "runtime_provenance.py",
 )
+POSIX_TRUST_INPUTS = (
+    "validate_linux_macos.sh",
+    "ensure_runtime.sh",
+    "release_manifest.json",
+    "requirements-ci-toolchain.lock",
+    "requirements-ci-runtime-posix.lock",
+    "pyproject.toml",
+    "doctor.py",
+    "runtime_provenance.py",
+)
+
+
+def _active_trust_inputs(system_name: str | None = None) -> tuple[str, ...]:
+    system = platform.system() if system_name is None else system_name
+    if system == "Windows":
+        return TRUST_INPUTS
+    if system in {"Linux", "Darwin"}:
+        return POSIX_TRUST_INPUTS
+    raise RuntimeError(f"unsupported runtime provenance platform: {system}")
 
 
 def _same_file(before: os.stat_result, opened: os.stat_result) -> bool:
@@ -240,11 +262,16 @@ def _verify_manifest_payloads(root: Path) -> None:
             raise RuntimeError(f"release payload changed after hashing: {name}")
 
 
-def build_receipt(root: Path, *, python_version: str) -> dict:
+def build_receipt(
+    root: Path,
+    *,
+    python_version: str,
+    trust_inputs: tuple[str, ...] = TRUST_INPUTS,
+) -> dict:
     if python_version != REQUIRED_PYTHON:
         raise RuntimeError(f"Python {REQUIRED_PYTHON} is required")
     inputs: dict[str, dict[str, int | str]] = {}
-    for name in TRUST_INPUTS:
+    for name in trust_inputs:
         data = _read_trust_input(root / name, name)
         inputs[name] = {"bytes": len(data), "sha256": _sha256(data)}
     return {
@@ -260,15 +287,22 @@ def receipt_path(root: Path = ROOT) -> Path:
 
 def _assert_expected_interpreter(root: Path = ROOT) -> None:
     venv = (root / ".venv").resolve()
-    executable = Path(sys.executable).resolve()
-    if executable.parent.parent != venv:
+    try:
+        prefix = Path(sys.prefix).resolve()
+    except OSError as exc:
+        raise RuntimeError(f"runtime receipt must be managed by {venv}") from exc
+    if prefix != venv:
         raise RuntimeError(f"runtime receipt must be managed by {venv}")
 
 
 def stamp(root: Path = ROOT) -> None:
     _assert_expected_interpreter(root)
     _verify_manifest_payloads(root)
-    receipt = build_receipt(root, python_version=platform.python_version())
+    receipt = build_receipt(
+        root,
+        python_version=platform.python_version(),
+        trust_inputs=_active_trust_inputs(),
+    )
     path = receipt_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = (json.dumps(receipt, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
@@ -304,7 +338,11 @@ def check(root: Path = ROOT) -> None:
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise RuntimeError("runtime provenance receipt is unreadable") from exc
     _verify_manifest_payloads(root)
-    expected = build_receipt(root, python_version=platform.python_version())
+    expected = build_receipt(
+        root,
+        python_version=platform.python_version(),
+        trust_inputs=_active_trust_inputs(),
+    )
     if actual != expected:
         raise RuntimeError("runtime provenance receipt is stale or mismatched")
     print("Axven runtime provenance receipt: GREEN")
