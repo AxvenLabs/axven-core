@@ -42,7 +42,7 @@ def main() -> None:
 
     assert "fresh previously-unused tag" in notes
     assert "If the tag already exists, stop" in notes
-    assert "rather than moving it" in notes
+    assert "rather than moving it" in notes_flat
     checks += 1
     print("[GREEN] release guidance fails closed on an already-existing tag")
 
