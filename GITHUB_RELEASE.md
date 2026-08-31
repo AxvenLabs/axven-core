@@ -1,10 +1,10 @@
 # Axven Core v0.9.0 Canonical Devnet
 
-Tag: `v0.9.0-devnet`
+Planned tag: `v0.9.0-devnet.1`
 
 Status: **Canonical devnet preview**
 
-This release is the first GitHub-ready Axven Core package built on the
+This release is the next GitHub-ready Axven Core package built on the
 activated `axven-devnet-2` network identity.
 
 Canonical identity:
@@ -20,6 +20,25 @@ Validated on the real Windows host:
 - two-node fork/reorg/reconnect
 - canonical activation audit
 - canonical block #1 operation/persistence
+
+## Legacy release quarantine
+
+The historical prerelease tag `v0.9.0-devnet` resolves to commit
+`2c144be2a1139cc3253ef98bac05d7acef2485b6`. It predates the SEC-205 external
+manifest trust anchor and the SEC-207 exact staged-payload inventory. It is a
+legacy/superseded release record and MUST NOT be treated as the current hardened
+Axven package or used as the tag for a new release.
+
+The legacy tag is historical evidence: **never retarget, delete, or reuse it** to
+make newer code appear under the old release identity. Every hardened release
+must use a fresh previously-unused tag. The release tag must resolve exactly to
+the fully validated source commit before the GitHub release is published, and
+the GitHub release must continue to identify that same immutable tag/commit.
+
+For the next preview, `v0.9.0-devnet.1` is reserved by this release plan. Before
+creating it, verify that the tag does not already exist and record the exact
+validated commit SHA. If the tag already exists, stop and choose a new tag rather
+than moving it.
 
 ## Release authenticity trust anchor
 
