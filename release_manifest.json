@@ -1089,8 +1089,8 @@
       "sha256": "b0b32889dabe13be4836178b3d874797bee41121421271dbf50fde3c1d5423c4"
     },
     "setup.cmd": {
-      "bytes": 172,
-      "sha256": "98a66f235b3b5aa9d8e8d127eb1e200f6c2c5bb16266d8a7b84760db613afd05"
+      "bytes": 326,
+      "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
     },
     "start-node1.cmd": {
       "bytes": 361,
@@ -1191,6 +1191,10 @@
     "security_sec203_posix_validator_provenance_spec.py": {
       "bytes": 5834,
       "sha256": "38a4918a61fbe0f7717385e1e87d400878131bcf4d0585c36dc5bc0c18f31ce0"
+    },
+    "security_sec204_windows_setup_provenance_spec.py": {
+      "bytes": 2442,
+      "sha256": "712f92a7886e096dababfb100bb3e13926bb5d527e833c39dbd522313228c1d0"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
