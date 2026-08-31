@@ -13,10 +13,16 @@
 - [ ] Internet-facing deployment hardening
 - [ ] security contact / disclosure channel
 - [ ] independent security review
+- [ ] preserve historical `v0.9.0-devnet`; never reuse or move that legacy tag
+- [ ] fetch canonical remote tags with `git fetch origin --tags` and choose a new unpublished tag name
+- [ ] run `python release_provenance.py prepare <NEW_UNPUBLISHED_TAG>` from the exact clean release commit
+- [ ] record the exact 40-hex `release commit SHA` printed by the provenance gate
 - [ ] compute final `release_manifest.json` SHA-256 from the exact release commit
 - [ ] build a new exact-inventory staging directory with `python build_release_package.py <NEW_EMPTY_OUTPUT_DIRECTORY>`
 - [ ] confirm the staged release contains no file outside the authenticated manifest plus `release_manifest.json`
-- [ ] publish that 64-hex digest in the canonical GitHub release body, outside the downloadable release package/assets
+- [ ] create an annotated tag at the recorded release commit and push it without `--force`
+- [ ] run `python release_provenance.py verify <TAG> <RELEASE_COMMIT_SHA> <TRUSTED_RELEASE_MANIFEST_SHA256>` after tag publication
+- [ ] publish both the exact release commit SHA and the 64-hex manifest digest in the canonical GitHub release body, outside downloadable assets
 - [ ] verify a clean downloaded staged package with the externally published digest using `python verify_release.py <TRUSTED_RELEASE_MANIFEST_SHA256>` before setup or first launch
 - [ ] tagged GitHub release (package ready)
 - [ ] public project website

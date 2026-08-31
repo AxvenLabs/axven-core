@@ -1,6 +1,8 @@
 # Axven Core v0.9.0 Canonical Devnet
 
-Tag: `v0.9.0-devnet`
+Release tag: `<NEW_UNPUBLISHED_TAG>`
+
+Historical public tag: `v0.9.0-devnet` — **legacy pre-hardening preview; MUST NOT be reused or moved**.
 
 Status: **Canonical devnet preview**
 
@@ -21,6 +23,44 @@ Validated on the real Windows host:
 - canonical activation audit
 - canonical block #1 operation/persistence
 
+## Release tag and commit provenance
+
+The historical `v0.9.0-devnet` tag points to the original August 2026 devnet
+preview and predates the current release-authenticity hardening. Preserve it as
+history. Do not delete it, force-move it, or reuse the same name for a hardened
+package.
+
+For every new public release, first fetch canonical tags, choose a **new** tag
+name, and run from the exact clean release commit:
+
+`git fetch origin --tags`
+
+`python release_provenance.py prepare <NEW_UNPUBLISHED_TAG>`
+
+Preparation fails closed if the tag already exists locally or on canonical
+origin, if the tracked checkout is dirty, if the repository origin is not
+AxvenLabs/axven-core, or if the historical `v0.9.0-devnet` name is supplied.
+Record both values printed by the tool:
+
+`release commit SHA: <PASTE FINAL 40-HEX COMMIT SHA HERE>`
+
+`release_manifest.json SHA-256: <PASTE FINAL 64-HEX SHA-256 HERE>`
+
+Create an **annotated** tag at that exact commit and push it without `--force`.
+A normal push must fail rather than rewrite an existing release tag:
+
+`git tag -a <NEW_UNPUBLISHED_TAG> <RELEASE_COMMIT_SHA> -m "Axven canonical devnet release"`
+
+`git push origin refs/tags/<NEW_UNPUBLISHED_TAG>`
+
+After the push, verify the local annotated tag object, its commit target, the
+manifest stored at the tag, and the remote tag object all agree:
+
+`python release_provenance.py verify <NEW_UNPUBLISHED_TAG> <RELEASE_COMMIT_SHA> <TRUSTED_RELEASE_MANIFEST_SHA256>`
+
+Do not publish the GitHub release until this command reports
+`Release provenance: GREEN`.
+
 ## Release authenticity trust anchor
 
 Before publishing a public release, compute the SHA-256 of the final
@@ -29,7 +69,9 @@ the **GitHub release body**. The published digest is a trust anchor and MUST NOT
 be sourced from the downloaded release archive or from another file bundled
 inside that archive.
 
-Release body field:
+Release body fields:
+
+`release commit SHA: <PASTE FINAL 40-HEX COMMIT SHA HERE>`
 
 `release_manifest.json SHA-256: <PASTE FINAL 64-HEX SHA-256 HERE>`
 
