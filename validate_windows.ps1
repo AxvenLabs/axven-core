@@ -3,22 +3,36 @@ Set-Location $PSScriptRoot
 
 $RequiredPython = "3.13.15"
 
-# Fail closed on the exact validated runtime before creating a virtualenv or
-# performing any package installation. The launcher may select a later 3.13
-# patch over time, so verify the concrete interpreter rather than trusting
-# the selector alone.
-py -3.13 -c "import platform,sys; raise SystemExit(0 if platform.python_version() == '$RequiredPython' else 2)"
+# SEC-219: the ambient interpreter is not trusted to import site/user startup
+# hooks while selecting the exact bootstrap runtime.
+py -3.13 -I -S -c "import platform,sys; raise SystemExit(0 if platform.python_version() == '$RequiredPython' else 2)"
 if ($LASTEXITCODE -ne 0) { throw "Python $RequiredPython is required" }
 
-if (-not (Test-Path ".venv")) {
-    py -3.13 -m venv .venv
-    if ($LASTEXITCODE -ne 0) { throw "virtualenv creation failed" }
+# Never reuse a pre-existing virtualenv during hardened validation. A stale
+# environment can contain sitecustomize/.pth startup code that executes before
+# Axven's provenance checks. Reparse points are removed as links; ordinary
+# generated virtualenv directories are rebuilt from scratch.
+$VenvPath = Join-Path $PSScriptRoot ".venv"
+$ExistingVenv = Get-Item -LiteralPath $VenvPath -Force -ErrorAction SilentlyContinue
+if ($null -ne $ExistingVenv) {
+    if (($ExistingVenv.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        Remove-Item -LiteralPath $VenvPath -Force
+    }
+    elseif ($ExistingVenv.PSIsContainer) {
+        Remove-Item -LiteralPath $VenvPath -Recurse -Force
+    }
+    else {
+        throw ".venv exists but is not a removable virtualenv directory"
+    }
 }
 
+py -3.13 -I -S -m venv .venv
+if ($LASTEXITCODE -ne 0) { throw "virtualenv creation failed" }
+
 $Python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
-& $Python -c "import platform,sys; raise SystemExit(0 if platform.python_version() == '$RequiredPython' else 2)"
+& $Python -I -S -c "import platform,sys; raise SystemExit(0 if platform.python_version() == '$RequiredPython' else 2)"
 if ($LASTEXITCODE -ne 0) {
-    throw "existing .venv is not Python $RequiredPython; remove it and rerun"
+    throw "fresh .venv is not Python $RequiredPython"
 }
 
 Write-Host "`n=== HASH-LOCKED DEPENDENCIES ===" -ForegroundColor Cyan
