@@ -257,8 +257,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 42691,
-      "sha256": "6ab024882a4195bacc1753ae8827edc4efb07cbd6fc7b4b48142496e9463203d"
+      "bytes": 44951,
+      "sha256": "691f83eff52be26fc9f91490cc593349d9d2ff6a78db002170a5cbe4e9c9fef0"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5864,
@@ -305,8 +305,8 @@
       "sha256": "96803ef5126f32c11e77036ece6972328c393a529b3d4748422d4174c45c21f3"
     },
     "p2p.py": {
-      "bytes": 55496,
-      "sha256": "18f607a6157a42e9053ebc4d20620ec930473ee6f62e1b6c93654f159cd6a1e8"
+      "bytes": 56639,
+      "sha256": "16ce52cfce08969b3be1bc8aed864f0c9b43266a1c95343ff6af695351d5b9ec"
     },
     "p2p_tx_bounds.py": {
       "bytes": 3630,
@@ -1167,6 +1167,10 @@
     "security_sec198_dependency_artifact_hashes_spec.py": {
       "bytes": 4594,
       "sha256": "e356f88c2d3f00acac7522b7400ea9b5fbc99a912a22d8aa7f1eea103b1ed9bc"
+    },
+    "security_sec199_resolved_peer_provenance_spec.py": {
+      "bytes": 6591,
+      "sha256": "de95c1a7b8ac4ce7f512ffd8d7b3537c18c0e67d376bf8a97a04b98e7c604dd1"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
