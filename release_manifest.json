@@ -1125,16 +1125,16 @@
       "sha256": "8ff47fead843673321ccaab72064f4d415e730a190368502fa09cbd4bd313418"
     },
     "security_sec201_windows_validator_provenance_spec.py": {
-      "bytes": 3060,
-      "sha256": "ebcdabdf0a1bbc4919da94d5f05bb3cd9bd13de0675e1bb8b0a778e20a113eca"
+      "bytes": 3494,
+      "sha256": "9ee36fb289a2979d2de394b2258dee76de8cbf1ec8497c4a57e499f6f7b2dfcc"
     },
     "security_sec202_openssl_backend_floor_spec.py": {
       "bytes": 2737,
       "sha256": "f803df8b324cb0897818a90eebae99e6eacc643010ba5b96d2ef5942ef3a8dab"
     },
     "security_sec203_posix_validator_provenance_spec.py": {
-      "bytes": 5834,
-      "sha256": "38a4918a61fbe0f7717385e1e87d400878131bcf4d0585c36dc5bc0c18f31ce0"
+      "bytes": 6112,
+      "sha256": "46e36309774583c0fcfff00fbe41a3928dc6ef0aa8abb7d5fc025777d8c6c6ae"
     },
     "security_sec204_windows_setup_provenance_spec.py": {
       "bytes": 2442,
@@ -1196,6 +1196,10 @@
       "bytes": 5056,
       "sha256": "f22e5d21394fb3086b9de5a70cf5ff07a3646edf479ffd19b98d85e78e7e4183"
     },
+    "security_sec219_clean_runtime_bootstrap_spec.py": {
+      "bytes": 4349,
+      "sha256": "5eb636bc1c60d0e690d48ff298223c45a8889b671168376980b963a8f8d5f502"
+    },
     "setup.cmd": {
       "bytes": 326,
       "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
@@ -1249,12 +1253,12 @@
       "sha256": "ae6c641c215cb8eacc94595a0fdb7d34b73ea836e0ce9842781520d68dcffd28"
     },
     "validate_linux_macos.sh": {
-      "bytes": 1664,
-      "sha256": "a8d7ab7be5787803921fddad6fbd1a9c591a48e6675f09161629bb3ea05a8584"
+      "bytes": 1964,
+      "sha256": "63d95861ddc59d84e0a2d97e85233059dd9757e7960c94aedf8929f9d2903289"
     },
     "validate_windows.ps1": {
-      "bytes": 2303,
-      "sha256": "f69b3a2eedc7b0a3d3d666018ecac8d74d869cd038f8e85131bba05079a7d8ac"
+      "bytes": 2928,
+      "sha256": "91f04edd80f2cee95571100c363cd19cc57023ef847ac256ab8344629693fa83"
     },
     "verify_release.py": {
       "bytes": 9222,
