@@ -1137,8 +1137,8 @@
       "sha256": "ae6c641c215cb8eacc94595a0fdb7d34b73ea836e0ce9842781520d68dcffd28"
     },
     "validate_linux_macos.sh": {
-      "bytes": 242,
-      "sha256": "17660fcebcbb586cb7c824b9236b0cecaf8c331da26a715883c83914c19636b4"
+      "bytes": 1572,
+      "sha256": "f13c9252cd5412741bb4a1094c987d24f964fab0c2fae04c47ba79900c422546"
     },
     "validate_windows.ps1": {
       "bytes": 2122,
@@ -1183,6 +1183,14 @@
     "security_sec202_openssl_backend_floor_spec.py": {
       "bytes": 2737,
       "sha256": "f803df8b324cb0897818a90eebae99e6eacc643010ba5b96d2ef5942ef3a8dab"
+    },
+    "requirements-ci-runtime-posix.lock": {
+      "bytes": 1231,
+      "sha256": "fa203ae837f5319ffac9eeb1755017545106cef3600f2afebb253749493082a5"
+    },
+    "security_sec203_posix_validator_provenance_spec.py": {
+      "bytes": 5834,
+      "sha256": "38a4918a61fbe0f7717385e1e87d400878131bcf4d0585c36dc5bc0c18f31ce0"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
