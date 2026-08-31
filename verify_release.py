@@ -5,6 +5,7 @@ from pathlib import Path, PurePosixPath
 import hashlib
 import hmac
 import json
+import os
 import re
 import stat
 import sys
@@ -25,6 +26,30 @@ HASH_CHUNK_BYTES = 64 * 1024
 # manifest, and repeat this check during the final inventory sweep so a mode
 # change after hashing also fails closed.
 UNSAFE_RELEASE_PERMISSION_BITS = stat.S_ISUID | stat.S_ISGID
+
+
+class _VerifiedBytes(bytes):
+    """Bytes bound to the descriptor identity that supplied them."""
+    def __new__(cls, data: bytes, metadata):
+        obj = bytes.__new__(cls, data)
+        obj._verified_metadata = metadata
+        return obj
+
+
+class _VerifiedDigest(str):
+    """Hex digest bound to the descriptor identity that was hashed."""
+    def __new__(cls, digest: str, metadata):
+        obj = str.__new__(cls, digest)
+        obj._verified_metadata = metadata
+        return obj
+
+
+def _same_file(before, opened) -> bool:
+    """Return True only when two stat snapshots identify one file object."""
+    try:
+        return os.path.samestat(before, opened)
+    except (AttributeError, OSError):
+        return (before.st_dev, before.st_ino) == (opened.st_dev, opened.st_ino)
 
 
 def fail(message: str) -> int:
@@ -53,21 +78,75 @@ def _read_manifest_bounded(path: Path, metadata) -> bytes:
             "release_manifest.json exceeds "
             f"{MAX_RELEASE_MANIFEST_BYTES} byte verification budget"
         )
-    with path.open("rb") as handle:
-        data = handle.read(MAX_RELEASE_MANIFEST_BYTES + 1)
+    try:
+        with path.open("rb") as handle:
+            opened = os.fstat(handle.fileno())
+            if (
+                not stat.S_ISREG(opened.st_mode)
+                or not _same_file(metadata, opened)
+                or opened.st_size != metadata.st_size
+                or _has_unsafe_release_permissions(opened)
+            ):
+                raise ValueError("release_manifest.json changed before reading")
+            data = handle.read(MAX_RELEASE_MANIFEST_BYTES + 1)
+            finished = os.fstat(handle.fileno())
+            if (
+                not stat.S_ISREG(finished.st_mode)
+                or not _same_file(opened, finished)
+                or finished.st_size != opened.st_size
+                or _has_unsafe_release_permissions(finished)
+            ):
+                raise ValueError("release_manifest.json changed while reading")
+    except ValueError:
+        raise
+    except OSError:
+        raise
     if len(data) > MAX_RELEASE_MANIFEST_BYTES:
         raise ValueError(
             "release_manifest.json exceeds "
             f"{MAX_RELEASE_MANIFEST_BYTES} byte verification budget"
         )
-    return data
+    try:
+        after = path.lstat()
+    except OSError as exc:
+        raise ValueError("release_manifest.json changed after reading") from exc
+    if (
+        stat.S_ISLNK(after.st_mode)
+        or not stat.S_ISREG(after.st_mode)
+        or not _same_file(opened, after)
+        or after.st_size != opened.st_size
+        or _has_unsafe_release_permissions(after)
+    ):
+        raise ValueError("release_manifest.json changed after reading")
+    return _VerifiedBytes(data, opened)
 
 
 def _hash_payload_exact_bounded(path: Path, expected_bytes: int) -> str | None:
-    """Hash at most the authenticated byte count plus one race-detection byte."""
+    """Hash exact authenticated bytes while binding the read to one file object."""
+    try:
+        before = path.lstat()
+    except OSError:
+        raise
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+        raise ValueError("release payload changed before hashing")
+    if _has_unsafe_release_permissions(before):
+        raise ValueError("unsafe release permission bits during hashing")
+    if before.st_size != expected_bytes:
+        return None
+
     digest = hashlib.sha256()
     total = 0
     with path.open("rb") as handle:
+        opened = os.fstat(handle.fileno())
+        if (
+            not stat.S_ISREG(opened.st_mode)
+            or not _same_file(before, opened)
+            or opened.st_size != expected_bytes
+        ):
+            raise ValueError("release payload changed before hashing")
+        if _has_unsafe_release_permissions(opened):
+            raise ValueError("unsafe release permission bits during hashing")
+
         while total < expected_bytes:
             chunk = handle.read(min(HASH_CHUNK_BYTES, expected_bytes - total))
             if not chunk:
@@ -75,23 +154,54 @@ def _hash_payload_exact_bounded(path: Path, expected_bytes: int) -> str | None:
             total += len(chunk)
             digest.update(chunk)
         extra = handle.read(1)
+
+        finished = os.fstat(handle.fileno())
+        if (
+            not stat.S_ISREG(finished.st_mode)
+            or not _same_file(opened, finished)
+            or finished.st_size != expected_bytes
+        ):
+            raise ValueError("release payload changed while hashing")
+        if _has_unsafe_release_permissions(finished):
+            raise ValueError("unsafe release permission bits during hashing")
+
     if total != expected_bytes or extra:
         return None
-    return digest.hexdigest()
+
+    try:
+        after = path.lstat()
+    except OSError as exc:
+        raise ValueError("release payload changed after hashing") from exc
+    if (
+        stat.S_ISLNK(after.st_mode)
+        or not stat.S_ISREG(after.st_mode)
+        or not _same_file(opened, after)
+        or after.st_size != expected_bytes
+    ):
+        raise ValueError("release payload changed after hashing")
+    if _has_unsafe_release_permissions(after):
+        raise ValueError("unsafe release permission bits after hashing")
+    return _VerifiedDigest(digest.hexdigest(), opened)
 
 
-def _release_inventory_violations(root: Path, manifest_names) -> list[str]:
-    """Require an exact staged release inventory and final expected path types.
+def _release_inventory_violations(
+    root: Path, manifest_names, verified_files=None
+) -> list[str]:
+    """Require exact inventory plus final authenticated expected-file state.
 
     SEC-207 rejects every unmanifested file/symlink/special entry. SEC-210 also
     requires every authenticated expected path to remain present as a regular,
     non-symlink file through the final inventory sweep. SEC-212 additionally
     rejects privilege-bearing permission bits both before and after hashing.
+    SEC-221 re-authenticates every expected regular file in the final sweep and
+    compares its descriptor identity with the first authenticated read, closing
+    same-size replacement and in-place content drift between the two phases.
     """
     root = root.resolve()
     expected = set(manifest_names)
     expected.add("release_manifest.json")
     seen_expected: set[str] = set()
+    stable_expected: set[str] = set()
     bad: list[str] = []
 
     for path in root.rglob("*"):
@@ -112,6 +222,8 @@ def _release_inventory_violations(root: Path, manifest_names) -> list[str]:
             elif stat.S_ISREG(metadata.st_mode):
                 if _has_unsafe_release_permissions(metadata):
                     bad.append(f"unsafe release permission bits: {relative}")
+                else:
+                    stable_expected.add(relative)
             elif stat.S_ISDIR(metadata.st_mode):
                 bad.append(f"expected release file became directory: {relative}")
             else:
@@ -129,6 +241,35 @@ def _release_inventory_violations(root: Path, manifest_names) -> list[str]:
 
     for relative in sorted(expected - seen_expected):
         bad.append(f"missing verified release file after hashing: {relative}")
+
+    if verified_files is not None:
+        for relative in sorted(stable_expected):
+            record = verified_files.get(relative)
+            if record is None:
+                bad.append(f"verified release file identity unavailable: {relative}")
+                continue
+            expected_bytes, expected_hash, first_metadata = record
+            path = root.joinpath(*PurePosixPath(relative).parts)
+            try:
+                got = _hash_payload_exact_bounded(path, expected_bytes)
+            except (OSError, ValueError):
+                bad.append(
+                    f"verified release file changed during final authentication: {relative}"
+                )
+                continue
+            if got is None:
+                bad.append(f"verified release file size changed after hashing: {relative}")
+                continue
+            if not hmac.compare_digest(got, expected_hash):
+                bad.append(f"verified release file content changed after hashing: {relative}")
+                continue
+            final_metadata = getattr(got, "_verified_metadata", None)
+            if (
+                first_metadata is None
+                or final_metadata is None
+                or not _same_file(first_metadata, final_metadata)
+            ):
+                bad.append(f"verified release file identity changed after hashing: {relative}")
 
     return sorted(set(bad))
 
@@ -163,6 +304,10 @@ def main(argv=None) -> int:
             f"expected {expected_manifest_sha256}, got {actual_manifest_sha256}"
         )
 
+    manifest_verified_metadata = getattr(manifest_bytes, "_verified_metadata", None)
+    if manifest_verified_metadata is None:
+        return fail("release manifest verification identity unavailable")
+
     try:
         manifest = json.loads(manifest_bytes.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -175,6 +320,13 @@ def main(argv=None) -> int:
     bad = []
     checked = 0
     canonical_names = set()
+    verified_files = {
+        "release_manifest.json": (
+            len(manifest_bytes),
+            expected_manifest_sha256,
+            manifest_verified_metadata,
+        )
+    }
     root_resolved = ROOT.resolve()
     for name, meta in files.items():
         pure = _canonical_manifest_name(name)
@@ -191,6 +343,7 @@ def main(argv=None) -> int:
         if SHA256_RE.fullmatch(expected_hash or "") is None or type(expected_bytes) is not int or expected_bytes < 0:
             bad.append(f"invalid manifest metadata: {name}")
             continue
+        expected_hash = expected_hash.lower()
 
         candidate = ROOT.joinpath(*pure.parts)
         resolved = candidate.resolve()
@@ -213,7 +366,7 @@ def main(argv=None) -> int:
 
         # The trusted manifest's exact size is the IO-work budget. Reject an
         # obvious oversized replacement before opening it, then stream at most
-        # that many bytes plus one byte to detect a path replacement race.
+        # that many bytes plus one byte while binding the read to one descriptor.
         if metadata.st_size != expected_bytes:
             bad.append(f"size mismatch: {name}")
             continue
@@ -222,15 +375,34 @@ def main(argv=None) -> int:
         except OSError:
             bad.append(f"unreadable file: {name}")
             continue
+        except ValueError as exc:
+            bad.append(f"{exc}: {name}")
+            continue
         checked += 1
         if got is None:
             bad.append(f"size mismatch: {name}")
             continue
-        if not hmac.compare_digest(got, expected_hash.lower()):
+        if not hmac.compare_digest(got, expected_hash):
             bad.append(f"hash mismatch: {name}")
+            continue
+        verified_metadata = getattr(got, "_verified_metadata", None)
+        if verified_metadata is None:
+            bad.append(f"release payload verification identity unavailable: {name}")
+            continue
+        verified_files[name] = (
+            expected_bytes,
+            expected_hash,
+            verified_metadata,
+        )
 
     if not bad:
-        bad.extend(_release_inventory_violations(ROOT, canonical_names))
+        bad.extend(
+            _release_inventory_violations(
+                ROOT,
+                canonical_names,
+                verified_files=verified_files,
+            )
+        )
 
     if bad:
         print("\n".join(bad), file=sys.stderr)
