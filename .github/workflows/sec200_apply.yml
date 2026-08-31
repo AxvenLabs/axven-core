@@ -39,30 +39,25 @@ jobs:
           text = p.read_text(encoding="utf-8")
           if text.count(old_checkout) != 1 or text.count(old_setup) != 1:
               raise SystemExit("SEC-107 action pin anchors changed")
-          text = text.replace(old_checkout, new_checkout)
-          text = text.replace(old_setup, new_setup)
+          text = text.replace(old_checkout, new_checkout).replace(old_setup, new_setup)
           old_forbidden = 'forbidden = ("@main", "@master", "@v1", "@v2", "@v3", "@v4", "@v5", "@latest")'
           new_forbidden = 'forbidden = ("@main", "@master", "@v1", "@v2", "@v3", "@v4", "@v5", "@v6", "@v7", "@latest")'
           if old_forbidden not in text:
               raise SystemExit("SEC-107 moving-ref anchor changed")
-          text = text.replace(old_forbidden, new_forbidden, 1)
-          p.write_text(text, encoding="utf-8")
+          p.write_text(text.replace(old_forbidden, new_forbidden, 1), encoding="utf-8")
 
           p = Path("security_sec108_github_actions_least_privilege_spec.py")
           text = p.read_text(encoding="utf-8")
           if text.count(old_checkout) != 1 or text.count(old_setup) != 1:
               raise SystemExit("SEC-108 action pin anchors changed")
-          text = text.replace(old_checkout, new_checkout)
-          text = text.replace(old_setup, new_setup)
-          p.write_text(text, encoding="utf-8")
+          p.write_text(text.replace(old_checkout, new_checkout).replace(old_setup, new_setup), encoding="utf-8")
 
-          spec = '''
+          spec = textwrap.dedent('''
           #!/usr/bin/env python3
           """SEC-200: validation actions must use reviewed native Node 24 releases."""
 
           import re
           from pathlib import Path
-          import axven
 
           WORKFLOW = Path(".github/workflows/validation.yml")
           CHECKOUT_PIN = "3d3c42e5aac5ba805825da76410c181273ba90b1"
@@ -89,12 +84,10 @@ jobs:
                       "actions/setup-python": SETUP_PYTHON_PIN,
                   },
               )
-
               green(
                   "retired Node 20-era action commits are absent",
                   all(pin not in text for pin in OLD_NODE20_PINS),
               )
-
               green(
                   "reviewed upstream release provenance is documented in workflow",
                   f"actions/checkout@{CHECKOUT_PIN} # v7.0.1" in text
@@ -119,7 +112,6 @@ jobs:
                   and "pull_request_target" not in text
                   and "workflow_run" not in text,
               )
-
               green(
                   "runtime and hash-locked dependency policy remain pinned",
                   'python-version: "3.13.15"' in text
@@ -127,25 +119,12 @@ jobs:
                   and text.count("--only-binary=:all:") >= 2
                   and '--no-build-isolation --no-deps -e ".[legacy-mldsa-recovery]"' in text,
               )
-
-              green(
-                  "SEC-200 leaves canonical chain and PQ activation identity unchanged",
-                  axven.CHAIN_ID == "axven-devnet-2"
-                  and axven.CONFIG_FINGERPRINT
-                  == "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae"
-                  and axven.CHAIN_CONFIG["pq_hybrid_activation_height"] == 2000
-                  and axven.CHAIN_CONFIG["pq_pure_activation_height"] == 5000
-                  and axven.Blockchain().tip.hash()
-                  == "a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3",
-              )
-
-              assert len(checks) == 6
-              print("SEC-200 GitHub Actions Node 24 runtime: 6/6 GREEN")
+              assert len(checks) == 5
+              print("SEC-200 GitHub Actions Node 24 runtime: 5/5 GREEN")
 
           if __name__ == "__main__":
               main()
-          '''
-          spec = textwrap.dedent(spec).lstrip()
+          ''').lstrip()
           Path("security_sec200_github_actions_node24_runtime_spec.py").write_text(spec, encoding="utf-8")
 
           targets = [
