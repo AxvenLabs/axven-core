@@ -1141,8 +1141,8 @@
       "sha256": "17660fcebcbb586cb7c824b9236b0cecaf8c331da26a715883c83914c19636b4"
     },
     "validate_windows.ps1": {
-      "bytes": 617,
-      "sha256": "8f0574154f6425cf4f5e4f08dacb79b6af41a307e108b69ec66027615d4ffd53"
+      "bytes": 2122,
+      "sha256": "739219eb6f768efbd8582623b892134124b441b0c621f6e99fd165084b4572e4"
     },
     "verify_release.py": {
       "bytes": 574,
@@ -1175,6 +1175,10 @@
     "security_sec200_github_actions_node24_runtime_spec.py": {
       "bytes": 2462,
       "sha256": "8ff47fead843673321ccaab72064f4d415e730a190368502fa09cbd4bd313418"
+    },
+    "security_sec201_windows_validator_provenance_spec.py": {
+      "bytes": 3060,
+      "sha256": "ebcdabdf0a1bbc4919da94d5f05bb3cd9bd13de0675e1bb8b0a778e20a113eca"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
