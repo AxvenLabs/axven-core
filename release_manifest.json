@@ -141,8 +141,8 @@
       "sha256": "1e3c44f1d410386438e65fe45dacc80a7ca9bd8b5a8fb42978a33096d5eeb981"
     },
     "build_release_package.py": {
-      "bytes": 7393,
-      "sha256": "2fbdfcf32a43deaa37fcda30c64f0d09513b8e624d277005b4bd05fbf55b7279"
+      "bytes": 8557,
+      "sha256": "83b13a1132be12018581e7b9785c2d947b0108cd54a72738c58a162f9426ea1e"
     },
     "canonical_node1_mine1.ps1": {
       "bytes": 140,
@@ -1160,6 +1160,10 @@
       "bytes": 5845,
       "sha256": "7e172ab89f5956484bf7caaf95c054c514674ec77d0e8383163a0b47f1f1a7b1"
     },
+    "security_sec212_release_permission_sanitization_spec.py": {
+      "bytes": 6823,
+      "sha256": "009e12b9a9b3451c988c83f99cd92ece2865192cd796484c97715d2771d6cc5a"
+    },
     "setup.cmd": {
       "bytes": 326,
       "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
@@ -1217,8 +1221,8 @@
       "sha256": "739219eb6f768efbd8582623b892134124b441b0c621f6e99fd165084b4572e4"
     },
     "verify_release.py": {
-      "bytes": 8392,
-      "sha256": "434b01a28fe64dae650315da754e15b90e144d6ad36aae3c3cbf2b416dc38cbd"
+      "bytes": 9222,
+      "sha256": "c2de68361b26ccebc4d1cbd46b4664743dd1cac600cdcb2f23584bf176259113"
     },
     "wallet.py": {
       "bytes": 20159,
