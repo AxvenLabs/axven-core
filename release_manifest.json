@@ -1177,8 +1177,8 @@
       "sha256": "af8659c814ad453411446baeb7e5bb1f06d14363bd32621e6ec2969a74fe855d"
     },
     "security_sec214_windows_operator_runtime_provenance_spec.py": {
-      "bytes": 3899,
-      "sha256": "0a034d8480f0da4e81c10e0dbbff97fd73b822becc45c837b547b0b3abacdcd4"
+      "bytes": 4011,
+      "sha256": "d66248e74892166c3b9494a11e1bb17b2b1a928f7d4f120b0be79e15e5802136"
     },
     "setup.cmd": {
       "bytes": 326,
