@@ -1,0 +1,162 @@
+name: SEC-218 one-shot POSIX runtime provenance apply
+
+on:
+  push:
+    branches:
+      - security-sec218-posix-runtime-provenance
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - name: Apply SEC-218 and refresh manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          rp = Path('runtime_provenance.py')
+          text = rp.read_text(encoding='utf-8')
+          text = text.replace(
+              '"""Create and verify the SEC-213 validated Windows runtime receipt."""',
+              '"""Create and verify platform-bound validated runtime provenance receipts."""',
+              1,
+          )
+
+          start = text.index('TRUST_INPUTS = (')
+          end = text.index('\n\n\ndef _same_file', start)
+          trust_block = '''WINDOWS_TRUST_INPUTS = (
+              "setup.cmd",
+              "validate_windows.ps1",
+              "ensure_runtime.ps1",
+              "release_manifest.json",
+              "requirements-ci-toolchain.lock",
+              "requirements-ci-runtime-windows.lock",
+              "pyproject.toml",
+              "doctor.py",
+              "runtime_provenance.py",
+          )
+          POSIX_TRUST_INPUTS = (
+              "validate_linux_macos.sh",
+              "release_manifest.json",
+              "requirements-ci-toolchain.lock",
+              "requirements-ci-runtime-posix.lock",
+              "pyproject.toml",
+              "doctor.py",
+              "runtime_provenance.py",
+          )
+          # Backward-compatible SEC-213 API: existing tests/callers use TRUST_INPUTS
+          # to mean the original Windows validated-runtime boundary.
+          TRUST_INPUTS = WINDOWS_TRUST_INPUTS'''
+          text = text[:start] + trust_block + text[end:]
+
+          build_start = text.index('def build_receipt(')
+          build_end = text.index('\n\n\ndef receipt_path', build_start)
+          helpers_and_build = '''def _trust_inputs_for_profile(profile: str) -> tuple[str, ...]:
+              if profile == "windows":
+                  return WINDOWS_TRUST_INPUTS
+              if profile == "posix":
+                  return POSIX_TRUST_INPUTS
+              raise RuntimeError(f"unsupported runtime provenance profile: {profile}")
+
+
+          def _runtime_profile() -> str:
+              system = platform.system()
+              if os.name == "nt" or system == "Windows":
+                  return "windows"
+              if system in {"Linux", "Darwin"}:
+                  return "posix"
+              raise RuntimeError(f"unsupported runtime provenance platform: {system}")
+
+
+          def build_receipt(root: Path, *, python_version: str, profile: str = "windows") -> dict:
+              if python_version != REQUIRED_PYTHON:
+                  raise RuntimeError(f"Python {REQUIRED_PYTHON} is required")
+              inputs: dict[str, dict[str, int | str]] = {}
+              for name in _trust_inputs_for_profile(profile):
+                  data = _read_trust_input(root / name, name)
+                  inputs[name] = {"bytes": len(data), "sha256": _sha256(data)}
+              return {
+                  "schema": RECEIPT_SCHEMA,
+                  "python_version": python_version,
+                  "inputs": inputs,
+              }'''
+          # Dedent the source literal while preserving function indentation.
+          import textwrap
+          helpers_and_build = textwrap.dedent(helpers_and_build)
+          text = text[:build_start] + helpers_and_build + text[build_end:]
+
+          old_stamp = 'def stamp(root: Path = ROOT) -> None:\n    _assert_expected_interpreter(root)'
+          new_stamp = 'def stamp(root: Path = ROOT, *, profile: str | None = None) -> None:\n    if profile is None:\n        profile = _runtime_profile()\n    _assert_expected_interpreter(root)'
+          if old_stamp not in text:
+              raise SystemExit('SEC-218 stamp anchor missing')
+          text = text.replace(old_stamp, new_stamp, 1)
+
+          old_check = 'def check(root: Path = ROOT) -> None:\n    _assert_expected_interpreter(root)'
+          new_check = 'def check(root: Path = ROOT, *, profile: str | None = None) -> None:\n    if profile is None:\n        profile = _runtime_profile()\n    _assert_expected_interpreter(root)'
+          if old_check not in text:
+              raise SystemExit('SEC-218 check anchor missing')
+          text = text.replace(old_check, new_check, 1)
+
+          old_receipt = 'build_receipt(root, python_version=platform.python_version())'
+          if text.count(old_receipt) != 2:
+              raise SystemExit(f'SEC-218 expected two receipt build anchors, found {text.count(old_receipt)}')
+          text = text.replace(
+              old_receipt,
+              'build_receipt(root, python_version=platform.python_version(), profile=profile)',
+          )
+          rp.write_text(text, encoding='utf-8', newline='\n')
+
+          validator = Path('validate_linux_macos.sh')
+          vtext = validator.read_text(encoding='utf-8')
+          anchor = '''printf '\\n=== SEC-076+ SECURITY TAIL ===\\n'
+          "$venv_python" security_tail_runner.py
+
+          echo "ALL AXVEN CHECKS GREEN"
+          '''
+          replacement = '''printf '\\n=== SEC-076+ SECURITY TAIL ===\\n'
+          "$venv_python" security_tail_runner.py
+
+          printf '\\n=== RUNTIME PROVENANCE RECEIPT ===\\n'
+          "$venv_python" runtime_provenance.py stamp
+
+          echo "ALL AXVEN CHECKS GREEN"
+          '''
+          import textwrap
+          anchor = textwrap.dedent(anchor)
+          replacement = textwrap.dedent(replacement)
+          if anchor not in vtext:
+              raise SystemExit('SEC-218 POSIX validator anchor missing')
+          validator.write_text(vtext.replace(anchor, replacement, 1), encoding='utf-8', newline='\n')
+
+          manifest_path = Path('release_manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          for name in (
+              'runtime_provenance.py',
+              'validate_linux_macos.sh',
+              'security_sec218_posix_runtime_provenance_spec.py',
+          ):
+              data = Path(name).read_bytes()
+              manifest['files'][name] = {
+                  'bytes': len(data),
+                  'sha256': hashlib.sha256(data).hexdigest(),
+              }
+          manifest['files'] = dict(sorted(manifest['files'].items()))
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/sec218_apply.yml
+          git add runtime_provenance.py validate_linux_macos.sh security_sec218_posix_runtime_provenance_spec.py release_manifest.json
+          git diff --cached --check
+          git commit -m 'SEC-218: bind POSIX validation to runtime provenance'
+          git push
