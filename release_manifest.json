@@ -1228,6 +1228,10 @@
       "bytes": 2490,
       "sha256": "125af5ed731b9dbee9c6d479e04d372be3ebe1ac3be04f6891fe1eba8a61483f"
     },
+    "security_sec225_bounded_daemon_retry_fanout_spec.py": {
+      "bytes": 4206,
+      "sha256": "b78f66c5458f33f310ea9eec43b8ade55c72aee87ead6da5f913260ebea5746d"
+    },
     "setup.cmd": {
       "bytes": 326,
       "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
