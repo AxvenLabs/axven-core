@@ -1,0 +1,79 @@
+name: SEC-208 Final Test Repair
+
+on:
+  push:
+    branches:
+      - security-sec208-release-tag-provenance
+    paths:
+      - .github/workflows/sec208-final-test-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: security-sec208-release-tag-provenance
+      - name: Repair SEC-208 regression and refresh manifest
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          spec = Path('security_sec208_release_tag_provenance_spec.py')
+          text = spec.read_text(encoding='utf-8')
+          old = '''    normalized_notes = " ".join(notes.split())
+    normalized_checklist = " ".join(checklist.split())
+    assert "v0.9.0-devnet" in notes and "MUST NOT be reused or moved" in normalized_notes
+    assert "release commit SHA: <PASTE FINAL 40-HEX COMMIT SHA HERE>" in notes
+    assert "release_manifest.json SHA-256: <PASTE FINAL 64-HEX SHA-256 HERE>" in notes
+    assert "release_provenance.py prepare" in notes
+    assert "release_provenance.py verify" in notes
+    assert "without --force" in normalized_notes
+    assert "v0.9.0-devnet" in checklist and "never reuse or move" in normalized_checklist
+'''
+          new = '''    normalized_notes = " ".join(notes.split())
+    normalized_checklist = " ".join(checklist.split())
+    plain_notes = normalized_notes.replace("`", "")
+    plain_checklist = normalized_checklist.replace("`", "")
+    assert "v0.9.0-devnet" in notes and "MUST NOT be reused or moved" in normalized_notes
+    assert "release commit SHA: <PASTE FINAL 40-HEX COMMIT SHA HERE>" in notes
+    assert "release_manifest.json SHA-256: <PASTE FINAL 64-HEX SHA-256 HERE>" in notes
+    assert "release_provenance.py prepare" in notes
+    assert "release_provenance.py verify" in notes
+    assert "without --force" in plain_notes
+    assert "v0.9.0-devnet" in checklist and "never reuse or move" in plain_checklist
+'''
+          if text.count(old) != 1:
+              raise SystemExit('SEC-208 markdown assertion anchor missing or ambiguous')
+          text = text.replace(old, new)
+          if text.count('    assert checks == 11, checks\n    print("SEC-208 release tag provenance: 11/11 GREEN")') != 1:
+              raise SystemExit('SEC-208 count anchor missing or ambiguous')
+          text = text.replace(
+              '    assert checks == 11, checks\n    print("SEC-208 release tag provenance: 11/11 GREEN")',
+              '    assert checks == 12, checks\n    print("SEC-208 release tag provenance: 12/12 GREEN")',
+          )
+          spec.write_text(text, encoding='utf-8', newline='\n')
+
+          manifest_path = Path('release_manifest.json')
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          data = spec.read_bytes()
+          manifest['files'][spec.as_posix()] = {
+              'bytes': len(data),
+              'sha256': hashlib.sha256(data).hexdigest(),
+          }
+          manifest['files'] = dict(sorted(manifest['files'].items()))
+          manifest_path.write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8', newline='\n')
+          PY
+          git rm .github/workflows/sec208-final-test-repair.yml
+          git config user.name "Axven Security Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add security_sec208_release_tag_provenance_spec.py release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-208: normalize final provenance regression"
+          git push origin HEAD:security-sec208-release-tag-provenance
