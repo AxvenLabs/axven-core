@@ -8,6 +8,17 @@ def main():
     def ok(n,x): assert x,n; c.append(n)
     root=Path(__file__).resolve().parent
 
+    # Temporary SEC-220 branch probe. Removed before the final PR diff.
+    for probe_name in ("p2p.py", "security_sec220_p2p_parse_byte_budget_spec.py"):
+        probe_data=(root/probe_name).read_bytes()
+        print(
+            "SEC220_HASH",
+            probe_name,
+            len(probe_data),
+            hashlib.sha256(probe_data).hexdigest(),
+            flush=True,
+        )
+
     # Identity pins/config must remain stable.
     ok("chain id",axven.CHAIN_ID=="axven-devnet-2")
     ok("fingerprint pin",axven.CONFIG_FINGERPRINT=="ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae")
