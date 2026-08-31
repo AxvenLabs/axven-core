@@ -1049,7 +1049,10 @@ class AxvenCore:
     def _propagate_block_outbound(self, block):
         for addr in self.outbound_peer_addresses():
             try:
-                p2p.propagate_block(addr,block)
+                def remote_host_gate(remote_host):
+                    source_host=self._canonical_resolved_peer_host(remote_host)
+                    return self._admit_resolved_peer_host(addr,source_host)
+                p2p.propagate_block(addr,block,remote_host_gate=remote_host_gate)
                 error=None
             except Exception as e:
                 error=f"{type(e).__name__}: {e}"
@@ -1060,7 +1063,10 @@ class AxvenCore:
     def _propagate_tx_outbound(self, tx):
         for addr in self.outbound_peer_addresses():
             try:
-                p2p.propagate_tx(addr,tx)
+                def remote_host_gate(remote_host):
+                    source_host=self._canonical_resolved_peer_host(remote_host)
+                    return self._admit_resolved_peer_host(addr,source_host)
+                p2p.propagate_tx(addr,tx,remote_host_gate=remote_host_gate)
                 error=None
             except Exception as e:
                 error=f"{type(e).__name__}: {e}"

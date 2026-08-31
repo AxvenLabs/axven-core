@@ -58,7 +58,8 @@ def main():
     entered = threading.Event(); release = threading.Event()
     original_propagate_tx = p2p.propagate_tx
 
-    def blocked_propagate(_addr, _tx):
+    def blocked_propagate(_addr, _tx, remote_host_gate=None):
+        assert callable(remote_host_gate), "propagation provenance gate missing"
         entered.set()
         release.wait(1.0)
         raise ConnectionRefusedError("late propagation failure")

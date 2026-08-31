@@ -1427,15 +1427,21 @@ def _validate_propagation_ack(reply,kind,expected_id):
         raise ProtocolError("invalid block acknowledgement status")
     return reply
 
-def propagate_tx(address,tx):
-    sock=connect(address)
+def propagate_tx(address,tx,remote_host_gate=None):
+    if remote_host_gate is None:
+        sock=connect(address)
+    else:
+        sock=connect(address,remote_host_gate=remote_host_gate)
     try:
         reply=request(sock,{"type":"tx","tx":tx.to_dict()})
         return _validate_propagation_ack(reply,"tx",tx.txid())
     finally:sock.close()
 
-def propagate_block(address,block):
-    sock=connect(address)
+def propagate_block(address,block,remote_host_gate=None):
+    if remote_host_gate is None:
+        sock=connect(address)
+    else:
+        sock=connect(address,remote_host_gate=remote_host_gate)
     try:
         reply=request(sock,{"type":"block","block":block.to_dict()})
         return _validate_propagation_ack(reply,"block",block.hash())
