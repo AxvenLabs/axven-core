@@ -250,6 +250,10 @@ _RPC_METHOD_PARAM_SCHEMA = {
     "get_balance": (frozenset({"scheme"}), frozenset()),
     "get_wallet_status": (frozenset({"scheme"}), frozenset()),
     "list_unspent": (frozenset({"scheme"}), frozenset({"scheme"})),
+    "list_unspent_page": (
+        frozenset({"scheme", "offset", "limit"}),
+        frozenset({"scheme"}),
+    ),
     "get_peers": (frozenset(), frozenset()),
     "get_peer_health": (frozenset(), frozenset()),
     "add_peer": (frozenset({"host", "port"}), frozenset({"host", "port"})),
@@ -325,6 +329,14 @@ class RPCDispatcher:
         if method == "get_balance": return self.core.balance(p.get("scheme"))
         if method == "get_wallet_status": return self.core.wallet_status(p.get("scheme"))
         if method == "list_unspent": return self.core.list_unspent(p["scheme"])
+        if method == "list_unspent_page":
+            offset = _require_rpc_int(p.get("offset", 0), "unspent offset")
+            limit = _require_rpc_int(p.get("limit", 100), "unspent limit")
+            if offset < 0 or offset > self.core.MAX_LIST_UNSPENT_OFFSET:
+                raise RPCError("invalid unspent offset")
+            if limit < 1 or limit > self.core.MAX_LIST_UNSPENT_RESULTS:
+                raise RPCError("invalid unspent limit")
+            return self.core.list_unspent_page(p["scheme"], offset, limit)
         if method == "get_peers": return self.core.outbound_peer_status()
         if method == "get_peer_health": return self.core.peer_health_summary()
         if method == "add_peer":

@@ -261,8 +261,8 @@
       "sha256": "3d01d4faa4c75c928acf14161d0ff39081499864d8680da20d48a8d4a8ff0a2f"
     },
     "core.py": {
-      "bytes": 44951,
-      "sha256": "691f83eff52be26fc9f91490cc593349d9d2ff6a78db002170a5cbe4e9c9fef0"
+      "bytes": 46939,
+      "sha256": "dc18e2611aec3cd23686da7e8d9a32566dbcb1c4d56d7bf09e0de9bd0e935723"
     },
     "daemon_lifecycle_test.py": {
       "bytes": 5864,
@@ -361,8 +361,8 @@
       "sha256": "8e5e096382a35d55ea1105f989eac41e42c237db1e9324b3a065267246a816c0"
     },
     "rpc.py": {
-      "bytes": 18929,
-      "sha256": "7663ed755b554e01cc572bceaa4675b1625ed5e14aba14c5ed8108029aac0e89"
+      "bytes": 19570,
+      "sha256": "0ad4f03f49d9f322407125f8e8f14751e74b3d140656ee97d863b661aa206d37"
     },
     "run_full_validation.py": {
       "bytes": 8663,
@@ -1163,6 +1163,10 @@
     "security_sec212_release_permission_sanitization_spec.py": {
       "bytes": 6823,
       "sha256": "009e12b9a9b3451c988c83f99cd92ece2865192cd796484c97715d2771d6cc5a"
+    },
+    "security_sec213_wallet_utxo_response_bounds_spec.py": {
+      "bytes": 4649,
+      "sha256": "dfd5cc7f539af188b02b9a4bc260d796c95cd9cb0c2ee36aef4e777bc1a9fd8e"
     },
     "setup.cmd": {
       "bytes": 326,

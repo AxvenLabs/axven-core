@@ -45,6 +45,11 @@ class AxvenCore:
     PEER_DIVERSITY_IPV6_PREFIX = 48
     PEER_HEALTH_INCIDENT_HISTORY_LIMIT = 64
     PEER_HEALTH_HISTORY_LIMIT = 64
+    # SEC-213: a public wallet address can be dusted with an arbitrary number
+    # of UTXOs over time. Never materialize or serialize an unbounded wallet
+    # UTXO response from local operator RPC.
+    MAX_LIST_UNSPENT_RESULTS = 1000
+    MAX_LIST_UNSPENT_OFFSET = (1 << 31) - 1
 
     def __init__(self, chain: Optional[axven.Blockchain] = None,
                  mempool: Optional[axven.Mempool] = None,
@@ -351,6 +356,19 @@ class AxvenCore:
             }
         return self.chain.balance(w.address_of(scheme))
 
+    def _iter_wallet_spendable_for_address_locked(self, address):
+        tip_height = self.chain.tip.height
+        for op, utxo in self.chain.utxo.items():
+            if utxo["recipient"] != address:
+                continue
+            if (
+                utxo["coinbase"]
+                and tip_height - utxo["height"] < axven.COINBASE_MATURITY
+            ):
+                continue
+            txid, idx = op.rsplit(":", 1)
+            yield txid, int(idx), int(utxo["amount"])
+
     def wallet_status(self, scheme=None):
         self._validate_scheme_bound(scheme)
         with self.chain._state_lock:
@@ -362,18 +380,13 @@ class AxvenCore:
         def status_for(selected_scheme):
             address = w.address_of(selected_scheme)
             total = int(self.chain.balance(address))
-            mature = list(self.chain.spendable(address))
-
-            reserved = sum(
-                int(amount)
-                for txid, idx, amount in mature
-                if self.pending.is_reserved((txid, idx))
-            )
-            spendable = sum(
-                int(amount)
-                for txid, idx, amount in mature
-                if not self.pending.is_reserved((txid, idx))
-            )
+            reserved = 0
+            spendable = 0
+            for txid, idx, amount in self._iter_wallet_spendable_for_address_locked(address):
+                if self.pending.is_reserved((txid, idx)):
+                    reserved += amount
+                else:
+                    spendable += amount
             immature = total - spendable - reserved
 
             return {
@@ -395,15 +408,52 @@ class AxvenCore:
             )
         }
 
+    def _list_unspent_page_locked(self, scheme, offset, limit):
+        w = self.require_wallet()
+        address = w.address_of(scheme)
+        items = []
+        matched = 0
+        next_offset = None
+        for txid, idx, amount in self._iter_wallet_spendable_for_address_locked(address):
+            if self.pending.is_reserved((txid, idx)):
+                continue
+            if matched < offset:
+                matched += 1
+                continue
+            if len(items) >= limit:
+                next_offset = offset + len(items)
+                break
+            items.append({"txid": txid, "index": idx, "amount": amount})
+            matched += 1
+        return {
+            "offset": offset,
+            "limit": limit,
+            "utxos": items,
+            "next_offset": next_offset,
+        }
+
     def list_unspent(self, scheme):
         self._validate_scheme_bound(scheme)
         with self.chain._state_lock:
-            w = self.require_wallet()
-            return [
-                {"txid": txid, "index": idx, "amount": amount}
-                for txid, idx, amount in self.chain.spendable(w.address_of(scheme))
-                if not self.pending.is_reserved((txid, idx))
-            ]
+            page = self._list_unspent_page_locked(
+                scheme, 0, self.MAX_LIST_UNSPENT_RESULTS
+            )
+            if page["next_offset"] is not None:
+                raise ValueError(
+                    "too many unspent outputs; use list_unspent_page"
+                )
+            return page["utxos"]
+
+    def list_unspent_page(self, scheme, offset=0, limit=100):
+        self._validate_scheme_bound(scheme)
+        offset = self._validate_service_int(
+            offset, "unspent offset", 0, self.MAX_LIST_UNSPENT_OFFSET
+        )
+        limit = self._validate_service_int(
+            limit, "unspent limit", 1, self.MAX_LIST_UNSPENT_RESULTS
+        )
+        with self.chain._state_lock:
+            return self._list_unspent_page_locked(scheme, offset, limit)
 
     def mine(self, count=1, scheme=None):
         self._validate_scheme_bound(scheme)
