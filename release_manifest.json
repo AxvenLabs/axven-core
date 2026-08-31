@@ -101,8 +101,8 @@
       "sha256": "fc2c93afb90dc71e8f01e908a879da4a6a18e77bb2c7d21cf06436f3524eb648"
     },
     "SECURITY.md": {
-      "bytes": 798,
-      "sha256": "0a0af07614e02a1014a85e3980b639d48d99a771c8cfcb85e476f6b8615af592"
+      "bytes": 975,
+      "sha256": "b6f0da24d549ef176945565094d3da4ac8af761f982c2c528db7fcaf987ddde0"
     },
     "USER_GUIDE.md": {
       "bytes": 1556,
@@ -1199,6 +1199,10 @@
     "security_sec205_release_manifest_trust_anchor_spec.py": {
       "bytes": 4900,
       "sha256": "215b5ec5ad6406f51260739cb947184a79670448a98255d90bec26c62b213d79"
+    },
+    "security_sec206_xml_parser_containment_spec.py": {
+      "bytes": 4857,
+      "sha256": "16a0cb6a9fc4b4b2e43d2b432873d1273407cb8286afa087ec2827c06867dd8e"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
