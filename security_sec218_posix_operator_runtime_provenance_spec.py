@@ -2,6 +2,7 @@
 """SEC-218: POSIX operator commands require validated runtime provenance."""
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -69,9 +70,9 @@ def main() -> None:
     validator = (ROOT / "validate_linux_macos.sh").read_text(encoding="utf-8")
     assert "requirements-ci-runtime-posix.lock" in validator
     assert "security_tail_runner.py" in validator
-    assert "runtime_provenance.py\" stamp" in validator
-    assert validator.index("security_tail_runner.py") < validator.index("runtime_provenance.py\" stamp")
-    assert validator.index("runtime_provenance.py\" stamp") < validator.index("ALL AXVEN CHECKS GREEN")
+    assert "runtime_provenance.py stamp" in validator
+    assert validator.index("security_tail_runner.py") < validator.index("runtime_provenance.py stamp")
+    assert validator.index("runtime_provenance.py stamp") < validator.index("ALL AXVEN CHECKS GREEN")
     checks += 1
     print("[GREEN] POSIX validator stamps provenance only after the complete security gate")
 
@@ -101,7 +102,6 @@ def main() -> None:
     checks += 1
     print("[GREEN] seed health and VPS operator commands are provenance-gated")
 
-    import json
     manifest = json.loads((ROOT / "release_manifest.json").read_text(encoding="utf-8"))
     for name in (
         "runtime_provenance.py",
