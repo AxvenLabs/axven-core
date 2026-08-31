@@ -13,6 +13,9 @@
 - [ ] Internet-facing deployment hardening
 - [ ] security contact / disclosure channel
 - [ ] independent security review
+- [ ] compute final `release_manifest.json` SHA-256 from the exact release commit
+- [ ] publish that 64-hex digest in the canonical GitHub release body, outside the downloadable release package/assets
+- [ ] verify a clean downloaded package with the externally published digest using `python verify_release.py <TRUSTED_RELEASE_MANIFEST_SHA256>`
 - [ ] tagged GitHub release (package ready)
 - [ ] public project website
 - [ ] final whitepaper
