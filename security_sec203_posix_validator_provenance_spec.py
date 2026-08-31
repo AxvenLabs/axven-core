@@ -90,9 +90,10 @@ def main():
     )
     runtime_probe=text.index("actual_python=")
     green(
-        "exact Python 3.13.15 is checked before any POSIX dependency installation",
+        "exact Python 3.13.15 is isolated and checked before any POSIX dependency installation",
         'required_python="3.13.15"' in text
         and runtime_probe < first_install
+        and "python3 -I -S -c" in text
         and "platform.python_version()" in text,
     )
 
@@ -145,10 +146,16 @@ def main():
         pip_check < doctor < full < tail,
     )
 
+    remove=text.index("rm -rf -- .venv")
+    recreate=text.index("python3 -I -S -m venv .venv")
+    first_package=text.index('"$venv_python" -m pip')
     green(
-        "existing POSIX virtualenv runtime mismatch fails closed",
-        "existing .venv is not Python $required_python; remove it and rerun" in text
-        and "existing .venv has no executable Python; remove it and rerun" in text,
+        "stale POSIX virtualenv state is removed before isolated reconstruction and package mutation",
+        "if [[ -L .venv ]]" in text
+        and "rm -- .venv" in text
+        and remove < recreate < first_package
+        and "if [[ ! -d .venv ]]" not in text
+        and '"$venv_python" -I -S -c' in text,
     )
 
     green(
