@@ -50,6 +50,20 @@ On Linux, use `sha256sum release_manifest.json`; on macOS, use
 missing, malformed, or different from the downloaded manifest. A digest copied
 from inside the same release package is not an authenticity check.
 
+## Release payload inventory
+
+Run release verification **before setup, dependency installation, or first
+launch**, from a freshly extracted package. The authenticated manifest is also
+the allow-list for active/runtime payload. Verification rejects unmanifested
+Python modules, launchers, binaries, runtime/config data, virtual environments,
+and filesystem indirection such as symlinks. Inert Markdown documentation and
+repository-host metadata may remain outside the manifest.
+
+This prevents an archive mirror or transport layer from appending an extra
+active file (for example `sitecustomize.py`, a launcher, a DLL/PYD, or an
+`axven-data` configuration) while leaving every authenticated Axven file and the
+external manifest digest unchanged.
+
 Important:
 - This is a **devnet preview**, not mainnet.
 - No independent third-party security audit has been completed.
