@@ -24,25 +24,42 @@ Current stage: **canonical devnet / pre-public release hardening**.
 - Fingerprint: `ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae`
 - Genesis: `a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3`
 
-## Windows quick start
+## Hardened first setup
+
+Do not bootstrap Axven with ambient `pip`, an unconstrained editable install, or
+an execution-policy bypass. The repository validators install only the reviewed,
+hash-locked dependency artifacts and require the supported Python runtime.
+
+Windows:
 
 ```text
-1. run setup.cmd
-2. run start-node1.cmd
-3. run axven-console.cmd
-4. run open-explorer-node1.cmd
+1. install exact Python 3.13.15
+2. run setup.cmd
+3. run start-node1.cmd
+4. run axven-console.cmd
+5. run open-explorer-node1.cmd
 ```
+
+`setup.cmd` delegates to the hardened Windows validator. It does not require or
+request `Set-ExecutionPolicy ... Bypass`.
+
+Linux/macOS validation:
+
+```bash
+# exact Python 3.13.15 is required
+bash validate_linux_macos.sh
+```
+
+Do not replace these paths with `pip install --upgrade pip`, `pip install -e .`,
+or another ambient dependency-resolution command.
 
 The first node start creates an encrypted wallet and asks for a passphrase.
 
 ## Validation
 
-On Windows PowerShell:
-
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\validate_windows.ps1
-```
+The hardened validators run dependency integrity checks, the Axven doctor, full
+validation, and the SEC-076+ security tail. Windows validation also maintains the
+validated runtime-provenance receipt used by the Windows operator launchers.
 
 The validation suite covers real ML-DSA, wallet integration, daemon lifecycle,
 TCP P2P, two-node reorg/reconnect, canonical activation records, consensus
