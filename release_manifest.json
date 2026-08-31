@@ -1212,6 +1212,10 @@
       "bytes": 9772,
       "sha256": "d207712f5575657ba549b0b0263834215303e6022bbd2a719aa7a6a9d5019531"
     },
+    "security_sec221_release_file_identity_spec.py": {
+      "bytes": 7643,
+      "sha256": "5ce7309b2655adde5e9614d997cd6f96484b8b1f062ee27bdbf8acc57eababf1"
+    },
     "setup.cmd": {
       "bytes": 326,
       "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
@@ -1273,8 +1277,8 @@
       "sha256": "f69b3a2eedc7b0a3d3d666018ecac8d74d869cd038f8e85131bba05079a7d8ac"
     },
     "verify_release.py": {
-      "bytes": 9222,
-      "sha256": "c2de68361b26ccebc4d1cbd46b4664743dd1cac600cdcb2f23584bf176259113"
+      "bytes": 15838,
+      "sha256": "8a32457acff69a7873baec4c1269bbbb76820ac8561fd80f65a5007f20626767"
     },
     "wallet.py": {
       "bytes": 20159,
