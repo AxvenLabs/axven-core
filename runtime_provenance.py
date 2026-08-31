@@ -35,19 +35,104 @@ TRUST_INPUTS = (
 )
 
 
+def _same_file(before: os.stat_result, opened: os.stat_result) -> bool:
+    """Return True only when both stat snapshots identify the same filesystem object."""
+    try:
+        return os.path.samestat(before, opened)
+    except (AttributeError, OSError):
+        return (before.st_dev, before.st_ino) == (opened.st_dev, opened.st_ino)
+
+
+def _read_regular_bounded(path: Path, *, label: str, max_bytes: int, allow_empty: bool) -> bytes:
+    """Read one regular file through a descriptor bound to the lstat-checked object."""
+    try:
+        before = path.lstat()
+    except OSError as exc:
+        raise RuntimeError(f"{label} is missing") from exc
+    if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
+        raise RuntimeError(f"{label} is not a regular non-symlink file")
+    if before.st_size < 0 or before.st_size > max_bytes or (not allow_empty and before.st_size == 0):
+        raise RuntimeError(f"{label} exceeds size budget or is invalid")
+
+    data = bytearray()
+    try:
+        with path.open("rb") as handle:
+            opened = os.fstat(handle.fileno())
+            if (
+                not stat.S_ISREG(opened.st_mode)
+                or not _same_file(before, opened)
+                or opened.st_size != before.st_size
+            ):
+                raise RuntimeError(f"{label} changed before reading")
+            remaining = opened.st_size
+            while remaining:
+                chunk = handle.read(min(HASH_CHUNK_BYTES, remaining))
+                if not chunk:
+                    break
+                data.extend(chunk)
+                remaining -= len(chunk)
+            extra = handle.read(1)
+    except RuntimeError:
+        raise
+    except OSError as exc:
+        raise RuntimeError(f"{label} is unreadable") from exc
+
+    if remaining or extra:
+        raise RuntimeError(f"{label} changed while reading")
+    try:
+        after = path.lstat()
+    except OSError as exc:
+        raise RuntimeError(f"{label} changed after reading") from exc
+    if (
+        stat.S_ISLNK(after.st_mode)
+        or not stat.S_ISREG(after.st_mode)
+        or not _same_file(opened, after)
+        or after.st_size != opened.st_size
+    ):
+        raise RuntimeError(f"{label} changed after reading")
+    return bytes(data)
+
+
 def _read_trust_input(path: Path, name: str) -> bytes:
     try:
-        metadata = path.lstat()
-    except OSError as exc:
-        raise RuntimeError(f"missing provenance input: {name}") from exc
-    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
-        raise RuntimeError(f"provenance input is not a regular non-symlink file: {name}")
-    if metadata.st_size < 0 or metadata.st_size > MAX_TRUST_INPUT_BYTES:
-        raise RuntimeError(f"provenance input exceeds size budget: {name}")
-    data = path.read_bytes()
-    if len(data) != metadata.st_size:
-        raise RuntimeError(f"provenance input changed while reading: {name}")
-    return data
+        return _read_regular_bounded(
+            path,
+            label=f"provenance input {name}",
+            max_bytes=MAX_TRUST_INPUT_BYTES,
+            allow_empty=True,
+        )
+    except RuntimeError as exc:
+        message = str(exc)
+        if message.endswith(" is missing"):
+            raise RuntimeError(f"missing provenance input: {name}") from exc
+        if "not a regular non-symlink file" in message:
+            raise RuntimeError(f"provenance input is not a regular non-symlink file: {name}") from exc
+        if "exceeds size budget" in message:
+            raise RuntimeError(f"provenance input exceeds size budget: {name}") from exc
+        if "changed" in message:
+            raise RuntimeError(f"provenance input changed while reading: {name}") from exc
+        raise RuntimeError(f"provenance input is unreadable: {name}") from exc
+
+
+def _read_receipt(path: Path) -> bytes:
+    try:
+        return _read_regular_bounded(
+            path,
+            label="runtime provenance receipt",
+            max_bytes=MAX_RECEIPT_BYTES,
+            allow_empty=False,
+        )
+    except RuntimeError as exc:
+        message = str(exc)
+        if message.endswith(" is missing"):
+            raise RuntimeError("runtime provenance receipt is missing") from exc
+        if "not a regular non-symlink file" in message:
+            raise RuntimeError("runtime provenance receipt is not a regular non-symlink file") from exc
+        if "exceeds size budget or is invalid" in message:
+            raise RuntimeError("runtime provenance receipt is invalid") from exc
+        if "changed" in message:
+            raise RuntimeError("runtime provenance receipt changed while reading") from exc
+        raise RuntimeError("runtime provenance receipt is unreadable") from exc
 
 
 def _sha256(data: bytes) -> str:
@@ -125,7 +210,11 @@ def _verify_manifest_payloads(root: Path) -> None:
         read_bytes = 0
         with path.open("rb") as handle:
             opened = os.fstat(handle.fileno())
-            if not stat.S_ISREG(opened.st_mode) or opened.st_size != expected_bytes:
+            if (
+                not stat.S_ISREG(opened.st_mode)
+                or not _same_file(metadata, opened)
+                or opened.st_size != expected_bytes
+            ):
                 raise RuntimeError(f"release payload changed before hashing: {name}")
             while read_bytes < expected_bytes:
                 chunk = handle.read(min(HASH_CHUNK_BYTES, expected_bytes - read_bytes))
@@ -138,6 +227,17 @@ def _verify_manifest_payloads(root: Path) -> None:
             raise RuntimeError(f"release payload changed while hashing: {name}")
         if not hmac.compare_digest(digest.hexdigest(), expected_hash):
             raise RuntimeError(f"release payload hash mismatch: {name}")
+        try:
+            after = path.lstat()
+        except OSError as exc:
+            raise RuntimeError(f"release payload changed after hashing: {name}") from exc
+        if (
+            stat.S_ISLNK(after.st_mode)
+            or not stat.S_ISREG(after.st_mode)
+            or not _same_file(opened, after)
+            or after.st_size != expected_bytes
+        ):
+            raise RuntimeError(f"release payload changed after hashing: {name}")
 
 
 def build_receipt(root: Path, *, python_version: str) -> dict:
@@ -197,16 +297,11 @@ def check(root: Path = ROOT) -> None:
     _assert_expected_interpreter(root)
     path = receipt_path(root)
     try:
-        metadata = path.lstat()
-    except OSError as exc:
-        raise RuntimeError("runtime provenance receipt is missing") from exc
-    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
-        raise RuntimeError("runtime provenance receipt is not a regular non-symlink file")
-    if metadata.st_size <= 0 or metadata.st_size > MAX_RECEIPT_BYTES:
-        raise RuntimeError("runtime provenance receipt is invalid")
-    try:
-        actual = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        receipt_bytes = _read_receipt(path)
+        actual = json.loads(receipt_bytes.decode("utf-8"))
+    except RuntimeError:
+        raise
+    except (UnicodeError, json.JSONDecodeError) as exc:
         raise RuntimeError("runtime provenance receipt is unreadable") from exc
     _verify_manifest_payloads(root)
     expected = build_receipt(root, python_version=platform.python_version())
