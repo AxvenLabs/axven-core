@@ -19,6 +19,9 @@ accepting third-party reports.
 - P2P: operator-controlled binding
 - wallet backups: encrypted with scrypt + AES-256-GCM
 - no fake ML-DSA backend is permitted
+- XML/Expat parsing is not part of the production Axven runtime surface; adding
+  an XML parser dependency or production import requires explicit security
+  review before merge
 
 The devnet should not be marketed as audited or production-safe unless an
 independent security review has actually been completed.
