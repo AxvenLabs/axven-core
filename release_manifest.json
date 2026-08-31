@@ -1197,8 +1197,8 @@
       "sha256": "8423b3e21a22cc5d44c0f8bb5b9c214a2a25b6e79da215433ce20451517de3a2"
     },
     "security_sec217_public_bootstrap_provenance_spec.py": {
-      "bytes": 2777,
-      "sha256": "43e2ee1df3a283d49896deed2eb5ca95e65f96ee200a9042a93a6124f12802d0"
+      "bytes": 2959,
+      "sha256": "c6593459b55103ca8c9b22772a0e3e4b4782e39fe863def846264b0cff35d0e8"
     },
     "security_sec218_posix_runtime_provenance_spec.py": {
       "bytes": 5056,
