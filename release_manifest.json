@@ -65,8 +65,8 @@
       "sha256": "4f55f35e35795d49b59933d24e93b3bb8cbca306b6a7689c4f2678ba7798a435"
     },
     "README.md": {
-      "bytes": 2475,
-      "sha256": "d8ab1ac5bdc380a37288787b108ffba3e4895dc808e36d2a92e525e32de97d62"
+      "bytes": 3045,
+      "sha256": "67025e0d3870666977ba2de4233c039aba9ca9f03732dd0474e6843c364f9e4c"
     },
     "REAL_PQ_VALIDATION.md": {
       "bytes": 821,
@@ -97,8 +97,8 @@
       "sha256": "39f19f20810841164f6156dd06f78a0bf65c0f81b5c407a8ac1ab9cb90d5ebf0"
     },
     "RUNBOOK.md": {
-      "bytes": 1320,
-      "sha256": "fc2c93afb90dc71e8f01e908a879da4a6a18e77bb2c7d21cf06436f3524eb648"
+      "bytes": 2387,
+      "sha256": "bfbbcb513c52e84769c113736f279907a66d8837d9978e84b54e86d709f04764"
     },
     "SECURITY.md": {
       "bytes": 975,
@@ -123,6 +123,10 @@
     "axven-console.cmd": {
       "bytes": 217,
       "sha256": "63e8e9d9167448dbca81d68dfd2b1943425714ad7051da3e86b30678f96a7636"
+    },
+    "axven-posix.sh": {
+      "bytes": 748,
+      "sha256": "11fa7dc63bfd4da8bb8964e21557ab908ba3e9731a8fbc377c676e91b254a2ac"
     },
     "axven.py": {
       "bytes": 75225,
@@ -283,6 +287,10 @@
     "ensure_runtime.ps1": {
       "bytes": 851,
       "sha256": "ae182611d8d2614317f9f05c5b29007ed7f39a841c2fe9f6b756a2de5f7be9b5"
+    },
+    "ensure_runtime.sh": {
+      "bytes": 271,
+      "sha256": "d27d13ad3080abd534439b0933cf52fd6a9a35019b3764c1532b81dc3c529f4c"
     },
     "explorer.py": {
       "bytes": 9267,
@@ -1195,6 +1203,10 @@
     "security_sec218_posix_runtime_provenance_spec.py": {
       "bytes": 5056,
       "sha256": "f22e5d21394fb3086b9de5a70cf5ff07a3646edf479ffd19b98d85e78e7e4183"
+    },
+    "security_sec219_posix_operator_runtime_provenance_spec.py": {
+      "bytes": 3444,
+      "sha256": "1cf02a6c81a9b6b6e2f1d6d5e46a02fd3924fc8df9e79e6eee5529299f4c3b5e"
     },
     "setup.cmd": {
       "bytes": 326,
