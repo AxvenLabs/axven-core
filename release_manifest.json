@@ -145,16 +145,16 @@
       "sha256": "5ea02e75b7d71e42f16e827c0f27fdda2d3dc734ce421bbcf7aac3b2493e93d1"
     },
     "canonical_node1_start.ps1": {
-      "bytes": 718,
-      "sha256": "6a7cdaebfb3a792dc30469be16366c16cec844ec6472e45026f1c0adf7bd06c1"
+      "bytes": 656,
+      "sha256": "0da7f69da4f2198ce8d25c95fafbdce3931853b658edc0fe1ff923eb353a3b10"
     },
     "canonical_node1_status.ps1": {
       "bytes": 123,
       "sha256": "5ec2a19638bca66aaa10ec5120e429694a454b5d5c68634c9cfd1d52469e8611"
     },
     "canonical_node2_start.ps1": {
-      "bytes": 718,
-      "sha256": "d8fb23c0a2154d462944883741663271ace8a7bd2249232d2c34f9a89ed6e978"
+      "bytes": 656,
+      "sha256": "e1b8a590fd6ec69ee135555389ebe353b9ff835f36a102ec77617a5e82503841"
     },
     "canonical_node2_sync_node1.ps1": {
       "bytes": 137,
@@ -1093,12 +1093,12 @@
       "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
     },
     "start-node1.cmd": {
-      "bytes": 361,
-      "sha256": "eae86db6f37807ddaa4a21ebb7bd09d20de5024a44be647c34e27fa4827d48a1"
+      "bytes": 416,
+      "sha256": "a3c47957a5307ba5ac4efeeb50e30869997add7eea1be2cce7dc6cae14d57d24"
     },
     "start-node2.cmd": {
-      "bytes": 361,
-      "sha256": "445ec185116c63122405197fd673b57f68ddc5dded38a1b61b24907d027a98d3"
+      "bytes": 416,
+      "sha256": "72dcfefc3e7585434b9f6a10f2e8ca670bd54c17aa445c860807a24bbb681b21"
     },
     "status-node1.cmd": {
       "bytes": 120,
@@ -1141,8 +1141,8 @@
       "sha256": "f13c9252cd5412741bb4a1094c987d24f964fab0c2fae04c47ba79900c422546"
     },
     "validate_windows.ps1": {
-      "bytes": 2122,
-      "sha256": "739219eb6f768efbd8582623b892134124b441b0c621f6e99fd165084b4572e4"
+      "bytes": 2304,
+      "sha256": "20a375b2f90fc6dfd73bb781474cdfbe14fa003d9d861074ad4e38f50a2b10a8"
     },
     "verify_release.py": {
       "bytes": 2884,
@@ -1203,6 +1203,22 @@
     "security_sec206_xml_parser_containment_spec.py": {
       "bytes": 4892,
       "sha256": "81d08732fb2c954b0c2af22b4aff7d4d9efd32c617cdf5f44688a9349b5a0bdf"
+    },
+    "runtime_provenance.py": {
+      "bytes": 3794,
+      "sha256": "1aec07237c3ebb4e942ae6249905e16b116be3d7f58fbea66674da65663368af"
+    },
+    "ensure_runtime.ps1": {
+      "bytes": 851,
+      "sha256": "ae182611d8d2614317f9f05c5b29007ed7f39a841c2fe9f6b756a2de5f7be9b5"
+    },
+    "start-public-p2p-node.cmd": {
+      "bytes": 627,
+      "sha256": "76af2dc8ccfa0595196f5f49c1659263268cea949b895e3469cd341077e6b19f"
+    },
+    "security_sec207_launcher_runtime_provenance_spec.py": {
+      "bytes": 4893,
+      "sha256": "d14ec850d4dca4790b5951a9e7ec04337e6ec09218ab651ded6d72d9c2f1f8e1"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
