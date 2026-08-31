@@ -28,6 +28,7 @@ jobs:
           from pathlib import Path
           import hashlib
           import json
+          import textwrap
 
           old_checkout = "11d5960a326750d5838078e36cf38b85af677262"
           new_checkout = "3d3c42e5aac5ba805825da76410c181273ba90b1"
@@ -55,7 +56,8 @@ jobs:
           text = text.replace(old_setup, new_setup)
           p.write_text(text, encoding="utf-8")
 
-          spec = '''#!/usr/bin/env python3
+          spec = '''
+          #!/usr/bin/env python3
           """SEC-200: validation actions must use reviewed native Node 24 releases."""
 
           import re
@@ -143,7 +145,7 @@ jobs:
           if __name__ == "__main__":
               main()
           '''
-          spec = "\n".join(line[10:] if line.startswith("          ") else line for line in spec.splitlines()) + "\n"
+          spec = textwrap.dedent(spec).lstrip()
           Path("security_sec200_github_actions_node24_runtime_spec.py").write_text(spec, encoding="utf-8")
 
           targets = [
