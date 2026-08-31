@@ -373,8 +373,8 @@
       "sha256": "35f82cd5d9dfbb136eed077c0d8051c8fab758c65922328ee816fe748013c2b8"
     },
     "runtime_provenance.py": {
-      "bytes": 4716,
-      "sha256": "5fcf47efb1d32c134d993f3b62d49ac4420575710d2eafbc4f8dcca0a94b3d15"
+      "bytes": 9096,
+      "sha256": "b00f39390df55bd05d4b0bdbe29e9db9cc3d0ec3df4dfa272d4284ce2aeb7044"
     },
     "security_sec014_atomic_read_spec.py": {
       "bytes": 5624,
@@ -1179,6 +1179,10 @@
     "security_sec214_windows_operator_runtime_provenance_spec.py": {
       "bytes": 4011,
       "sha256": "d66248e74892166c3b9494a11e1bb17b2b1a928f7d4f120b0be79e15e5802136"
+    },
+    "security_sec215_runtime_source_integrity_spec.py": {
+      "bytes": 7097,
+      "sha256": "70b6c97ae670a8e572f161b190886c22b08135d1ee4b0309a8135408db5126e6"
     },
     "setup.cmd": {
       "bytes": 326,
