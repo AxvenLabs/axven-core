@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SEC-207: authenticated releases must reject appended active payloads."""
+"""SEC-207: authenticated releases must reject every appended payload file."""
 from __future__ import annotations
 
 import hashlib
@@ -8,6 +8,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import axven
+import build_release_package
 import verify_release
 
 
@@ -24,10 +25,14 @@ def _verify_temp(root: Path, files) -> int:
     manifest = root / "release_manifest.json"
     manifest.write_bytes(_manifest_bytes(files))
     anchor = hashlib.sha256(manifest.read_bytes()).hexdigest()
+    return _verify_staged(root, anchor)
+
+
+def _verify_staged(root: Path, anchor: str) -> int:
     original_root = verify_release.ROOT
     original_manifest = verify_release.MANIFEST
     verify_release.ROOT = root.resolve()
-    verify_release.MANIFEST = manifest.resolve()
+    verify_release.MANIFEST = (root / "release_manifest.json").resolve()
     try:
         return verify_release.main([anchor])
     finally:
@@ -40,25 +45,21 @@ def main():
 
     manifest_path = Path("release_manifest.json")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    trusted_digest = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
-    assert verify_release.main([trusted_digest]) == 0
-    checks += 1
-    print("[GREEN] canonical release tree has no unmanifested active payload")
 
     with TemporaryDirectory() as tmp:
-        root = Path(tmp).resolve()
-        payload = root / "payload.txt"
-        payload.write_text("trusted payload\n", encoding="utf-8")
-        files = {"payload.txt": _entry(payload)}
-
-        # Inert docs and repository-host metadata are intentionally outside the
-        # active payload allow-list so source checkouts remain verifiable.
-        (root / "NOTES.md").write_text("notes\n", encoding="utf-8")
-        (root / ".github").mkdir()
-        (root / ".github" / "metadata.yml").write_text("name: metadata\n", encoding="utf-8")
-        assert _verify_temp(root, files) == 0
+        staged = Path(tmp).resolve() / "release"
+        trusted_digest = build_release_package.build(staged)
+        assert _verify_staged(staged, trusted_digest) == 0
     checks += 1
-    print("[GREEN] inert documentation and GitHub metadata do not create a false positive")
+    print("[GREEN] manifest-defined builder produces an exact verifiable release inventory")
+
+    with TemporaryDirectory() as tmp:
+        staged = Path(tmp).resolve() / "release"
+        trusted_digest = build_release_package.build(staged)
+        (staged / "NOTES.md").write_text("appended after release build\n", encoding="utf-8")
+        assert _verify_staged(staged, trusted_digest) == 2
+    checks += 1
+    print("[GREEN] even inert-looking appended files are rejected from the verified release asset")
 
     with TemporaryDirectory() as tmp:
         root = Path(tmp).resolve()
@@ -105,22 +106,39 @@ def main():
     checks += 1
     print("[GREEN] authenticated manifest paths must use one canonical relative spelling")
 
-    notes = Path("GITHUB_RELEASE.md").read_text(encoding="utf-8")
-    assert "Release payload inventory" in notes
-    assert "before setup" in notes
-    assert "sitecustomize.py" in notes
-    assert "unmanifested" in notes
+    with TemporaryDirectory() as tmp:
+        output = Path(tmp).resolve() / "already-exists"
+        output.mkdir()
+        try:
+            build_release_package.build(output)
+        except RuntimeError as exc:
+            assert "must not already exist" in str(exc)
+        else:
+            raise AssertionError("release builder accepted a pre-existing output directory")
     checks += 1
-    print("[GREEN] release guidance requires inventory verification before setup or launch")
+    print("[GREEN] release builder refuses stale/pre-populated output directories")
+
+    notes = Path("GITHUB_RELEASE.md").read_text(encoding="utf-8")
+    checklist = Path("RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
+    assert "Release payload inventory" in notes
+    assert "build_release_package.py" in notes
+    assert "before setup" in notes
+    assert "single extra file" in notes
+    assert "build_release_package.py" in checklist
+    checks += 1
+    print("[GREEN] release guidance requires clean manifest-defined staging before publication")
 
     for name in (
         "verify_release.py",
+        "build_release_package.py",
         "GITHUB_RELEASE.md",
+        "RELEASE_CHECKLIST.md",
+        "security_sec205_release_manifest_trust_anchor_spec.py",
         "security_sec207_release_unlisted_payload_containment_spec.py",
     ):
         assert name in manifest["files"], name
     checks += 1
-    print("[GREEN] authenticated manifest covers SEC-207 verifier, guidance, and regression")
+    print("[GREEN] authenticated manifest covers the builder, verifier, guidance, and regressions")
 
     assert axven.CHAIN_ID == "axven-devnet-2"
     assert axven.CONFIG_FINGERPRINT == "ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae"
@@ -128,8 +146,8 @@ def main():
     checks += 1
     print("[GREEN] canonical chain identity unchanged")
 
-    assert checks == 9, checks
-    print("SEC-207 unmanifested release payload containment: 9/9 GREEN")
+    assert checks == 10, checks
+    print("SEC-207 exact release payload containment: 10/10 GREEN")
 
 
 if __name__ == "__main__":
