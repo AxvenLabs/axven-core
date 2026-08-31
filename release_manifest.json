@@ -140,6 +140,10 @@
       "bytes": 7326,
       "sha256": "1e3c44f1d410386438e65fe45dacc80a7ca9bd8b5a8fb42978a33096d5eeb981"
     },
+    "build_release_package.py": {
+      "bytes": 4377,
+      "sha256": "9eb51c8541753715a372d6f8ed85329d1e15e0fc0de686450f99645c2b6c0c30"
+    },
     "canonical_node1_mine1.ps1": {
       "bytes": 140,
       "sha256": "5ea02e75b7d71e42f16e827c0f27fdda2d3dc734ce421bbcf7aac3b2493e93d1"
@@ -339,6 +343,18 @@
     "release_packaging_test.py": {
       "bytes": 3268,
       "sha256": "c2a04eac89bc49efb193db51e3d0aeba094c8979764f13d00716f686694f57e5"
+    },
+    "requirements-ci-runtime-posix.lock": {
+      "bytes": 1231,
+      "sha256": "fa203ae837f5319ffac9eeb1755017545106cef3600f2afebb253749493082a5"
+    },
+    "requirements-ci-runtime-windows.lock": {
+      "bytes": 785,
+      "sha256": "846373307293dff5648ec5ca18b97e3c13dbaee342e05968f50ce69e4db9d6a9"
+    },
+    "requirements-ci-toolchain.lock": {
+      "bytes": 529,
+      "sha256": "bbfad10e572d3d7dd48979cef6163a81b695b7909c9c1faed7ab4eb224fa1446"
     },
     "requirements.txt": {
       "bytes": 48,
@@ -1088,6 +1104,54 @@
       "bytes": 6079,
       "sha256": "b0b32889dabe13be4836178b3d874797bee41121421271dbf50fde3c1d5423c4"
     },
+    "security_sec198_dependency_artifact_hashes_spec.py": {
+      "bytes": 4594,
+      "sha256": "e356f88c2d3f00acac7522b7400ea9b5fbc99a912a22d8aa7f1eea103b1ed9bc"
+    },
+    "security_sec199_resolved_peer_provenance_spec.py": {
+      "bytes": 6591,
+      "sha256": "de95c1a7b8ac4ce7f512ffd8d7b3537c18c0e67d376bf8a97a04b98e7c604dd1"
+    },
+    "security_sec200_github_actions_node24_runtime_spec.py": {
+      "bytes": 2462,
+      "sha256": "8ff47fead843673321ccaab72064f4d415e730a190368502fa09cbd4bd313418"
+    },
+    "security_sec201_windows_validator_provenance_spec.py": {
+      "bytes": 3060,
+      "sha256": "ebcdabdf0a1bbc4919da94d5f05bb3cd9bd13de0675e1bb8b0a778e20a113eca"
+    },
+    "security_sec202_openssl_backend_floor_spec.py": {
+      "bytes": 2737,
+      "sha256": "f803df8b324cb0897818a90eebae99e6eacc643010ba5b96d2ef5942ef3a8dab"
+    },
+    "security_sec203_posix_validator_provenance_spec.py": {
+      "bytes": 5834,
+      "sha256": "38a4918a61fbe0f7717385e1e87d400878131bcf4d0585c36dc5bc0c18f31ce0"
+    },
+    "security_sec204_windows_setup_provenance_spec.py": {
+      "bytes": 2442,
+      "sha256": "712f92a7886e096dababfb100bb3e13926bb5d527e833c39dbd522313228c1d0"
+    },
+    "security_sec205_release_manifest_trust_anchor_spec.py": {
+      "bytes": 5343,
+      "sha256": "d9476e70025842cc7b53ac3d9909b0083253110b81a01cb22ca808a6d4b1ff4f"
+    },
+    "security_sec206_xml_parser_containment_spec.py": {
+      "bytes": 4892,
+      "sha256": "81d08732fb2c954b0c2af22b4aff7d4d9efd32c617cdf5f44688a9349b5a0bdf"
+    },
+    "security_sec207_release_unlisted_payload_containment_spec.py": {
+      "bytes": 5881,
+      "sha256": "d79436d98c407009936adb0043fdd7f41540934fc08925b7da318879ee660bf6"
+    },
+    "security_sec208_legacy_release_provenance_spec.py": {
+      "bytes": 3979,
+      "sha256": "0c297af3f8383f358542117b52dbcb2af571615d67ccad964f0ed06a927ea55a"
+    },
+    "security_sec209_release_verifier_resource_bounds_spec.py": {
+      "bytes": 5272,
+      "sha256": "c48fefbbde1eaf192b55ed7be330d93c1c63c73fa2727e9840f0779f9342d6c5"
+    },
     "setup.cmd": {
       "bytes": 326,
       "sha256": "bc6f0bbb2f745ba03d3ff352e8fe767cbecc89bc50c479b730d5effc6aeaee1f"
@@ -1145,8 +1209,8 @@
       "sha256": "739219eb6f768efbd8582623b892134124b441b0c621f6e99fd165084b4572e4"
     },
     "verify_release.py": {
-      "bytes": 5484,
-      "sha256": "a44d0dd9a477564a7ea38b343d24a3066e8abb811f2d2cb5910afd1e84cc5f08"
+      "bytes": 7531,
+      "sha256": "104499721efe257a0aa8dc53e5ae75af494570882598d0168940253c107f71d1"
     },
     "wallet.py": {
       "bytes": 20159,
@@ -1155,66 +1219,6 @@
     "wallet_persistence_cli_test.py": {
       "bytes": 3243,
       "sha256": "0826cd7f03dca3bfa679c0052ae749d2adb0195eea8c065fa8ebb197b9a54804"
-    },
-    "requirements-ci-toolchain.lock": {
-      "bytes": 529,
-      "sha256": "bbfad10e572d3d7dd48979cef6163a81b695b7909c9c1faed7ab4eb224fa1446"
-    },
-    "requirements-ci-runtime-windows.lock": {
-      "bytes": 785,
-      "sha256": "846373307293dff5648ec5ca18b97e3c13dbaee342e05968f50ce69e4db9d6a9"
-    },
-    "security_sec198_dependency_artifact_hashes_spec.py": {
-      "bytes": 4594,
-      "sha256": "e356f88c2d3f00acac7522b7400ea9b5fbc99a912a22d8aa7f1eea103b1ed9bc"
-    },
-    "security_sec199_resolved_peer_provenance_spec.py": {
-      "bytes": 6591,
-      "sha256": "de95c1a7b8ac4ce7f512ffd8d7b3537c18c0e67d376bf8a97a04b98e7c604dd1"
-    },
-    "security_sec200_github_actions_node24_runtime_spec.py": {
-      "bytes": 2462,
-      "sha256": "8ff47fead843673321ccaab72064f4d415e730a190368502fa09cbd4bd313418"
-    },
-    "security_sec201_windows_validator_provenance_spec.py": {
-      "bytes": 3060,
-      "sha256": "ebcdabdf0a1bbc4919da94d5f05bb3cd9bd13de0675e1bb8b0a778e20a113eca"
-    },
-    "security_sec202_openssl_backend_floor_spec.py": {
-      "bytes": 2737,
-      "sha256": "f803df8b324cb0897818a90eebae99e6eacc643010ba5b96d2ef5942ef3a8dab"
-    },
-    "requirements-ci-runtime-posix.lock": {
-      "bytes": 1231,
-      "sha256": "fa203ae837f5319ffac9eeb1755017545106cef3600f2afebb253749493082a5"
-    },
-    "security_sec203_posix_validator_provenance_spec.py": {
-      "bytes": 5834,
-      "sha256": "38a4918a61fbe0f7717385e1e87d400878131bcf4d0585c36dc5bc0c18f31ce0"
-    },
-    "security_sec204_windows_setup_provenance_spec.py": {
-      "bytes": 2442,
-      "sha256": "712f92a7886e096dababfb100bb3e13926bb5d527e833c39dbd522313228c1d0"
-    },
-    "security_sec205_release_manifest_trust_anchor_spec.py": {
-      "bytes": 5343,
-      "sha256": "d9476e70025842cc7b53ac3d9909b0083253110b81a01cb22ca808a6d4b1ff4f"
-    },
-    "security_sec206_xml_parser_containment_spec.py": {
-      "bytes": 4892,
-      "sha256": "81d08732fb2c954b0c2af22b4aff7d4d9efd32c617cdf5f44688a9349b5a0bdf"
-    },
-    "security_sec207_release_unlisted_payload_containment_spec.py": {
-      "bytes": 5881,
-      "sha256": "d79436d98c407009936adb0043fdd7f41540934fc08925b7da318879ee660bf6"
-    },
-    "build_release_package.py": {
-      "bytes": 4377,
-      "sha256": "9eb51c8541753715a372d6f8ed85329d1e15e0fc0de686450f99645c2b6c0c30"
-    },
-    "security_sec208_legacy_release_provenance_spec.py": {
-      "bytes": 3979,
-      "sha256": "0c297af3f8383f358542117b52dbcb2af571615d67ccad964f0ed06a927ea55a"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
