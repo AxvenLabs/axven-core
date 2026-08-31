@@ -57,8 +57,8 @@
       "sha256": "b32a3db30c2d0dcaed514a8c68c26c090bfcb7a3fb0c9e5c403cfe582dc0fcd7"
     },
     "GITHUB_RELEASE.md": {
-      "bytes": 2026,
-      "sha256": "a6b06203fa3541b264694f96d15c5f7cd37035c98f763dd4757e500169781820"
+      "bytes": 2771,
+      "sha256": "ba28fec5f6b3a722d43cf3a8ae7e43ce6e14180420a26981f2af91473383cc05"
     },
     "LICENSE": {
       "bytes": 1075,
@@ -1145,8 +1145,8 @@
       "sha256": "739219eb6f768efbd8582623b892134124b441b0c621f6e99fd165084b4572e4"
     },
     "verify_release.py": {
-      "bytes": 2884,
-      "sha256": "94aa2b3bff2457b94f1e06ce526fea9d8dff747dc222c54c3bd42dc8530cb03f"
+      "bytes": 6437,
+      "sha256": "632f1e4a58ce812e7827eae944f021a1348f90ea4f19a76bc18e0f0546d0117b"
     },
     "wallet.py": {
       "bytes": 20159,
@@ -1203,6 +1203,10 @@
     "security_sec206_xml_parser_containment_spec.py": {
       "bytes": 4892,
       "sha256": "81d08732fb2c954b0c2af22b4aff7d4d9efd32c617cdf5f44688a9349b5a0bdf"
+    },
+    "security_sec207_release_unlisted_payload_containment_spec.py": {
+      "bytes": 5184,
+      "sha256": "e383d856e75eac2da6742f0c013828baf56603dcc9cf2cf8e3bbd3a5eb8047b4"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
