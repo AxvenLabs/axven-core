@@ -1,0 +1,60 @@
+name: SEC-221 Manifest Refresh
+
+on:
+  push:
+    branches:
+      - security-sec221-release-verifier-file-identity
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - name: Refresh SEC-221 release manifest pins
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+          import json
+
+          root = Path('.').resolve()
+          manifest_path = root / 'release_manifest.json'
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          files = manifest['files']
+          for name in (
+              'verify_release.py',
+              'security_sec221_release_file_identity_spec.py',
+          ):
+              raw = (root / name).read_bytes()
+              files[name] = {
+                  'bytes': len(raw),
+                  'sha256': hashlib.sha256(raw).hexdigest(),
+              }
+          manifest['files'] = dict(sorted(files.items()))
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          git diff --check
+          git diff -- release_manifest.json
+
+      - name: Commit refreshed manifest
+        shell: bash
+        run: |
+          if git diff --quiet -- release_manifest.json; then
+            echo 'release_manifest.json already current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release_manifest.json
+          git commit -m 'SEC-221: refresh release manifest pins'
+          git push origin HEAD:${GITHUB_REF_NAME}
