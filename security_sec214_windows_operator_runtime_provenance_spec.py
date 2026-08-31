@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import axven
@@ -30,10 +31,12 @@ EXPECTED_OPERATOR_ENTRYPOINTS = {
     "canonical_node2_sync_node1.ps1",
     "canonical_stop_all.ps1",
 }
+VENV_PYTHON_RE = re.compile(r"\.venv[\\/]+scripts[\\/]+python\.exe", re.IGNORECASE)
 
 
-def _normalized(text: str) -> str:
-    return text.replace("/", "\\").lower()
+def _first_venv_python(text: str) -> int:
+    match = VENV_PYTHON_RE.search(text)
+    return -1 if match is None else match.start()
 
 
 def main() -> None:
@@ -43,23 +46,23 @@ def main() -> None:
     candidates = sorted(ROOT.glob("*.cmd")) + sorted(ROOT.glob("*.ps1"))
     for path in candidates:
         text = path.read_text(encoding="utf-8-sig")
-        norm = _normalized(text)
-        python_pos = norm.find(".venv\\scripts\\python.exe")
+        lower = text.lower()
+        python_pos = _first_venv_python(text)
         if python_pos < 0 or path.name in EXEMPT_RUNTIME_IMPLEMENTATIONS:
             continue
 
         discovered.add(path.name)
-        gate_pos = norm.find("ensure_runtime.ps1")
+        gate_pos = lower.find("ensure_runtime.ps1")
         assert gate_pos >= 0, f"{path.name}: missing ensure_runtime.ps1 preflight"
         assert gate_pos < python_pos, f"{path.name}: runtime preflight occurs after first .venv Python execution"
 
         if path.suffix.lower() == ".cmd":
-            between = norm[gate_pos:python_pos]
+            between = lower[gate_pos:python_pos]
             assert "if errorlevel 1 exit /b 1" in between, (
                 f"{path.name}: CMD launcher does not fail closed when provenance preflight fails"
             )
         else:
-            assert '$erroractionpreference = "stop"' in norm[:python_pos], (
+            assert '$erroractionpreference = "stop"' in lower[:python_pos], (
                 f"{path.name}: PowerShell launcher is not fail-closed before Python execution"
             )
 
@@ -74,8 +77,8 @@ def main() -> None:
     # candidate runtime while establishing/checking provenance; they are not
     # operator entrypoints and must stay narrowly enumerated here.
     for name in EXEMPT_RUNTIME_IMPLEMENTATIONS:
-        text = _normalized((ROOT / name).read_text(encoding="utf-8-sig"))
-        assert ".venv\\scripts\\python.exe" in text
+        text = (ROOT / name).read_text(encoding="utf-8-sig")
+        assert _first_venv_python(text) >= 0
     checks += 1
     print("[GREEN] only the explicit validator/preflight implementations are exempt from operator gating")
 
