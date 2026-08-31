@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 required_python="3.13.15"
-actual_python="$(python3 -c 'import platform; print(platform.python_version())')"
+actual_python="$(python3 -I -S -c 'import platform; print(platform.python_version())')"
 if [[ "$actual_python" != "$required_python" ]]; then
   echo "Axven validation requires exact Python $required_python; found $actual_python" >&2
   exit 2
@@ -20,19 +20,29 @@ case "$os:$arch" in
     ;;
 esac
 
-if [[ ! -d .venv ]]; then
-  python3 -m venv .venv
+# SEC-219: never trust a stale virtualenv during hardened validation. Remove a
+# symlink as a link; rebuild ordinary generated .venv directories from scratch.
+if [[ -L .venv ]]; then
+  rm -- .venv
+elif [[ -e .venv ]]; then
+  if [[ ! -d .venv ]]; then
+    echo ".venv exists but is not a removable virtualenv directory" >&2
+    exit 2
+  fi
+  rm -rf -- .venv
 fi
+
+python3 -I -S -m venv .venv
 
 venv_python=".venv/bin/python"
 if [[ ! -x "$venv_python" ]]; then
-  echo "existing .venv has no executable Python; remove it and rerun" >&2
+  echo "fresh .venv has no executable Python" >&2
   exit 2
 fi
 
-venv_version="$($venv_python -c 'import platform; print(platform.python_version())')"
+venv_version="$($venv_python -I -S -c 'import platform; print(platform.python_version())')"
 if [[ "$venv_version" != "$required_python" ]]; then
-  echo "existing .venv is not Python $required_python; remove it and rerun" >&2
+  echo "fresh .venv is not Python $required_python" >&2
   exit 2
 fi
 
