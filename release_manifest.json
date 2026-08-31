@@ -1201,8 +1201,8 @@
       "sha256": "215b5ec5ad6406f51260739cb947184a79670448a98255d90bec26c62b213d79"
     },
     "security_sec206_xml_parser_containment_spec.py": {
-      "bytes": 4857,
-      "sha256": "16a0cb6a9fc4b4b2e43d2b432873d1273407cb8286afa087ec2827c06867dd8e"
+      "bytes": 4892,
+      "sha256": "81d08732fb2c954b0c2af22b4aff7d4d9efd32c617cdf5f44688a9349b5a0bdf"
     }
   },
   "final_pre_activation_audit": "REAL_MACHINE_EXECUTION_REQUIRED",
