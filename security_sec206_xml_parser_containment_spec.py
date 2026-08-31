@@ -103,6 +103,7 @@ def main():
     synthetic = """
 import xml.etree.ElementTree
 from xml.parsers import expat
+from defusedxml import ElementTree
 import importlib
 __import__('pyexpat')
 importlib.import_module('lxml.etree')
