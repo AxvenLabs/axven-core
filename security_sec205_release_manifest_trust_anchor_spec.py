@@ -8,6 +8,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import axven
+import build_release_package
 import verify_release
 
 
@@ -28,10 +29,20 @@ def main():
     print("[GREEN] release verification rejects a mismatched external manifest digest")
 
     manifest_path = Path("release_manifest.json")
-    trusted_digest = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
-    assert verify_release.main([trusted_digest]) == 0
+    with TemporaryDirectory() as tmp:
+        staged = Path(tmp).resolve() / "release"
+        trusted_digest = build_release_package.build(staged)
+        original_root = verify_release.ROOT
+        original_manifest = verify_release.MANIFEST
+        verify_release.ROOT = staged
+        verify_release.MANIFEST = staged / "release_manifest.json"
+        try:
+            assert verify_release.main([trusted_digest]) == 0
+        finally:
+            verify_release.ROOT = original_root
+            verify_release.MANIFEST = original_manifest
     checks += 1
-    print("[GREEN] exact external manifest digest unlocks normal release integrity verification")
+    print("[GREEN] exact external manifest digest unlocks staged release integrity verification")
 
     original_root = verify_release.ROOT
     original_manifest = verify_release.MANIFEST
