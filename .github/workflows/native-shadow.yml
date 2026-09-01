@@ -1,0 +1,63 @@
+name: Axven Native Shadow
+
+on:
+  push:
+    paths:
+      - "axven.py"
+      - "core.py"
+      - "native/**"
+      - "RUST_005.md"
+      - "rust_005_replay_shadow_spec.py"
+      - ".github/workflows/native-shadow.yml"
+  pull_request:
+    paths:
+      - "axven.py"
+      - "core.py"
+      - "native/**"
+      - "RUST_005.md"
+      - "rust_005_replay_shadow_spec.py"
+      - ".github/workflows/native-shadow.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-shadow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYO3_PYTHON: python
+      PYTHONUTF8: 1
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked Axven runtime dependencies
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: Install exact Rust toolchain
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+          python --version
+          rustc --version
+          cargo --version
+
+      - name: Build release PyO3 extension
+        run: |
+          cargo build --release --locked --manifest-path native/axven_native/Cargo.toml --features extension-module
+          cp native/axven_native/target/release/libaxven_native.so ./axven_native.so
+          python -c "import axven_native; assert axven_native.boundary_version() == 'rust-001'"
+
+      - name: RUST-005 replay and reorg shadow equivalence
+        run: python rust_005_replay_shadow_spec.py
