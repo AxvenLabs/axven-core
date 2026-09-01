@@ -7,9 +7,12 @@ on:
       - "RUST_009.md"
       - "RUST_010.md"
       - "RUST_011.md"
+      - "RUST_012.md"
       - "rust_009_portable_linux_wheel_spec.py"
       - "rust_011_portable_attestation.py"
       - "rust_011_portable_attestation_policy_spec.py"
+      - "rust_012_offline_consumer_verify.py"
+      - "rust_012_offline_consumer_policy_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
       - ".github/workflows/native-portable-attestation.yml"
@@ -19,9 +22,12 @@ on:
       - "RUST_009.md"
       - "RUST_010.md"
       - "RUST_011.md"
+      - "RUST_012.md"
       - "rust_009_portable_linux_wheel_spec.py"
       - "rust_011_portable_attestation.py"
       - "rust_011_portable_attestation_policy_spec.py"
+      - "rust_012_offline_consumer_verify.py"
+      - "rust_012_offline_consumer_policy_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
       - ".github/workflows/native-portable-attestation.yml"
@@ -67,6 +73,9 @@ jobs:
 
       - name: RUST-011 static portable attestation policy
         run: python rust_011_portable_attestation_policy_spec.py
+
+      - name: RUST-012 static detached consumer policy
+        run: python rust_012_offline_consumer_policy_spec.py
 
       - name: Pull and verify immutable manylinux image
         shell: bash
@@ -127,3 +136,46 @@ jobs:
 
       - name: Reverify evidence after mutation tests
         run: python rust_011_portable_attestation.py verify portable-provenance.json portable-attestation.json
+
+      - name: Verify detached RUST-012 consumer bundle under empty environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHON_BIN="$(command -v python)"
+          consumer="$(mktemp -d)"
+          trap 'rm -rf "$consumer"' EXIT
+          wheels=(wheelhouse-portable/*.whl)
+          test "${#wheels[@]}" -eq 1
+          test "$(basename "${wheels[0]}")" = "axven_native-0.1.0-cp313-abi3-manylinux_2_28_x86_64.whl"
+          cp -- rust_012_offline_consumer_verify.py "$consumer/rust_012_offline_consumer_verify.py"
+          cp -- "${wheels[0]}" "$consumer/axven_native-0.1.0-cp313-abi3-manylinux_2_28_x86_64.whl"
+          cp -- portable-provenance.json "$consumer/portable-provenance.json"
+          cp -- portable-attestation.json "$consumer/portable-attestation.json"
+          test "$(find "$consumer" -mindepth 1 -maxdepth 1 -type f | wc -l)" -eq 4
+          test "$(find "$consumer" -mindepth 1 -maxdepth 1 | wc -l)" -eq 4
+          test ! -e "$consumer/.git"
+          cd "$consumer"
+          env -i \
+            PATH=/usr/bin:/bin \
+            HOME="$consumer" \
+            PYTHONNOUSERSITE=1 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            "$PYTHON_BIN" rust_012_offline_consumer_verify.py verify \
+              axven_native-0.1.0-cp313-abi3-manylinux_2_28_x86_64.whl \
+              portable-provenance.json portable-attestation.json
+          env -i \
+            PATH=/usr/bin:/bin \
+            HOME="$consumer" \
+            PYTHONNOUSERSITE=1 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            "$PYTHON_BIN" rust_012_offline_consumer_verify.py selftest \
+              axven_native-0.1.0-cp313-abi3-manylinux_2_28_x86_64.whl \
+              portable-provenance.json portable-attestation.json
+          env -i \
+            PATH=/usr/bin:/bin \
+            HOME="$consumer" \
+            PYTHONNOUSERSITE=1 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            "$PYTHON_BIN" rust_012_offline_consumer_verify.py verify \
+              axven_native-0.1.0-cp313-abi3-manylinux_2_28_x86_64.whl \
+              portable-provenance.json portable-attestation.json
