@@ -5,11 +5,13 @@ on:
     paths:
       - "native/**"
       - "RUST_003.md"
+      - "rust_003_native_fuzz_contract_spec.py"
       - ".github/workflows/native-fuzz.yml"
   pull_request:
     paths:
       - "native/**"
       - "RUST_003.md"
+      - "rust_003_native_fuzz_contract_spec.py"
       - ".github/workflows/native-fuzz.yml"
   workflow_dispatch:
 
@@ -32,6 +34,9 @@ jobs:
         with:
           python-version: "3.13.15"
           check-latest: false
+
+      - name: RUST-003 static boundary contract
+        run: python rust_003_native_fuzz_contract_spec.py
 
       - name: Install exact fuzz toolchain
         run: |
