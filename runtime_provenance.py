@@ -27,6 +27,7 @@ MAX_RELEASE_FILES = 4096
 MAX_RELEASE_FILE_BYTES = 64 * 1024 * 1024
 MAX_RELEASE_TOTAL_BYTES = 256 * 1024 * 1024
 HASH_CHUNK_BYTES = 64 * 1024
+POSIX_UNSAFE_WRITE_BITS = stat.S_IWGRP | stat.S_IWOTH
 WINDOWS_TRUST_INPUTS = (
     "setup.cmd",
     "validate_windows.ps1",
@@ -67,6 +68,57 @@ def _is_reparse_point(metadata: object) -> bool:
     return bool(attributes & flag)
 
 
+def _has_unsafe_posix_write_permissions(metadata: object) -> bool:
+    """Return True when POSIX group/other write permission is present."""
+    return bool(getattr(metadata, "st_mode", 0) & POSIX_UNSAFE_WRITE_BITS)
+
+
+def _assert_posix_directory_write_boundary(path: Path, *, label: str) -> None:
+    """Require one POSIX trust-boundary directory to exclude other writers."""
+    if os.name != "posix":
+        return
+    try:
+        metadata = Path(path).lstat()
+    except OSError as exc:
+        raise RuntimeError(f"{label} is missing") from exc
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+        raise RuntimeError(f"{label} is not a real directory")
+    if _has_unsafe_posix_write_permissions(metadata):
+        raise RuntimeError(f"{label} is group/world-writable")
+
+
+def _assert_posix_installation_write_boundary(root: Path = ROOT) -> None:
+    """Require the installation root and .venv root to exclude other writers."""
+    if os.name != "posix":
+        return
+    root_path = Path(os.path.abspath(root))
+    _assert_posix_directory_write_boundary(root_path, label="Axven runtime root")
+    _assert_posix_directory_write_boundary(
+        root_path / ".venv", label="validated runtime directory"
+    )
+
+
+def _assert_posix_manifest_parent_write_boundary(
+    root: Path, path: Path, *, label: str
+) -> None:
+    """Reject writable/symlink directory components beneath the runtime root."""
+    if os.name != "posix":
+        return
+    root_path = Path(os.path.abspath(root))
+    path_path = Path(os.path.abspath(path))
+    try:
+        relative = path_path.relative_to(root_path)
+    except ValueError as exc:
+        raise RuntimeError(f"{label} escapes runtime root") from exc
+    current = root_path
+    _assert_posix_directory_write_boundary(current, label="Axven runtime root")
+    for part in relative.parts[:-1]:
+        current = current / part
+        _assert_posix_directory_write_boundary(
+            current, label=f"{label} parent directory"
+        )
+
+
 def _assert_local_runtime_directory(root: Path = ROOT) -> None:
     """Require .venv to be a real directory rooted directly under root."""
     runtime_dir = Path(root) / ".venv"
@@ -80,6 +132,8 @@ def _assert_local_runtime_directory(root: Path = ROOT) -> None:
         )
     if not stat.S_ISDIR(metadata.st_mode):
         raise RuntimeError("validated runtime path is not a directory")
+    if os.name == "posix" and _has_unsafe_posix_write_permissions(metadata):
+        raise RuntimeError("validated runtime directory is group/world-writable")
     try:
         resolved_root = Path(root).resolve(strict=True)
         resolved_runtime = runtime_dir.resolve(strict=True)
@@ -97,6 +151,8 @@ def _read_regular_bounded(path: Path, *, label: str, max_bytes: int, allow_empty
         raise RuntimeError(f"{label} is missing") from exc
     if stat.S_ISLNK(before.st_mode) or not stat.S_ISREG(before.st_mode):
         raise RuntimeError(f"{label} is not a regular non-symlink file")
+    if os.name == "posix" and _has_unsafe_posix_write_permissions(before):
+        raise RuntimeError(f"{label} changed to group/world-writable")
     if before.st_size < 0 or before.st_size > max_bytes or (not allow_empty and before.st_size == 0):
         raise RuntimeError(f"{label} exceeds size budget or is invalid")
 
@@ -108,6 +164,7 @@ def _read_regular_bounded(path: Path, *, label: str, max_bytes: int, allow_empty
                 not stat.S_ISREG(opened.st_mode)
                 or not _same_file(before, opened)
                 or opened.st_size != before.st_size
+                or (os.name == "posix" and _has_unsafe_posix_write_permissions(opened))
             ):
                 raise RuntimeError(f"{label} changed before reading")
             remaining = opened.st_size
@@ -134,6 +191,7 @@ def _read_regular_bounded(path: Path, *, label: str, max_bytes: int, allow_empty
         or not stat.S_ISREG(after.st_mode)
         or not _same_file(opened, after)
         or after.st_size != opened.st_size
+        or (os.name == "posix" and _has_unsafe_posix_write_permissions(after))
     ):
         raise RuntimeError(f"{label} changed after reading")
     return bytes(data)
@@ -200,6 +258,9 @@ def _verify_manifest_payloads(root: Path) -> None:
     """Verify every release-manifest payload before a validated runtime is trusted."""
     root = Path(root).resolve()
     manifest_path = root / "release_manifest.json"
+    _assert_posix_manifest_parent_write_boundary(
+        root, manifest_path, label="release manifest"
+    )
     manifest_bytes = _read_trust_input(manifest_path, "release_manifest.json")
     if len(manifest_bytes) > MAX_RELEASE_MANIFEST_BYTES:
         raise RuntimeError("release manifest exceeds runtime verification size budget")
@@ -239,12 +300,17 @@ def _verify_manifest_payloads(root: Path) -> None:
 
     for name, pure, expected_hash, expected_bytes in entries:
         path = root.joinpath(*pure.parts)
+        _assert_posix_manifest_parent_write_boundary(
+            root, path, label=f"release payload {name}"
+        )
         try:
             metadata = path.lstat()
         except OSError as exc:
             raise RuntimeError(f"missing release payload: {name}") from exc
         if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
             raise RuntimeError(f"release payload is not a regular non-symlink file: {name}")
+        if os.name == "posix" and _has_unsafe_posix_write_permissions(metadata):
+            raise RuntimeError(f"release payload changed to group/world-writable: {name}")
         if metadata.st_size != expected_bytes:
             raise RuntimeError(f"release payload size mismatch: {name}")
         try:
@@ -260,6 +326,7 @@ def _verify_manifest_payloads(root: Path) -> None:
                 not stat.S_ISREG(opened.st_mode)
                 or not _same_file(metadata, opened)
                 or opened.st_size != expected_bytes
+                or (os.name == "posix" and _has_unsafe_posix_write_permissions(opened))
             ):
                 raise RuntimeError(f"release payload changed before hashing: {name}")
             while read_bytes < expected_bytes:
@@ -282,6 +349,7 @@ def _verify_manifest_payloads(root: Path) -> None:
             or not stat.S_ISREG(after.st_mode)
             or not _same_file(opened, after)
             or after.st_size != expected_bytes
+            or (os.name == "posix" and _has_unsafe_posix_write_permissions(after))
         ):
             raise RuntimeError(f"release payload changed after hashing: {name}")
 
@@ -419,6 +487,7 @@ def _assert_expected_interpreter(root: Path = ROOT) -> None:
 def stamp(root: Path = ROOT, *, profile: str | None = None) -> None:
     if profile is None:
         profile = _runtime_profile()
+    _assert_posix_installation_write_boundary(root)
     _assert_local_runtime_directory(root)
     _assert_expected_interpreter(root)
     _verify_manifest_payloads(root)
@@ -446,6 +515,7 @@ def stamp(root: Path = ROOT, *, profile: str | None = None) -> None:
 def check(root: Path = ROOT, *, profile: str | None = None) -> None:
     if profile is None:
         profile = _runtime_profile()
+    _assert_posix_installation_write_boundary(root)
     _assert_local_runtime_directory(root)
     _assert_expected_interpreter(root)
     path = receipt_path(root)

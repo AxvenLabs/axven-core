@@ -1,6 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 cd "$(dirname "$0")"
+
+posix_mode() {
+  if stat -c '%a' / >/dev/null 2>&1; then
+    stat -L -c '%a' -- "$1"
+  else
+    stat -L -f '%Lp' "$1"
+  fi
+}
+
+assert_not_group_world_writable() {
+  local path="$1"
+  local label="$2"
+  local mode
+  if [[ ! -e "$path" && ! -L "$path" ]]; then
+    return 0
+  fi
+  mode="$(posix_mode "$path")" || {
+    echo "unable to inspect POSIX permissions for $label" >&2
+    exit 2
+  }
+  if (( (8#$mode & 8#022) != 0 )); then
+    echo "$label is group/world-writable; remove group/other write permission and retry" >&2
+    exit 2
+  fi
+}
 
 if [[ -L .venv ]]; then
   echo "Axven validated runtime directory must not be a symlink; remove .venv and rerun validation" >&2
@@ -9,6 +35,13 @@ fi
 if [[ -e .venv && ! -d .venv ]]; then
   echo "Axven validated runtime path is not a directory; remove .venv and rerun validation" >&2
   exit 2
+fi
+
+assert_not_group_world_writable "." "Axven runtime root"
+assert_not_group_world_writable "validate_linux_macos.sh" "POSIX validator"
+assert_not_group_world_writable "runtime_provenance.py" "runtime provenance verifier"
+if [[ -d .venv ]]; then
+  assert_not_group_world_writable ".venv" "validated runtime directory"
 fi
 
 required_python="3.13.15"
@@ -43,7 +76,12 @@ if [[ ! -x "$venv_python" ]]; then
   echo "existing .venv has no executable Python; remove it and rerun" >&2
   exit 2
 fi
+assert_not_group_world_writable ".venv" "validated runtime directory"
+assert_not_group_world_writable "$venv_python" "validated runtime interpreter"
+assert_not_group_world_writable "$verifier_path" "runtime provenance verifier"
 if [[ "$created_venv" -eq 0 ]]; then
+  assert_not_group_world_writable "$digest_path" "runtime interpreter attestation"
+  assert_not_group_world_writable "$verifier_digest_path" "runtime provenance verifier attestation"
   if [[ ! -f "$digest_path" || -L "$digest_path" ]]; then
     echo "existing .venv lacks interpreter attestation; remove it and rerun" >&2
     exit 2
