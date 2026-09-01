@@ -1,0 +1,25 @@
+[package]
+name = "axven-native-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "=0.4.13"
+
+[dependencies.axven-native]
+path = ".."
+features = ["fuzzing"]
+
+[[bin]]
+name = "smt_mirror"
+path = "fuzz_targets/smt_mirror.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]

@@ -16,6 +16,17 @@ struct UtxoRecord {
     height: u64,
 }
 
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FuzzUtxoRecord {
+    pub op: String,
+    pub amount: u64,
+    pub recipient: String,
+    pub coinbase: bool,
+    pub height: u64,
+}
+
 fn native_probe_impl(data: &[u8]) -> (usize, u64) {
     let mut acc = 0x9e37_79b9_7f4a_7c15_u64;
     for &byte in data {
@@ -127,6 +138,22 @@ fn smt_root_mirror_impl(records: &[UtxoRecord]) -> Result<Hash32, &'static str> 
     }
 
     Ok(nodes.get(&[0u8; 32]).copied().unwrap_or(defaults[0]))
+}
+
+#[cfg(feature = "fuzzing")]
+#[doc(hidden)]
+pub fn fuzz_smt_root_mirror(records: &[FuzzUtxoRecord]) -> Result<[u8; 32], &'static str> {
+    let internal = records
+        .iter()
+        .map(|record| UtxoRecord {
+            op: record.op.clone(),
+            amount: record.amount,
+            recipient: record.recipient.clone(),
+            coinbase: record.coinbase,
+            height: record.height,
+        })
+        .collect::<Vec<_>>();
+    smt_root_mirror_impl(&internal)
 }
 
 #[pyfunction]
