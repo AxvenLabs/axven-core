@@ -1,0 +1,233 @@
+name: Axven Native Build Material Attestation
+
+on:
+  push:
+    paths:
+      - "native/axven_native/**"
+      - "requirements-native-build.lock"
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "rust_013_reproducible_wheel_spec.py"
+      - "rust_014_reproducible_attestation.py"
+      - "rust_018_detached_rebuild_verify.py"
+      - "rust_019_offline_dependency_closure.py"
+      - "rust_020_verified_vendor.py"
+      - "rust_021_verified_dependency_rebuild_spec.py"
+      - "rust_023_rust_toolchain_closure.py"
+      - "rust_024_upstream_rust_distribution.py"
+      - "rust_025_upstream_authenticated_detached_build.sh"
+      - "rust_025_upstream_authenticated_detached_build_policy_spec.py"
+      - "RUST_026.md"
+      - "rust_026_build_material_attestation.py"
+      - "rust_026_build_material_attestation_policy_spec.py"
+      - ".github/workflows/native-build-material-attestation.yml"
+  pull_request:
+    paths:
+      - "native/axven_native/**"
+      - "requirements-native-build.lock"
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "rust_013_reproducible_wheel_spec.py"
+      - "rust_014_reproducible_attestation.py"
+      - "rust_018_detached_rebuild_verify.py"
+      - "rust_019_offline_dependency_closure.py"
+      - "rust_020_verified_vendor.py"
+      - "rust_021_verified_dependency_rebuild_spec.py"
+      - "rust_023_rust_toolchain_closure.py"
+      - "rust_024_upstream_rust_distribution.py"
+      - "rust_025_upstream_authenticated_detached_build.sh"
+      - "rust_025_upstream_authenticated_detached_build_policy_spec.py"
+      - "RUST_026.md"
+      - "rust_026_build_material_attestation.py"
+      - "rust_026_build_material_attestation_policy_spec.py"
+      - ".github/workflows/native-build-material-attestation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MANYLINUX_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7
+  RUST_URL: https://static.rust-lang.org/dist/2026-08-20/rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz
+  RUST_SHA256: ed8ee2df70909c88cbaf87a6cfa3920dac00b537de12a6abe6906641e0f5952f
+  RUST_ARCHIVE_NAME: rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz
+  RUST_ARCHIVE_ROOT: rust-1.98.0-x86_64-unknown-linux-gnu
+  TOOLCHAIN_NAME: 1.98.0-x86_64-unknown-linux-gnu
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  build-material-attestation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked Axven runtime dependencies
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: Install exact host Rust toolchain for RUST-025 dependency collection
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+          rustc --version | grep -F "rustc 1.98.0 "
+          cargo --version | grep -F "cargo 1.98.0 "
+
+      - name: RUST-026 static build-material attestation policy
+        run: python rust_026_build_material_attestation_policy_spec.py
+
+      - name: Reapply RUST-025 static integration policy
+        run: python rust_025_upstream_authenticated_detached_build_policy_spec.py
+
+      - name: Derive source-bound reproducibility epoch
+        id: epoch
+        shell: bash
+        run: |
+          set -euo pipefail
+          checkout="$(git rev-parse HEAD)"
+          test "$checkout" = "$AXVEN_SOURCE_SHA"
+          source_epoch="$(git show -s --format=%ct "$AXVEN_SOURCE_SHA")"
+          case "$source_epoch" in
+            ''|*[!0-9]*) exit 1 ;;
+          esac
+          test "$source_epoch" -ge 315532800
+          printf 'epoch=%s\n' "$source_epoch" >> "$GITHUB_OUTPUT"
+
+      - name: Reproduce complete RUST-025 upstream-authenticated detached build
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: bash rust_025_upstream_authenticated_detached_build.sh
+
+      - name: Bridge RUST-023 manifest canonical encoding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("/tmp/axven-rust025-toolchain.json")
+          raw = path.read_bytes()
+          value = json.loads(raw.decode("utf-8"))
+          if not isinstance(value, dict):
+              raise AssertionError("RUST-023 toolchain manifest must be a JSON object")
+          rust023_canonical = json.dumps(
+              value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+          ).encode("utf-8")
+          if raw != rust023_canonical:
+              raise AssertionError("RUST-023 toolchain manifest source encoding mismatch")
+          normalized = rust023_canonical + b"\n"
+          path.write_bytes(normalized)
+          if path.read_bytes() != normalized:
+              raise AssertionError("RUST-026 toolchain manifest normalization failed")
+          print("RUST-026 canonical bridge: RUST-023 manifest semantics preserved")
+          PY
+
+      - name: Generate canonical RUST-026 build materials
+        shell: bash
+        run: |
+          set -euo pipefail
+          wheel="$(find /tmp/axven-rust025-consumer/rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
+          test -n "$wheel"
+          python rust_026_build_material_attestation.py generate \
+            "$wheel" \
+            "/tmp/$RUST_ARCHIVE_NAME" \
+            /tmp/axven-rust025-toolchain.json \
+            /tmp/axven-rust025-dependencies \
+            /tmp/axven-rust025-vendor \
+            /tmp/axven-rust025-consumer/rebuild-source/native/axven_native/Cargo.lock \
+            /tmp/axven-rust025-consumer/source-inputs/requirements-native-build.lock \
+            "$AXVEN_SOURCE_SHA" \
+            /tmp/axven-rust026-materials.json
+
+      - name: Seal TEST-ONLY RUST-026 build-material attestation
+        run: |
+          python rust_026_build_material_attestation.py seal \
+            /tmp/axven-rust026-materials.json /tmp/axven-rust026-attestation.json
+
+      - name: Verify RUST-026 material attestation before detachment
+        shell: bash
+        run: |
+          set -euo pipefail
+          wheel="$(find /tmp/axven-rust025-consumer/rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
+          python rust_026_build_material_attestation.py verify \
+            "$wheel" "/tmp/$RUST_ARCHIVE_NAME" /tmp/axven-rust025-toolchain.json \
+            /tmp/axven-rust025-dependencies /tmp/axven-rust025-vendor \
+            /tmp/axven-rust025-consumer/rebuild-source/native/axven_native/Cargo.lock \
+            /tmp/axven-rust025-consumer/source-inputs/requirements-native-build.lock \
+            "$AXVEN_SOURCE_SHA" /tmp/axven-rust026-materials.json /tmp/axven-rust026-attestation.json
+
+      - name: Stage detached RUST-026 verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust026-consumer
+          rm -rf "$consumer"
+          mkdir -p "$consumer"
+          cp rust_026_build_material_attestation.py "$consumer/verifier.py"
+          cp /tmp/axven-rust026-materials.json "$consumer/materials.json"
+          cp /tmp/axven-rust026-attestation.json "$consumer/attestation.json"
+          test "$(find "$consumer" -maxdepth 1 -type f | wc -l)" -eq 3
+          test "$(find "$consumer" -type l | wc -l)" -eq 0
+
+      - name: Detached offline RUST-026 verification and mutation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust026-consumer
+          wheel="$(find /tmp/axven-rust025-consumer/rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
+          cd /tmp
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python "$consumer/verifier.py" verify \
+              "$wheel" "/tmp/$RUST_ARCHIVE_NAME" /tmp/axven-rust025-toolchain.json \
+              /tmp/axven-rust025-dependencies /tmp/axven-rust025-vendor \
+              /tmp/axven-rust025-consumer/rebuild-source/native/axven_native/Cargo.lock \
+              /tmp/axven-rust025-consumer/source-inputs/requirements-native-build.lock \
+              "$AXVEN_SOURCE_SHA" "$consumer/materials.json" "$consumer/attestation.json"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python "$consumer/verifier.py" selftest \
+              "$wheel" "/tmp/$RUST_ARCHIVE_NAME" /tmp/axven-rust025-toolchain.json \
+              /tmp/axven-rust025-dependencies /tmp/axven-rust025-vendor \
+              /tmp/axven-rust025-consumer/rebuild-source/native/axven_native/Cargo.lock \
+              /tmp/axven-rust025-consumer/source-inputs/requirements-native-build.lock \
+              "$AXVEN_SOURCE_SHA" "$consumer/materials.json" "$consumer/attestation.json"
+
+      - name: Reverify pristine RUST-026 material attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust026-consumer
+          wheel="$(find /tmp/axven-rust025-consumer/rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
+          cd /tmp
+          env -i HOME=/tmp PATH="$PATH" PYTHONUTF8=1 PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1 \
+            python "$consumer/verifier.py" verify \
+              "$wheel" "/tmp/$RUST_ARCHIVE_NAME" /tmp/axven-rust025-toolchain.json \
+              /tmp/axven-rust025-dependencies /tmp/axven-rust025-vendor \
+              /tmp/axven-rust025-consumer/rebuild-source/native/axven_native/Cargo.lock \
+              /tmp/axven-rust025-consumer/source-inputs/requirements-native-build.lock \
+              "$AXVEN_SOURCE_SHA" "$consumer/materials.json" "$consumer/attestation.json"
