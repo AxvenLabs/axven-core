@@ -2,6 +2,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+if [[ -L .venv ]]; then
+  echo "Axven validated runtime directory must not be a symlink; remove .venv and rerun validation" >&2
+  exit 2
+fi
+if [[ -e .venv && ! -d .venv ]]; then
+  echo "Axven validated runtime path is not a directory; remove .venv and rerun validation" >&2
+  exit 2
+fi
+
 venv_python=".venv/bin/python"
 digest_path=".venv/.axven-python.sha256"
 verifier_path="runtime_provenance.py"

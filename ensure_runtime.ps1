@@ -1,6 +1,23 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
+function Assert-AxvenLocalRuntimeDirectory {
+    param([switch]$AllowMissing)
+    if (-not (Test-Path -LiteralPath ".venv")) {
+        if ($AllowMissing) { return }
+        throw "Axven validated runtime directory is missing"
+    }
+    $Item = Get-Item -LiteralPath ".venv" -Force
+    if (-not $Item.PSIsContainer) {
+        throw "Axven validated runtime path is not a directory; remove .venv and rerun validation"
+    }
+    if (($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        throw "Axven validated runtime directory must not be a reparse point; remove .venv and rerun validation"
+    }
+}
+
+Assert-AxvenLocalRuntimeDirectory -AllowMissing
+
 $Python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
 $PythonDigest = Join-Path $PSScriptRoot ".venv\.axven-python.sha256"
 $Verifier = Join-Path $PSScriptRoot "runtime_provenance.py"
@@ -59,6 +76,8 @@ if (-not (Test-AxvenValidatedRuntime)) {
     Write-Host "Axven runtime is missing, stale, or unvalidated; running hardened validation..." -ForegroundColor Yellow
     & (Join-Path $PSScriptRoot "validate_windows.ps1")
 }
+
+Assert-AxvenLocalRuntimeDirectory
 
 if (-not (Test-AxvenValidatedRuntime)) {
     throw "Axven runtime provenance validation failed"
