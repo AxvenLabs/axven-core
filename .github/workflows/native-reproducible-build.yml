@@ -16,6 +16,9 @@ on:
       - "RUST_016.md"
       - "rust_016_offline_build_input_verify.py"
       - "rust_016_offline_build_input_policy_spec.py"
+      - "RUST_017.md"
+      - "rust_017_offline_git_tree_verify.py"
+      - "rust_017_offline_git_tree_policy_spec.py"
       - "rust_009_portable_linux_wheel_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
@@ -35,6 +38,9 @@ on:
       - "RUST_016.md"
       - "rust_016_offline_build_input_verify.py"
       - "rust_016_offline_build_input_policy_spec.py"
+      - "RUST_017.md"
+      - "rust_017_offline_git_tree_verify.py"
+      - "rust_017_offline_git_tree_policy_spec.py"
       - "rust_009_portable_linux_wheel_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
@@ -90,6 +96,9 @@ jobs:
 
       - name: RUST-016 static detached signed build-input policy
         run: python rust_016_offline_build_input_policy_spec.py
+
+      - name: RUST-017 static detached Git tree policy
+        run: python rust_017_offline_git_tree_policy_spec.py
 
       - name: Derive source-bound reproducibility epoch
         id: epoch
@@ -420,3 +429,89 @@ jobs:
             PYTHONIOENCODING=utf-8 \
             python rust_016_offline_build_input_verify.py verify \
               "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json source-inputs
+
+      - name: Prepare detached RUST-017 Git object bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust017-consumer
+          rm -rf "$consumer"
+          cp -a /tmp/axven-rust016-consumer "$consumer"
+          cp rust_017_offline_git_tree_verify.py "$consumer/"
+          mkdir -p "$consumer/git-objects/trees"
+          git cat-file commit "$AXVEN_SOURCE_SHA" > "$consumer/git-objects/commit.object"
+          test "$(git hash-object -t commit --stdin < "$consumer/git-objects/commit.object")" = "$AXVEN_SOURCE_SHA"
+          root_tree="$(git rev-parse "$AXVEN_SOURCE_SHA^{tree}")"
+          tree_paths=(
+            ""
+            ".github"
+            ".github/workflows"
+            "native"
+            "native/axven_native"
+            "native/axven_native/src"
+          )
+          for tree_path in "${tree_paths[@]}"; do
+            if [[ -z "$tree_path" ]]; then
+              oid="$root_tree"
+            else
+              oid="$(git rev-parse "$AXVEN_SOURCE_SHA:$tree_path")"
+            fi
+            git cat-file tree "$oid" > "$consumer/git-objects/trees/$oid.tree"
+            test "$(git hash-object -t tree --stdin < "$consumer/git-objects/trees/$oid.tree")" = "$oid"
+          done
+          test ! -e "$consumer/.git"
+          test "$(find "$consumer" -type f | wc -l)" -eq 25
+          test "$(find "$consumer" -type l | wc -l)" -eq 0
+          test "$(find "$consumer/source-inputs" -type f | wc -l)" -eq 11
+          test "$(find "$consumer/git-objects" -type f | wc -l)" -eq 7
+          test "$(find "$consumer/git-objects/trees" -type f -name '*.tree' | wc -l)" -eq 6
+
+      - name: Verify detached RUST-017 Git tree proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust017-consumer
+          cd "$consumer"
+          wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
+          wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
+          test -n "$wheel_a"
+          test -n "$wheel_b"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            python rust_017_offline_git_tree_verify.py verify \
+              "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json source-inputs git-objects
+
+      - name: RUST-017 detached Git tree mutation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust017-consumer
+          cd "$consumer"
+          wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
+          wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            python rust_017_offline_git_tree_verify.py selftest \
+              "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json source-inputs git-objects
+
+      - name: Reverify detached RUST-017 Git tree proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust017-consumer
+          cd "$consumer"
+          wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
+          wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            python rust_017_offline_git_tree_verify.py verify \
+              "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json source-inputs git-objects
