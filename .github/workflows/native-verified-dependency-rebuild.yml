@@ -134,6 +134,7 @@ jobs:
             -e PYTHONHASHSEED=0 \
             -e TZ=UTC \
             -e LC_ALL=C.UTF-8 \
+            -e REGISTRY_SOURCE_DIR="$REGISTRY_SOURCE_DIR" \
             -e RUSTFLAGS="--remap-path-prefix=/cargo/registry/src/$REGISTRY_SOURCE_DIR=/axven/vendor" \
             -e CARGO_TARGET_DIR=/work/.rust021-reference-target \
             -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
