@@ -113,6 +113,31 @@ jobs:
           SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
         run: bash rust_025_upstream_authenticated_detached_build.sh
 
+      - name: Bridge RUST-023 manifest canonical encoding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("/tmp/axven-rust025-toolchain.json")
+          raw = path.read_bytes()
+          value = json.loads(raw.decode("utf-8"))
+          if not isinstance(value, dict):
+              raise AssertionError("RUST-023 toolchain manifest must be a JSON object")
+          rust023_canonical = json.dumps(
+              value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+          ).encode("utf-8")
+          if raw != rust023_canonical:
+              raise AssertionError("RUST-023 toolchain manifest source encoding mismatch")
+          normalized = rust023_canonical + b"\n"
+          path.write_bytes(normalized)
+          if path.read_bytes() != normalized:
+              raise AssertionError("RUST-026 toolchain manifest normalization failed")
+          print("RUST-026 canonical bridge: RUST-023 manifest semantics preserved")
+          PY
+
       - name: Generate canonical RUST-026 build materials
         shell: bash
         run: |
