@@ -78,7 +78,7 @@ def main() -> None:
         "python rust_020_verified_vendor_policy_spec.py",
         "cargo fetch --locked --manifest-path native/axven_native/Cargo.toml",
         "python rust_019_offline_dependency_closure.py collect-crates",
-        "python rust_019_offline_dependency_closure.py verify-crates",
+        "closure.verify_crates",
         "python rust_020_verified_vendor.py build",
         "python rust_020_verified_vendor.py verify",
         "python rust_020_verified_vendor.py selftest",
