@@ -1,0 +1,6 @@
+# RUST-007 native wheel build frontend. Platform wheels only; no sdist fallback.
+# SHA-256 values are from the official PyPI maturin 1.15.0 release files.
+maturin==1.15.0 \
+    --hash=sha256:653020a63525bb224e5ab0adf02e17a2e08bc86dbea7fc1399c9a56d7529b99e \
+    --hash=sha256:cd35772633f489841132bc8e71d6fc7f842df30b9c05cd5cdf1ee1ddcb744cc7 \
+    --hash=sha256:552c2be4afd43fe8d5c9f3ec8d4c4756d973b8dcbe94c14084390301f50243e1
