@@ -11,6 +11,7 @@ DOC = Path("RUST_024.md")
 
 URL = "https://static.rust-lang.org/dist/2026-08-20/rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz"
 SHA256 = "ed8ee2df70909c88cbaf87a6cfa3920dac00b537de12a6abe6906641e0f5952f"
+ARCHIVE_ROOT = "rust-1.98.0-x86_64-unknown-linux-gnu"
 IMAGE = "quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7"
 RUSTC = "rustc 1.98.0 (88d9e12ae 2026-08-18)"
 CARGO = "cargo 1.98.0 (797e8a9bc 2026-08-05)"
@@ -38,6 +39,16 @@ def _imports(tree: ast.AST) -> set[str]:
     return result
 
 
+def _assignment_value(tree: ast.Module, name: str) -> object:
+    for node in tree.body:
+        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if isinstance(target, ast.Name) and target.id == name:
+            return ast.literal_eval(node.value)
+    raise AssertionError(f"missing verifier assignment: {name}")
+
+
 def main() -> None:
     verifier = VERIFIER.read_text(encoding="utf-8")
     workflow = WORKFLOW.read_text(encoding="utf-8")
@@ -47,9 +58,16 @@ def main() -> None:
     bad = sorted(_imports(tree) & FORBIDDEN_IMPORTS)
     if bad:
         raise AssertionError(f"RUST-024 verifier imports network/process modules: {bad}")
-    for token in (URL, SHA256, 'ARCHIVE_ROOT = "rust-1.98.0-x86_64-unknown-linux-gnu"'):
-        if token not in verifier:
-            raise AssertionError(f"missing pinned upstream identity: {token}")
+    expected_assignments = {
+        "UPSTREAM_URL": URL,
+        "UPSTREAM_SHA256": SHA256,
+        "ARCHIVE_ROOT": ARCHIVE_ROOT,
+        "ARCHIVE_NAME": f"{ARCHIVE_ROOT}.tar.xz",
+    }
+    for name, expected in expected_assignments.items():
+        actual = _assignment_value(tree, name)
+        if actual != expected:
+            raise AssertionError(f"verifier pin changed: {name}={actual!r} expected={expected!r}")
     for required in (
         "Rust distribution SHA-256 mismatch",
         "archive member outside pinned root",
@@ -61,7 +79,7 @@ def main() -> None:
     ):
         if required not in verifier:
             raise AssertionError(f"missing fail-closed archive contract: {required}")
-    print("[GREEN] RUST-024 verifier pins upstream URL/SHA and rejects unsafe archive structures without network/process escape")
+    print("[GREEN] RUST-024 verifier pins upstream URL/SHA semantically and rejects unsafe archive structures without network/process escape")
 
     if "permissions:\n  contents: read\n" not in workflow:
         raise AssertionError("workflow permissions must remain contents: read")
