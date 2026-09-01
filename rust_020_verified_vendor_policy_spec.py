@@ -107,6 +107,17 @@ def main() -> None:
     assert "CARGO_HOME=/cargo-home" in workflow
     assert "test ! -e \"$cargo_home/registry\"" in workflow
     for marker in (
+        'test ! -e "$cargo_home/registry/index"',
+        'test ! -e "$cargo_home/registry/cache"',
+        'test ! -e "$cargo_home/registry/src"',
+        'test ! -e "$cargo_home/git"',
+        "test ! -e /cargo-home/registry/index",
+        "test ! -e /cargo-home/registry/cache",
+        "test ! -e /cargo-home/registry/src",
+        "test ! -e /cargo-home/git",
+    ):
+        assert marker in workflow, marker
+    for marker in (
         "id-token: write",
         "attestations: write",
         "packages: write",
@@ -123,7 +134,7 @@ def main() -> None:
     assert "does **not** publish artifacts" in doc.lower()
     assert "stops at dependency resolution" in doc.lower()
     checks += 1
-    print("[GREEN] checkpoint adds no publication/signing/deployment privilege and keeps Cargo resolution offline")
+    print("[GREEN] checkpoint adds no publication/signing/deployment privilege and keeps registry/index/cache/src and Git dependency caches absent")
 
     for name in PRODUCTION:
         assert "axven_native" not in text(name), name
