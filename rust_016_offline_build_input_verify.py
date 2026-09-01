@@ -11,6 +11,10 @@ import sys
 import tempfile
 import zipfile
 
+# RUST-017 composes this verifier into another exact detached evidence tree.
+# Prevent imported helper bytecode from mutating that tree between verification stages.
+sys.dont_write_bytecode = True
+
 import rust_015_offline_repro_consumer_verify as upstream
 
 BUILD_INPUT_KEYS = frozenset(
