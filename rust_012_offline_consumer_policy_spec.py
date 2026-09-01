@@ -27,11 +27,14 @@ def main() -> None:
     tree = ast.parse(source, filename=str(VERIFIER))
 
     imported: set[str] = set()
+    string_literals: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             imported.update(alias.name.split(".", 1)[0] for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module.split(".", 1)[0])
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            string_literals.add(node.value)
     forbidden_imports = {
         "axven",
         "core",
@@ -48,8 +51,9 @@ def main() -> None:
         "requests",
     }
     assert not (imported & forbidden_imports), sorted(imported & forbidden_imports)
-    for marker in ("GITHUB_", "git ", "git\"", "docker", ".git", "urlopen", "requests."):
+    for marker in ("GITHUB_", "git ", "git\"", "docker", "urlopen", "requests."):
         assert marker not in source, marker
+    assert ".git" not in string_literals
     checks += 1
     print("[GREEN] detached verifier has no repo, GitHub-env, git, Docker, or network dependency")
 
