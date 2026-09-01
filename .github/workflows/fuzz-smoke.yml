@@ -39,4 +39,4 @@ jobs:
 
       - name: Coverage-guided parser and ML-DSA wrapper fuzz
         run: |
-          python fuzz_targets/fuzz_parser_crypto.py -runs=5000 -max_len=4096 -timeout=5
+          python fuzz_targets/fuzz_parser_crypto.py fuzz_corpus/parser_crypto -runs=5000 -max_len=4096 -timeout=5
