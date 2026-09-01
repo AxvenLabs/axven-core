@@ -5,9 +5,14 @@ from __future__ import annotations
 import hashlib
 import inspect
 import random
+import tomllib
+from pathlib import Path
 
 import axven
 import axven_native
+
+ROOT = Path(__file__).resolve().parent
+NATIVE = ROOT / "native" / "axven_native"
 
 
 def as_entries(utxo):
@@ -48,6 +53,15 @@ def make_outpoint(label):
 def main():
     checks = 0
 
+    cargo = tomllib.loads((NATIVE / "Cargo.toml").read_text(encoding="utf-8"))
+    assert cargo["dependencies"]["sha2"] == "=0.10.9"
+    lock = tomllib.loads((NATIVE / "Cargo.lock").read_text(encoding="utf-8"))
+    packages = {(pkg["name"], pkg["version"]): pkg for pkg in lock["package"]}
+    assert packages[("sha2", "0.10.9")].get("checksum")
+    assert packages[("pyo3", "0.29.2")].get("checksum")
+    checks += 1
+    print("[GREEN] RustCrypto SHA-256 and PyO3 dependency graph are exact and checksum-locked")
+
     assert axven_native.smt_root_mirror([]) == axven.SMT_EMPTY_ROOT
     checks += 1
     print("[GREEN] empty Rust SMT root equals the Python canonical empty root")
@@ -72,9 +86,9 @@ def main():
             "height": 10_000,
         },
     }
-    expected = assert_equal_root(fixed)
+    fixed_root = assert_equal_root(fixed)
     reversed_entries = list(reversed(as_entries(fixed)))
-    assert axven_native.smt_root_mirror(reversed_entries) == expected
+    assert axven_native.smt_root_mirror(reversed_entries) == fixed_root
     checks += 1
     print("[GREEN] fixed vectors and input-order changes are byte-for-byte identical")
 
@@ -108,7 +122,7 @@ def main():
 
     stable_entries = as_entries(fixed)
     roots = {axven_native.smt_root_mirror(stable_entries) for _ in range(20)}
-    assert roots == {expected if fixed == state else axven.smt_root_reference(fixed)}
+    assert roots == {fixed_root}
     checks += 1
     print("[GREEN] repeated native replay is deterministic")
 
@@ -150,8 +164,8 @@ def main():
     checks += 1
     print("[GREEN] RUST-002 leaves canonical chain and PQ activation identity unchanged")
 
-    assert checks == 8, checks
-    print("RUST-002 SMT differential mirror: 8/8 GREEN")
+    assert checks == 9, checks
+    print("RUST-002 SMT differential mirror: 9/9 GREEN")
 
 
 if __name__ == "__main__":
