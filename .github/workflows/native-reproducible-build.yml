@@ -10,6 +10,9 @@ on:
       - "RUST_014.md"
       - "rust_014_reproducible_attestation.py"
       - "rust_014_reproducible_attestation_policy_spec.py"
+      - "RUST_015.md"
+      - "rust_015_offline_repro_consumer_verify.py"
+      - "rust_015_offline_repro_consumer_policy_spec.py"
       - "rust_009_portable_linux_wheel_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
@@ -23,6 +26,9 @@ on:
       - "RUST_014.md"
       - "rust_014_reproducible_attestation.py"
       - "rust_014_reproducible_attestation_policy_spec.py"
+      - "RUST_015.md"
+      - "rust_015_offline_repro_consumer_verify.py"
+      - "rust_015_offline_repro_consumer_policy_spec.py"
       - "rust_009_portable_linux_wheel_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
@@ -72,6 +78,9 @@ jobs:
 
       - name: RUST-014 static reproducibility attestation policy
         run: python rust_014_reproducible_attestation_policy_spec.py
+
+      - name: RUST-015 static detached reproducibility consumer policy
+        run: python rust_015_offline_repro_consumer_policy_spec.py
 
       - name: Derive source-bound reproducibility epoch
         id: epoch
@@ -247,3 +256,71 @@ jobs:
         run: |
           set -euo pipefail
           python rust_014_reproducible_attestation.py verify reproducible-provenance.json reproducible-attestation.json
+
+      - name: Prepare detached RUST-015 reproducibility bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust015-consumer
+          rm -rf "$consumer"
+          mkdir -p "$consumer/build-a" "$consumer/build-b"
+          cp rust_015_offline_repro_consumer_verify.py "$consumer/"
+          cp wheelhouse-repro-a/*.whl "$consumer/build-a/"
+          cp wheelhouse-repro-b/*.whl "$consumer/build-b/"
+          cp reproducible-provenance.json "$consumer/"
+          cp reproducible-attestation.json "$consumer/"
+          test ! -e "$consumer/.git"
+          test "$(find "$consumer" -type f | wc -l)" -eq 5
+          test "$(find "$consumer" -type l | wc -l)" -eq 0
+          test "$(find "$consumer/build-a" -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 1
+          test "$(find "$consumer/build-b" -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 1
+
+      - name: Verify detached RUST-015 reproducibility bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust015-consumer
+          cd "$consumer"
+          wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
+          wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
+          test -n "$wheel_a"
+          test -n "$wheel_b"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            python rust_015_offline_repro_consumer_verify.py verify \
+              "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json
+
+      - name: RUST-015 detached fail-closed mutation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust015-consumer
+          cd "$consumer"
+          wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
+          wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            python rust_015_offline_repro_consumer_verify.py selftest \
+              "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json
+
+      - name: Reverify detached RUST-015 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust015-consumer
+          cd "$consumer"
+          wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
+          wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            python rust_015_offline_repro_consumer_verify.py verify \
+              "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json
