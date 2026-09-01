@@ -27,8 +27,8 @@ jobs:
 
       - name: Resolve exact RUST-002 lock additions
         run: |
-          cargo check --manifest-path native/axven_native/Cargo.toml
-          cargo check --locked --manifest-path native/axven_native/Cargo.toml
+          cargo update --manifest-path native/axven_native/Cargo.toml
+          cargo metadata --locked --manifest-path native/axven_native/Cargo.toml --format-version 1 --no-deps >/dev/null
           git diff --check -- native/axven_native/Cargo.lock
           git diff -- native/axven_native/Cargo.lock
 
