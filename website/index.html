@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#07111f" />
+  <meta name="description" content="Axven is an open-source Proof-of-Work blockchain research project focused on post-quantum security, UTXO state commitments, and resilient peer-to-peer infrastructure." />
+  <meta property="og:title" content="Axven — Post-Quantum Blockchain Infrastructure" />
+  <meta property="og:description" content="Open-source Proof-of-Work blockchain research focused on post-quantum security, verifiable UTXO state, and resilient P2P infrastructure." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://axven.org/" />
+  <meta name="twitter:card" content="summary" />
+  <title>Axven — Post-Quantum Blockchain Infrastructure</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="canonical" href="https://axven.org/" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="noise"></div>
+
+  <header class="nav-wrap">
+    <nav class="nav container">
+      <a class="brand" href="#top" aria-label="Axven home">
+        <img src="/logo.svg" alt="Axven" class="brand-logo" />
+      </a>
+
+      <button class="menu-btn" aria-label="Open menu" aria-expanded="false">☰</button>
+
+      <div class="nav-links">
+        <a href="#technology">Technology</a>
+        <a href="#status">Devnet</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#security">Security</a>
+        <a href="#contact">Contact</a>
+        <a class="btn btn-small btn-ghost" href="https://github.com/AxvenLabs/axven-core" target="_blank" rel="noreferrer">GitHub ↗</a>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero section">
+      <div class="orb orb-a"></div>
+      <div class="orb orb-b"></div>
+
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="pulse"></span> CANONICAL DEVNET · v0.9.0</div>
+          <h1>Blockchain infrastructure built for a <span>post-quantum future.</span></h1>
+          <p class="hero-lead">
+            Axven is an open-source Proof-of-Work blockchain research project combining UTXO state commitments,
+            hybrid cryptographic authorization, deterministic chain state, and resilient peer-to-peer networking.
+          </p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/AxvenLabs/axven-core" target="_blank" rel="noreferrer">Explore the code</a>
+            <a class="btn btn-ghost" href="#technology">See the architecture</a>
+          </div>
+
+          <div class="hero-meta">
+            <div><strong>PoW</strong><span>Cumulative chainwork</span></div>
+            <div><strong>UTXO</strong><span>State commitments</span></div>
+            <div><strong>ML-DSA-44</strong><span>Post-quantum signatures</span></div>
+          </div>
+        </div>
+
+        <div class="terminal-card">
+          <div class="terminal-top">
+            <span></span><span></span><span></span>
+            <small>axven-devnet-2</small>
+          </div>
+          <div class="terminal-body">
+            <p><span class="muted">$</span> axven status</p>
+            <p><span class="green">✓</span> network <b>axven-devnet-2</b></p>
+            <p><span class="green">✓</span> consensus <b>proof-of-work</b></p>
+            <p><span class="green">✓</span> pq signatures <b>ML-DSA-44</b></p>
+            <p><span class="green">✓</span> state commitment <b>sparse merkle tree</b></p>
+            <p><span class="green">✓</span> validation <b>green</b></p>
+            <div class="divider"></div>
+            <p class="hash-label">GENESIS</p>
+            <code>a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3</code>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics">
+      <div class="container metric-grid">
+        <div class="metric"><span>Network</span><strong>axven-devnet-2</strong></div>
+        <div class="metric"><span>Block target</span><strong>2 sec</strong></div>
+        <div class="metric"><span>Max block</span><strong>~7 MiB</strong></div>
+        <div class="metric"><span>Phase</span><strong>Devnet</strong></div>
+      </div>
+    </section>
+
+    <section id="technology" class="section">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">CORE TECHNOLOGY</div>
+          <h2>Designed around verifiable state and cryptographic agility.</h2>
+          <p>Axven’s architecture is built to evolve without sacrificing deterministic chain behavior.</p>
+        </div>
+
+        <div class="card-grid">
+          <article class="feature-card"><div class="icon">⛏</div><h3>Proof of Work</h3><p>Cumulative-chainwork fork selection with deterministic replay and reorganization behavior.</p></article>
+          <article class="feature-card"><div class="icon">◫</div><h3>UTXO + Sparse Merkle Tree</h3><p>UTXO state commitments backed by Sparse Merkle Tree infrastructure and deterministic roots.</p></article>
+          <article class="feature-card"><div class="icon">⌁</div><h3>Post-Quantum Cryptography</h3><p>Ed25519 (N), ML-DSA-44 (M), and hybrid Ed25519 + ML-DSA authorization (H).</p></article>
+          <article class="feature-card"><div class="icon">⇄</div><h3>Witness-Separated Transactions</h3><p>Transaction identity remains separated from witness material, supporting stable transaction semantics.</p></article>
+          <article class="feature-card"><div class="icon">◉</div><h3>Peer-to-Peer Networking</h3><p>TCP-based node communication with synchronization, propagation, reconnect behavior, and bounded resources.</p></article>
+          <article class="feature-card"><div class="icon">▣</div><h3>Wallet + RPC + CLI</h3><p>Persistent encrypted wallet storage, local JSON-RPC, CLI workflows, and operator-focused tooling.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="status" class="section section-alt">
+      <div class="container split">
+        <div>
+          <div class="eyebrow">CANONICAL DEVNET</div>
+          <h2>One pinned network identity.</h2>
+          <p class="lead">Axven v0.9.0 runs as a development network with a pinned chain identity, genesis hash, and configuration fingerprint.</p>
+          <div class="notice"><strong>Devnet only.</strong> This release is for development and testing. It is not a production mainnet and should not be treated as one.</div>
+        </div>
+
+        <div class="identity-card">
+          <div class="identity-row"><span>Network</span><code>axven-devnet-2</code></div>
+          <div class="identity-row"><span>Genesis hash</span><code>a49413203b4a00f3c5b3a5901e8cd198b09f41f58295f22c927883f7fe4e1ab3</code></div>
+          <div class="identity-row"><span>Config fingerprint</span><code>ac56ced3ca38dd449dabc3fc0091a3cc4dce6e05c692dcf836f1e493e7efabae</code></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap" class="section">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">ROADMAP</div>
+          <h2>From reference core to production-grade network.</h2>
+          <p>The current focus is correctness, hardening, and measurable performance — before premature optimization.</p>
+        </div>
+
+        <div class="timeline">
+          <div class="timeline-item done"><div class="dot"></div><div><small>FOUNDATION</small><h3>Consensus, UTXO state and devnet identity</h3><p>Deterministic genesis, chainwork fork choice, state commitments, replay and reorg invariants.</p></div></div>
+          <div class="timeline-item active"><div class="dot"></div><div><small>CURRENT</small><h3>Security hardening and reference-core stabilization</h3><p>Bounded P2P/RPC surfaces, wallet safety, node lifecycle reliability, validation coverage and release discipline.</p></div></div>
+          <div class="timeline-item"><div class="dot"></div><div><small>NEXT</small><h3>Performance profiling + native acceleration</h3><p>Measure real bottlenecks, then move selected hot paths into an <code>axven_native</code> Rust layer while keeping Python as the reference implementation.</p></div></div>
+          <div class="timeline-item"><div class="dot"></div><div><small>LATER</small><h3>Multi-node testnet and production readiness</h3><p>Long-running multi-node tests, packaging, bootstrap infrastructure, operator docs, public testnet observation, and only then a mainnet decision.</p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="security" class="section section-alt">
+      <div class="container split">
+        <div class="security-copy">
+          <div class="eyebrow">SECURITY MODEL</div>
+          <h2>Correctness first. Limits everywhere.</h2>
+          <p class="lead">Axven’s security work treats malformed inputs, resource exhaustion, state races, and restart/reorg behavior as first-class protocol engineering problems.</p>
+          <ul class="check-list">
+            <li>Bounded RPC request size and concurrency</li>
+            <li>Bounded P2P peers, messages, sync batches and orphan pools</li>
+            <li>Atomic chain-state reads across reorgs</li>
+            <li>Deterministic validation and release manifests</li>
+            <li>Regression contracts for security invariants</li>
+          </ul>
+        </div>
+
+        <div class="security-panel">
+          <div class="security-score"><span>Reference core</span><strong>HARDENING</strong></div>
+          <p>Axven does not claim to be production-ready or externally audited. Security work is ongoing and public testing will precede any mainnet decision.</p>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="contact" class="section contact-section">
+      <div class="container split contact-grid">
+        <div>
+          <div class="eyebrow">CONTACT</div>
+          <h2>Get in touch with Axven.</h2>
+          <p class="lead">
+            For development, collaboration, sponsorship, research, or general project enquiries,
+            contact the Axven team directly.
+          </p>
+        </div>
+
+        <div class="contact-card">
+          <div class="contact-item">
+            <span>General enquiries</span>
+            <a href="mailto:contact@axven.org">contact@axven.org</a>
+          </div>
+          <div class="contact-item">
+            <span>Security reports</span>
+            <a href="mailto:security@axven.org">security@axven.org</a>
+          </div>
+          <p class="contact-note">
+            For sensitive vulnerability reports, please avoid posting details in public GitHub issues.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section support-section">
+      <div class="container support-card">
+        <div>
+          <div class="eyebrow">OPEN SOURCE</div>
+          <h2>Build Axven in the open.</h2>
+          <p>Follow development, inspect the code, open issues, and watch the network evolve.</p>
+        </div>
+        <div class="support-actions">
+          <a class="btn btn-primary" href="https://github.com/AxvenLabs/axven-core" target="_blank" rel="noreferrer">View GitHub</a>
+          <button class="btn btn-ghost" disabled>Support coming soon</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer-grid">
+      <div>
+        <a class="brand footer-brand" href="#top"><img src="/logo.svg" alt="Axven" class="brand-logo footer-logo" /></a>
+        <p>Open-source blockchain research and infrastructure.</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/AxvenLabs/axven-core" target="_blank" rel="noreferrer">GitHub</a>
+        <a href="#technology">Technology</a>
+        <a href="#roadmap">Roadmap</a>
+        <a href="#security">Security</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span id="year"></span> AxvenLabs</span>
+      <span>Devnet software · Not financial advice · Not a production mainnet</span>
+    </div>
+  </footer>
+
+  <script src="/script.js"></script>
+</body>
+</html>

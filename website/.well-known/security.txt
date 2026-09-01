@@ -1,0 +1,6 @@
+Contact: mailto:security@axven.org
+Contact: https://github.com/AxvenLabs/axven-core/security/advisories/new
+Expires: 2027-08-25T00:00:00Z
+Canonical: https://axven.org/.well-known/security.txt
+Policy: https://github.com/AxvenLabs/axven-core/security
+Preferred-Languages: en
