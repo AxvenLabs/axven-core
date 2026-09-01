@@ -168,7 +168,13 @@ fn axven_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
 mod tests {
     use super::*;
 
-    fn record(op: String, amount: u64, recipient: String, coinbase: bool, height: u64) -> UtxoRecord {
+    fn record(
+        op: String,
+        amount: u64,
+        recipient: String,
+        coinbase: bool,
+        height: u64,
+    ) -> UtxoRecord {
         UtxoRecord {
             op,
             amount,
