@@ -1,0 +1,79 @@
+name: SEC-230 implementation
+
+on:
+  push:
+    branches:
+      - security-sec230-daemon-service-port-isolation
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    if: ${{ !contains(github.event.head_commit.message, '[sec230-impl]') }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+      - name: Apply SEC-230 production fix and refresh manifest
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          import hashlib, json, re
+
+          targets = (
+              "daemon_lifecycle_test.py",
+              "checkpoint42_peer_reconnect_spec.py",
+              "checkpoint46_peer_retry_scheduler_spec.py",
+              "checkpoint47_peer_retry_daemon_spec.py",
+              "checkpoint48_peer_retry_recovery_spec.py",
+              "checkpoint51_peer_health_transitions_daemon_spec.py",
+              "checkpoint52_peer_health_history_daemon_spec.py",
+              "checkpoint53_peer_health_incidents_daemon_spec.py",
+              "checkpoint54_peer_health_incident_history_daemon_spec.py",
+          )
+
+          pattern = re.compile(r'("--p2p-port"\s*,\s*str\([^)]+\))')
+          for name in targets:
+              path = Path(name)
+              source = path.read_text(encoding="utf-8")
+              if '"--explorer-port"' in source or "'--explorer-port'" in source:
+                  raise SystemExit(f"unexpected pre-existing explorer port in {name}")
+              patched, count = pattern.subn(r'\1,"--explorer-port","0"', source)
+              if count < 1:
+                  raise SystemExit(f"unable to patch daemon invocation in {name}")
+              path.write_text(patched, encoding="utf-8", newline="\n")
+
+          manifest_path = Path("release_manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          files = manifest["files"]
+          for name in (*targets, "security_sec230_daemon_service_port_isolation_spec.py"):
+              data = Path(name).read_bytes()
+              files[name] = {
+                  "bytes": len(data),
+                  "sha256": hashlib.sha256(data).hexdigest(),
+              }
+          manifest["files"] = dict(sorted(files.items()))
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2) + "\n",
+              encoding="utf-8",
+              newline="\n",
+          )
+          '@ | Set-Content -Encoding utf8 sec230_apply.py
+          python sec230_apply.py
+          Remove-Item sec230_apply.py
+      - name: Commit implementation
+        shell: pwsh
+        run: |
+          git config user.name "AxvenLabs"
+          git config user.email "dogacan432@gmail.com"
+          git add daemon_lifecycle_test.py checkpoint42_peer_reconnect_spec.py checkpoint46_peer_retry_scheduler_spec.py checkpoint47_peer_retry_daemon_spec.py checkpoint48_peer_retry_recovery_spec.py checkpoint51_peer_health_transitions_daemon_spec.py checkpoint52_peer_health_history_daemon_spec.py checkpoint53_peer_health_incidents_daemon_spec.py checkpoint54_peer_health_incident_history_daemon_spec.py security_sec230_daemon_service_port_isolation_spec.py release_manifest.json
+          git diff --cached --check
+          git commit -m "SEC-230: isolate daemon rehearsal service ports [sec230-impl]"
+          git push
