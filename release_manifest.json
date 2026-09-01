@@ -285,12 +285,12 @@
       "sha256": "950bf9aa08618b893a40716978fd361e7c4ee32150f95271d285553d2193c1a7"
     },
     "ensure_runtime.ps1": {
-      "bytes": 1639,
-      "sha256": "a684b05df38d9d0bef4001d01d8d60d759371c18e4ce5243f5fb67edd62a345c"
+      "bytes": 2507,
+      "sha256": "d865ffff88ccae3436cd91d2935a83bb2b28167793572c9c8ce51c6c37c64fc6"
     },
     "ensure_runtime.sh": {
-      "bytes": 1174,
-      "sha256": "7715cced3a248bf24d64711d13c5d68cdcee7b445a6518083867bc2bb635a44e"
+      "bytes": 2293,
+      "sha256": "c0ec356cc34e10c6e411924a99f4ad69d2e5af35092fd24695cbbe303cff3c97"
     },
     "explorer.py": {
       "bytes": 9267,
@@ -381,8 +381,8 @@
       "sha256": "35f82cd5d9dfbb136eed077c0d8051c8fab758c65922328ee816fe748013c2b8"
     },
     "runtime_provenance.py": {
-      "bytes": 16434,
-      "sha256": "4eda953975aab24a5c4c43d222db830fda37526d8e8f02416317dc00d65941a0"
+      "bytes": 17861,
+      "sha256": "c75f1fb8c0a865d381cef38f9d16fc2c2c7c87d3338b2c1e141f999a3e8b9442"
     },
     "security_sec014_atomic_read_spec.py": {
       "bytes": 5624,
@@ -1237,8 +1237,8 @@
       "sha256": "7f9c1091e61f1cc3188a8afd0d89d9c9f96999126d7e2ca8ae65bd4aa86d54c3"
     },
     "security_sec227_preexecution_provenance_verifier_attestation_spec.py": {
-      "bytes": 4216,
-      "sha256": "e82fd8392594ca91b254211beaa2473b59a3ae2682380f7e6e44ee38d16b8a9d"
+      "bytes": 4354,
+      "sha256": "5fc511a102c123f5f8f0ef4f375f6cb120c620552c2aacf3c1ff61d5a7a9842c"
     },
     "setup.cmd": {
       "bytes": 326,
@@ -1293,12 +1293,12 @@
       "sha256": "ae6c641c215cb8eacc94595a0fdb7d34b73ea836e0ce9842781520d68dcffd28"
     },
     "validate_linux_macos.sh": {
-      "bytes": 2625,
-      "sha256": "3099835cae8602b1bf7fe4582286447afbcb1aeb356c7780a43c7b91ce5f0b8a"
+      "bytes": 3730,
+      "sha256": "0fba33b03e4cdc63bbb719d30df9ec0d051bc4896744355e03834483d1c5ad47"
     },
     "validate_windows.ps1": {
-      "bytes": 3091,
-      "sha256": "c3bed30e9c5a0faee126ee9a03ff73d9e7eb9e69230ac2ac6b4c658a81db152e"
+      "bytes": 3951,
+      "sha256": "016c2d608a7d57396f685b5889b15ad0d0c86c9dee6882bc90a270071cc00ecf"
     },
     "verify_release.py": {
       "bytes": 15838,

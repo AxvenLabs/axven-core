@@ -3,6 +3,8 @@ Set-Location $PSScriptRoot
 
 $Python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
 $PythonDigest = Join-Path $PSScriptRoot ".venv\.axven-python.sha256"
+$Verifier = Join-Path $PSScriptRoot "runtime_provenance.py"
+$VerifierDigest = Join-Path $PSScriptRoot ".venv\.axven-runtime-provenance.sha256"
 
 function Test-AxvenInterpreterDigest {
     if (-not (Test-Path $Python -PathType Leaf)) { return $false }
@@ -13,11 +15,23 @@ function Test-AxvenInterpreterDigest {
     return $Actual -eq $Expected
 }
 
+function Test-AxvenVerifierDigest {
+    if (-not (Test-Path $Verifier -PathType Leaf)) { return $false }
+    if (-not (Test-Path $VerifierDigest -PathType Leaf)) { return $false }
+    $Expected = (Get-Content -LiteralPath $VerifierDigest -Raw).Trim()
+    if ($Expected -notmatch "^[0-9a-f]{64}$") { return $false }
+    $Actual = (Get-FileHash -LiteralPath $Verifier -Algorithm SHA256).Hash.ToLowerInvariant()
+    return $Actual -eq $Expected
+}
+
 function Test-AxvenValidatedRuntime {
     if (-not (Test-Path $Python -PathType Leaf)) {
         return $false
     }
     if (-not (Test-AxvenInterpreterDigest)) {
+        return $false
+    }
+    if (-not (Test-AxvenVerifierDigest)) {
         return $false
     }
 
@@ -36,6 +50,9 @@ function Test-AxvenValidatedRuntime {
 
 if ((Test-Path $Python -PathType Leaf) -and -not (Test-AxvenInterpreterDigest)) {
     throw "Axven runtime interpreter attestation is missing or mismatched; remove .venv and rerun validate_windows.ps1"
+}
+if ((Test-Path $Python -PathType Leaf) -and -not (Test-AxvenVerifierDigest)) {
+    throw "Axven runtime provenance verifier attestation is missing or mismatched; remove .venv and rerun validate_windows.ps1"
 }
 
 if (-not (Test-AxvenValidatedRuntime)) {

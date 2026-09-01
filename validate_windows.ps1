@@ -19,6 +19,8 @@ if (-not (Test-Path ".venv")) {
 
 $Python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
 $PythonDigest = Join-Path $PSScriptRoot ".venv\.axven-python.sha256"
+$Verifier = Join-Path $PSScriptRoot "runtime_provenance.py"
+$VerifierDigest = Join-Path $PSScriptRoot ".venv\.axven-runtime-provenance.sha256"
 if (-not $CreatedVenv) {
     if (-not (Test-Path $Python -PathType Leaf) -or -not (Test-Path $PythonDigest -PathType Leaf)) {
         throw "existing .venv lacks interpreter attestation; remove it and rerun"
@@ -30,6 +32,17 @@ if (-not $CreatedVenv) {
     $ActualDigest = (Get-FileHash -LiteralPath $Python -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($ActualDigest -ne $ExpectedDigest) {
         throw "existing .venv interpreter attestation mismatch; remove it and rerun"
+    }
+    if (-not (Test-Path $Verifier -PathType Leaf) -or -not (Test-Path $VerifierDigest -PathType Leaf)) {
+        throw "existing .venv lacks provenance verifier attestation; remove it and rerun"
+    }
+    $ExpectedVerifierDigest = (Get-Content -LiteralPath $VerifierDigest -Raw).Trim()
+    if ($ExpectedVerifierDigest -notmatch "^[0-9a-f]{64}$") {
+        throw "existing .venv provenance verifier attestation is invalid; remove it and rerun"
+    }
+    $ActualVerifierDigest = (Get-FileHash -LiteralPath $Verifier -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($ActualVerifierDigest -ne $ExpectedVerifierDigest) {
+        throw "existing .venv provenance verifier attestation mismatch; remove it and rerun"
     }
 }
 & $Python -c "import platform,sys; raise SystemExit(0 if platform.python_version() == '$RequiredPython' else 2)"

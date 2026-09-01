@@ -31,8 +31,9 @@ def main() -> None:
     ps = ensure_ps.lower()
     assert ".axven-runtime-provenance.sha256" in ps
     assert "get-filehash" in ps
-    verifier_hash = ps.index("runtime_provenance.py", ps.index("get-filehash"))
     verifier_exec = ps.index("& $python runtime_provenance.py check")
+    assert ps.count("get-filehash") >= 2
+    verifier_hash = ps.rindex("get-filehash", 0, verifier_exec)
     assert verifier_hash < verifier_exec
     checks += 1
     print("[GREEN] Windows hashes runtime_provenance.py before first verifier execution")
@@ -54,7 +55,9 @@ def main() -> None:
 
     validate_ps = (ROOT / "validate_windows.ps1").read_text(encoding="utf-8").lower()
     assert ".axven-runtime-provenance.sha256" in validate_ps
-    assert validate_ps.index("get-filehash") < validate_ps.index('& $python -c')
+    python_exec = validate_ps.index('& $python -c')
+    assert validate_ps.count("get-filehash", 0, python_exec) >= 2
+    assert validate_ps.rindex("get-filehash", 0, python_exec) < python_exec
     checks += 1
     print("[GREEN] Windows existing-runtime validation rejects verifier drift before venv Python")
 

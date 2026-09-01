@@ -16,8 +16,10 @@ REQUIRED_PYTHON = "3.13.15"
 RECEIPT_SCHEMA = 3
 RECEIPT_NAME = ".axven-runtime-provenance.json"
 PYTHON_DIGEST_NAME = ".axven-python.sha256"
+PROVENANCE_VERIFIER_DIGEST_NAME = ".axven-runtime-provenance.sha256"
 MAX_RECEIPT_BYTES = 32 * 1024
 MAX_PYTHON_DIGEST_BYTES = 128
+MAX_PROVENANCE_VERIFIER_DIGEST_BYTES = 128
 MAX_INTERPRETER_BYTES = 64 * 1024 * 1024
 MAX_TRUST_INPUT_BYTES = 2 * 1024 * 1024
 MAX_RELEASE_MANIFEST_BYTES = 1024 * 1024
@@ -317,6 +319,10 @@ def python_digest_path(root: Path = ROOT) -> Path:
     return root / ".venv" / PYTHON_DIGEST_NAME
 
 
+def provenance_verifier_digest_path(root: Path = ROOT) -> Path:
+    return root / ".venv" / PROVENANCE_VERIFIER_DIGEST_NAME
+
+
 def _read_python_digest(path: Path) -> str:
     try:
         raw = _read_regular_bounded(
@@ -330,6 +336,22 @@ def _read_python_digest(path: Path) -> str:
         raise RuntimeError("Python interpreter digest is invalid") from exc
     if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
         raise RuntimeError("Python interpreter digest is invalid")
+    return value
+
+
+def _read_provenance_verifier_digest(path: Path) -> str:
+    try:
+        raw = _read_regular_bounded(
+            path,
+            label="Python provenance verifier digest",
+            max_bytes=MAX_PROVENANCE_VERIFIER_DIGEST_BYTES,
+            allow_empty=False,
+        )
+        value = raw.decode("ascii").strip()
+    except UnicodeError as exc:
+        raise RuntimeError("Python provenance verifier digest is invalid") from exc
+    if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
+        raise RuntimeError("Python provenance verifier digest is invalid")
     return value
 
 
@@ -383,6 +405,11 @@ def stamp(root: Path = ROOT, *, profile: str | None = None) -> None:
     _atomic_write_private(path, payload)
     digest = receipt["python_executable"]["sha256"]
     _atomic_write_private(python_digest_path(root), (digest + "\n").encode("ascii"))
+    verifier_digest = receipt["inputs"]["runtime_provenance.py"]["sha256"]
+    _atomic_write_private(
+        provenance_verifier_digest_path(root),
+        (verifier_digest + "\n").encode("ascii"),
+    )
     print("Axven runtime provenance receipt: STAMPED")
 
 
@@ -408,6 +435,12 @@ def check(root: Path = ROOT, *, profile: str | None = None) -> None:
     published_digest = _read_python_digest(python_digest_path(root))
     if not hmac.compare_digest(published_digest, expected["python_executable"]["sha256"]):
         raise RuntimeError("Python interpreter digest is stale or mismatched")
+    published_verifier_digest = _read_provenance_verifier_digest(
+        provenance_verifier_digest_path(root)
+    )
+    expected_verifier_digest = expected["inputs"]["runtime_provenance.py"]["sha256"]
+    if not hmac.compare_digest(published_verifier_digest, expected_verifier_digest):
+        raise RuntimeError("Python provenance verifier digest is stale or mismatched")
     if actual != expected:
         raise RuntimeError("runtime provenance receipt is stale or mismatched")
     print("Axven runtime provenance receipt: GREEN")

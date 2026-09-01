@@ -28,6 +28,8 @@ fi
 
 venv_python=".venv/bin/python"
 digest_path=".venv/.axven-python.sha256"
+verifier_path="runtime_provenance.py"
+verifier_digest_path=".venv/.axven-runtime-provenance.sha256"
 if [[ ! -x "$venv_python" ]]; then
   echo "existing .venv has no executable Python; remove it and rerun" >&2
   exit 2
@@ -52,6 +54,27 @@ if [[ "$created_venv" -eq 0 ]]; then
   fi
   if [[ "$actual_digest" != "$expected_digest" ]]; then
     echo "existing .venv interpreter attestation mismatch; remove it and rerun" >&2
+    exit 2
+  fi
+  if [[ ! -f "$verifier_path" || -L "$verifier_path" || ! -f "$verifier_digest_path" || -L "$verifier_digest_path" ]]; then
+    echo "existing .venv lacks provenance verifier attestation; remove it and rerun" >&2
+    exit 2
+  fi
+  IFS= read -r expected_verifier_digest < "$verifier_digest_path" || true
+  if [[ ! "$expected_verifier_digest" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "existing .venv provenance verifier attestation is invalid; remove it and rerun" >&2
+    exit 2
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual_verifier_digest="$(sha256sum -- "$verifier_path" | awk '{print $1}')"
+  elif command -v shasum >/dev/null 2>&1; then
+    actual_verifier_digest="$(shasum -a 256 -- "$verifier_path" | awk '{print $1}')"
+  else
+    echo "Axven validation requires sha256sum or shasum" >&2
+    exit 2
+  fi
+  if [[ "$actual_verifier_digest" != "$expected_verifier_digest" ]]; then
+    echo "existing .venv provenance verifier attestation mismatch; remove it and rerun" >&2
     exit 2
   fi
 fi
