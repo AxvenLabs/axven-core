@@ -79,6 +79,8 @@ def main() -> None:
         'git cat-file tree "$oid"',
         "git hash-object -t commit --stdin",
         "git hash-object -t tree --stdin",
+        'find "$consumer" -type d -name \'__pycache__\' -prune -exec rm -rf {} +',
+        'test "$(find "$consumer" -type f \\( -name \'*.pyc\' -o -name \'*.pyo\' \\) | wc -l)" -eq 0',
         'test ! -e "$consumer/.git"',
         'test "$(find "$consumer" -type f | wc -l)" -eq 25',
         'test "$(find "$consumer/git-objects" -type f | wc -l)" -eq 7',
@@ -92,7 +94,7 @@ def main() -> None:
         "Prepare detached RUST-017 Git object bundle"
     )
     checks += 1
-    print("[GREEN] workflow exports the minimum raw Git object closure and verifies it only after RUST-016")
+    print("[GREEN] workflow exports a cache-free minimum raw Git object closure and verifies it only after RUST-016")
 
     lower = workflow.lower()
     assert "permissions:\n  contents: read" in workflow
