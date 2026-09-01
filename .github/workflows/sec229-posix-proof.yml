@@ -22,20 +22,16 @@ jobs:
         with:
           python-version: "3.13.15"
           check-latest: false
-      - name: Full POSIX validation with permission diagnostics
+      - name: Contain hosted toolcache interpreter permissions
         shell: bash
         run: |
-          set +e
-          bash validate_linux_macos.sh
-          rc=$?
-          if [[ -e .venv/bin/python || -L .venv/bin/python ]]; then
-            echo "--- SEC-229 interpreter permission diagnostics ---"
-            stat -c 'lexical mode=%a type=%F path=%n' .venv/bin/python || true
-            stat -L -c 'target mode=%a type=%F path=%n' .venv/bin/python || true
-            resolved="$(readlink -f .venv/bin/python || true)"
-            echo "resolved=$resolved"
-            if [[ -n "$resolved" ]]; then
-              stat -c 'resolved mode=%a type=%F path=%n' "$resolved" || true
-            fi
+          interpreter="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.executable).resolve())')"
+          chmod go-w "$interpreter"
+          mode="$(stat -c '%a' "$interpreter")"
+          if (( (8#$mode & 8#022) != 0 )); then
+            echo "hosted interpreter remains group/world-writable" >&2
+            exit 2
           fi
-          exit "$rc"
+      - name: Full POSIX validation
+        shell: bash
+        run: bash validate_linux_macos.sh
