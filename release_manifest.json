@@ -185,8 +185,8 @@
       "sha256": "cac56f972f45a0df509acb5f68dd3e9cdf2a0cc5b0c597a5bda60f37d8195cbc"
     },
     "checkpoint42_peer_reconnect_spec.py": {
-      "bytes": 6530,
-      "sha256": "a64682e8e6653860afd472b37b1ae4285ba07750a6249cb0a277fb2a85d5b405"
+      "bytes": 6552,
+      "sha256": "c97a89dc5b9f58f1cc2555124bc0457889837ed539a1c85815b5a7bb537d8b4b"
     },
     "checkpoint43_peer_health_spec.py": {
       "bytes": 1988,
@@ -205,20 +205,20 @@
       "sha256": "c7dd0c17673c2988c9e96242c6423a17839cf0ddabac585ad21e60eee2ea33f6"
     },
     "checkpoint46_peer_retry_scheduler_spec.py": {
-      "bytes": 4289,
-      "sha256": "de3c47faf4981eb80937f714cba273341e85c1c7ba53202d6b30e43eb5691105"
+      "bytes": 4311,
+      "sha256": "765764c842c90ba8bf6aa3e2ebaabe96864a2a00cbf535b09076396f65e5022b"
     },
     "checkpoint47_peer_retry_daemon_spec.py": {
-      "bytes": 4964,
-      "sha256": "4f0519d0d2fe067e39faa9bd7d364a9f4e7e36b129ba0dd26405a341736a349c"
+      "bytes": 4986,
+      "sha256": "d2d4c0801a75e22696b978b79c289d5f960ff9f01bf3ae8e09b2af2574ffe4e2"
     },
     "checkpoint47_peer_retry_observability_spec.py": {
       "bytes": 2896,
       "sha256": "26592a94a95a5ab15799fc2b8fda25d780d5798bd88fa5e3dc4e64fe12929d7b"
     },
     "checkpoint48_peer_retry_recovery_spec.py": {
-      "bytes": 5877,
-      "sha256": "2171bae23683587712b1a2446042d83357d4843010581176293281272fba8f0e"
+      "bytes": 5899,
+      "sha256": "a1093f47e2892fb7bf485b24fbbfd444d848e757d14511fb7bc505790693edf0"
     },
     "checkpoint49_peer_recovery_summary_spec.py": {
       "bytes": 2755,
@@ -229,32 +229,32 @@
       "sha256": "2a78ac3d6e47cce76e9a60cc0709a24dc553c42c98addde0abe7e40c661469ff"
     },
     "checkpoint51_peer_health_transitions_daemon_spec.py": {
-      "bytes": 6176,
-      "sha256": "4dcf3454f462836ffe349c9c2eb71927b948c47ff2b1c99da3840e8ceca46a5a"
+      "bytes": 6198,
+      "sha256": "f651633ab3508d6755286792004c8d46263ee23bc9a8a8c782b84e02c5cc2ecf"
     },
     "checkpoint51_peer_health_transitions_spec.py": {
       "bytes": 3857,
       "sha256": "60024c0a3a444479cfd1791231d146755d4a81c70cc0809676e444205023692a"
     },
     "checkpoint52_peer_health_history_daemon_spec.py": {
-      "bytes": 6039,
-      "sha256": "447a581e5b03e3177b3abc5c16ca680bde9e26b35a9c1764c9fc3d9a3a82dd86"
+      "bytes": 6061,
+      "sha256": "4de293b12ac859f57465da78d4b3659b65230f752bcd06d68baf25204981d375"
     },
     "checkpoint52_peer_health_history_spec.py": {
       "bytes": 3968,
       "sha256": "a486cea60e542847fedbbc87ab1316ce1c83fffc58f16f24a65ff1fecce29715"
     },
     "checkpoint53_peer_health_incidents_daemon_spec.py": {
-      "bytes": 7347,
-      "sha256": "dcf78483ece86772c2b856a7e6e3b07e9523a70c5ca69a0b98fdca8699e8913c"
+      "bytes": 7369,
+      "sha256": "09c14bab4c58944baccc17ee2867a0ec528ed02b6a2f53006b2878eef03fef15"
     },
     "checkpoint53_peer_health_incidents_spec.py": {
       "bytes": 4450,
       "sha256": "de28b4342030619a9e6b9fcc6e903995475c85ef114fd3fe215bb4e5f91d940a"
     },
     "checkpoint54_peer_health_incident_history_daemon_spec.py": {
-      "bytes": 6735,
-      "sha256": "cf2ad91300ad1017c8aa72ef516f0de01b5adb1c2597d1f6b7591f44ec174a01"
+      "bytes": 6757,
+      "sha256": "401e8d4eb7e30db3c87603a80cbdef34742df49520b5e1b48c90bf100a64367a"
     },
     "checkpoint54_peer_health_incident_history_spec.py": {
       "bytes": 4519,
@@ -269,8 +269,8 @@
       "sha256": "46887db8eb2654666db34b7ee8ba741bf8183bcd11f7ca19aaccf56ddfeee0e8"
     },
     "daemon_lifecycle_test.py": {
-      "bytes": 5864,
-      "sha256": "e3e5c65cc41f968e7cacacf2d0aa62ddd53f145a1c17b86ab9dd56d9ce3cd3e2"
+      "bytes": 5886,
+      "sha256": "d0e84471899b56fe59c6939de1a2e3ebcde85007207cde7dd19997e193240f81"
     },
     "datadir.py": {
       "bytes": 17504,
@@ -1247,6 +1247,10 @@
     "security_sec229_posix_runtime_write_permissions_spec.py": {
       "bytes": 4039,
       "sha256": "9a6902cd761c04c5d10c1c7fa334380657a52d0a0ebc20c400e56f4700e89b47"
+    },
+    "security_sec230_daemon_service_port_isolation_spec.py": {
+      "bytes": 2170,
+      "sha256": "2d5b2ad159d7d7a7bf774f95ce15dc472934eee68996daa10dafdd390f906971"
     },
     "setup.cmd": {
       "bytes": 326,
