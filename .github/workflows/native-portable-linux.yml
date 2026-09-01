@@ -85,12 +85,15 @@ jobs:
             /bin/bash -lc '
               set -euo pipefail
               python --version
+              python -c "import sys; assert sys.version_info[:2] == (3, 13)"
               rustc --version
               cargo --version
               python -m pip install --no-deps --only-binary=:all: --require-hashes --target /work/.rust009-tools -r /work/requirements-native-build.lock
               export PYTHONPATH=/work/.rust009-tools
-              python -m maturin --version
-              python -m maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /work/wheelhouse-portable
+              export PATH=/work/.rust009-tools/bin:$PATH
+              test -x /work/.rust009-tools/bin/maturin
+              maturin --version
+              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /work/wheelhouse-portable
               auditwheel show /work/wheelhouse-portable/*.whl
             '
 
