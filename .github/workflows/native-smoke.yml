@@ -5,13 +5,17 @@ on:
     paths:
       - "native/**"
       - "RUST_001.md"
+      - "RUST_002.md"
       - "rust_001_native_boundary_spec.py"
+      - "rust_002_smt_differential_spec.py"
       - ".github/workflows/native-smoke.yml"
   pull_request:
     paths:
       - "native/**"
       - "RUST_001.md"
+      - "RUST_002.md"
       - "rust_001_native_boundary_spec.py"
+      - "rust_002_smt_differential_spec.py"
       - ".github/workflows/native-smoke.yml"
   workflow_dispatch:
 
@@ -21,7 +25,7 @@ permissions:
 jobs:
   native-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       PYO3_PYTHON: python
 
@@ -61,3 +65,12 @@ jobs:
 
       - name: RUST-001 boundary contract
         run: python rust_001_native_boundary_spec.py
+
+      - name: Build test-only PyO3 extension
+        run: |
+          cargo build --locked --manifest-path native/axven_native/Cargo.toml --features extension-module
+          cp native/axven_native/target/debug/libaxven_native.so ./axven_native.so
+          python -c "import axven_native; print(axven_native.boundary_version())"
+
+      - name: RUST-002 SMT differential contract
+        run: python rust_002_smt_differential_spec.py
