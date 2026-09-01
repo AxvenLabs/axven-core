@@ -27,13 +27,15 @@ and returns one lowercase 64-hex sparse-Merkle root.
 3. Match Python's full recompute semantics, independent of input ordering.
 4. Reject duplicate outpoints at the FFI boundary.
 5. Keep all filesystem, socket, RPC, process, thread, clock, randomness, wallet-key, and persistent-state behavior outside the native crate.
-6. Do not implement Ed25519, ML-DSA, ML-KEM, or custom cryptographic primitives. SHA-256 is supplied by the pinned RustCrypto `sha2` crate rather than handwritten Axven code.
-7. Production Axven modules must not import or call `axven_native` in RUST-002.
+6. Do not implement Ed25519, ML-DSA, ML-KEM, or custom cryptographic primitives. SHA-256 is supplied by exact `sha2==0.10.9` from RustCrypto rather than handwritten Axven code.
+7. `Cargo.lock` must preserve registry checksums for `sha2==0.10.9`, `pyo3==0.29.2`, and their resolved dependency graph.
+8. Production Axven modules must not import or call `axven_native` in RUST-002.
 
 ## Differential gate
 
 The RUST-002 native smoke must prove:
 
+- the RustCrypto SHA-256 and PyO3 dependencies are exact and checksum-locked;
 - empty-root equality;
 - fixed-vector equality;
 - input-order independence;
