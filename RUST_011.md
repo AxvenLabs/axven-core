@@ -15,10 +15,12 @@ The canonical `axven-native-portable-provenance-v1` statement binds:
 - repository `AxvenLabs/axven-core` and the exact checked-out source SHA;
 - immutable builder image `quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7`;
 - compatibility floor `manylinux_2_28` and architecture `x86_64`;
-- CPython `3.13.15`, Rust `1.98.0`, maturin `1.15.0`, and PyO3 `0.29.2` policy pins;
+- the actual immutable-image builder CPython `3.13.13`, Rust `1.98.0`, maturin `1.15.0`, and PyO3 `0.29.2` policy pins;
 - exact SHA-256/byte length/filename of the single portable wheel;
 - SHA-256 of native source/build inputs and the permanent RUST-011 workflow;
 - `production_consensus: python`.
+
+The GitHub host verifier remains pinned separately to CPython `3.13.15`. Builder and verifier Python versions are intentionally distinguished: the immutable manylinux image currently contains CPython `3.13.13`, while the host-side policy/provenance/attestation verifier runs on `3.13.15`. The evidence must describe the environment that actually produced the wheel rather than silently substituting the host interpreter version.
 
 The generator requires the portable wheel filename to end in `-cp313-abi3-manylinux_2_28_x86_64.whl` and requires the current checkout to equal `AXVEN_SOURCE_SHA`.
 
@@ -36,7 +38,9 @@ The dedicated workflow:
 
 - uses `permissions: contents: read` only;
 - checks out the exact PR head/push SHA with credentials disabled;
+- runs host-side verification on CPython `3.13.15`;
 - pulls the immutable manylinux image and verifies the resolved digest before execution;
+- verifies the builder image's actual CPython is exactly `3.13.13` before building;
 - mounts the exact Rust 1.98.0 toolchain read-only into the container;
 - installs maturin from the existing hash-locked requirements file;
 - builds one unpublished portable wheel with Cargo `--locked`;
