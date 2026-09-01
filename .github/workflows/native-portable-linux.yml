@@ -1,0 +1,101 @@
+name: Axven Native Portable Linux
+
+on:
+  push:
+    paths:
+      - "native/**"
+      - "RUST_007.md"
+      - "RUST_008.md"
+      - "RUST_009.md"
+      - "rust_007_native_wheel_package_spec.py"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "requirements-native-build.lock"
+      - ".github/workflows/native-portable-linux.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - "RUST_007.md"
+      - "RUST_008.md"
+      - "RUST_009.md"
+      - "rust_007_native_wheel_package_spec.py"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "requirements-native-build.lock"
+      - ".github/workflows/native-portable-linux.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MANYLINUX_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7
+
+jobs:
+  portable-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked Axven runtime dependencies
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: Install exact host Rust toolchain for controlled mount
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          RUSTUP_TOOLCHAIN=1.98.0 rustc --version
+          RUSTUP_TOOLCHAIN=1.98.0 cargo --version
+
+      - name: Pull and verify immutable manylinux image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$MANYLINUX_IMAGE"
+          resolved="$(docker image inspect "$MANYLINUX_IMAGE" --format '{{index .RepoDigests 0}}')"
+          test "$resolved" = "$MANYLINUX_IMAGE"
+          printf 'RUST-009 pinned image: %s\n' "$resolved"
+
+      - name: Build locked manylinux_2_28 wheel inside pinned image
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf wheelhouse-portable .rust009-tools
+          mkdir -p wheelhouse-portable .rust009-tools
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e CARGO_HOME=/cargo \
+            -e RUSTUP_HOME=/rustup \
+            -e RUSTUP_TOOLCHAIN=1.98.0 \
+            -e PYO3_PYTHON=/opt/python/cp313-cp313/bin/python \
+            -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -v "$HOME/.cargo:/cargo" \
+            -v "$HOME/.rustup:/rustup:ro" \
+            -w /work \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              python --version
+              python -c "import sys; assert sys.version_info[:2] == (3, 13)"
+              rustc --version
+              cargo --version
+              python -m pip install --no-deps --only-binary=:all: --require-hashes --target /work/.rust009-tools -r /work/requirements-native-build.lock
+              export PYTHONPATH=/work/.rust009-tools
+              export PATH=/work/.rust009-tools/bin:$PATH
+              test -x /work/.rust009-tools/bin/maturin
+              maturin --version
+              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /work/wheelhouse-portable
+              auditwheel show /work/wheelhouse-portable/*.whl
+            '
+
+      - name: Verify portable tag, ELF glibc floor, clean install, and consensus boundary
+        run: python rust_009_portable_linux_wheel_spec.py
