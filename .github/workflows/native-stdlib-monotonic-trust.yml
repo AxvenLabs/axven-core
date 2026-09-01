@@ -1,0 +1,269 @@
+name: Axven Native Stdlib Monotonic Trust Consumer
+
+on:
+  push:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_026_build_material_attestation.py"
+      - "RUST_028.md"
+      - "rust_028_trust_root_rotation_verify.py"
+      - "rust_028_trust_root_rotation_policy_spec.py"
+      - "RUST_029.md"
+      - "rust_029_monotonic_trust_state.py"
+      - "rust_029_monotonic_trust_state_policy_spec.py"
+      - "RUST_030.md"
+      - "rust_030_stdlib_monotonic_trust_verify.py"
+      - "rust_030_stdlib_monotonic_trust_policy_spec.py"
+      - ".github/workflows/native-stdlib-monotonic-trust.yml"
+  pull_request:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_026_build_material_attestation.py"
+      - "RUST_028.md"
+      - "rust_028_trust_root_rotation_verify.py"
+      - "rust_028_trust_root_rotation_policy_spec.py"
+      - "RUST_029.md"
+      - "rust_029_monotonic_trust_state.py"
+      - "rust_029_monotonic_trust_state_policy_spec.py"
+      - "RUST_030.md"
+      - "rust_030_stdlib_monotonic_trust_verify.py"
+      - "rust_030_stdlib_monotonic_trust_policy_spec.py"
+      - ".github/workflows/native-stdlib-monotonic-trust.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  stdlib-monotonic-trust:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked fixture and differential-verifier dependencies
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: RUST-030 static stdlib monotonic trust policy
+        run: python rust_030_stdlib_monotonic_trust_policy_spec.py
+
+      - name: Reapply RUST-029 monotonic trust-state policy
+        run: python rust_029_monotonic_trust_state_policy_spec.py
+
+      - name: RUST-030 stdlib RFC 8032 known-answer contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -i \
+            HOME=/tmp \
+            PATH=/usr/bin:/bin \
+            PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S rust_030_stdlib_monotonic_trust_verify.py rfc-selftest
+
+      - name: Generate canonical TEST-ONLY RUST-029 transition fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture=/tmp/axven-rust030-fixture
+          rm -rf "$fixture"
+          mkdir -p "$fixture"
+          python - <<'PY'
+          import base64
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+          OLD_KEY_ID = "rust-026-test-only-ed25519-v1"
+          OLD_SEED = bytes.fromhex("da8a182c808371700b7b10e9408ef5e97b62a9018a8426cfd489adcacc24a9aa")
+          OLD_PUBLIC = bytes.fromhex("4dd000548d1ed66588e6c23531163bd12c9c5dbca5eb932d4c6a75cde6525064")
+          NEW_KEY_ID = "rust-028-test-only-ed25519-v2"
+          NEW_PUBLIC = bytes.fromhex("158d55a155c9191d0783d48c1a1a1531fe65a783356c5b221e6952e57d58fdb3")
+          STATE_SCHEMA = "axven-native-trust-state-v1"
+          TRANSITION_SCHEMA = "axven-native-trust-transition-v1"
+          ENVELOPE_SCHEMA = "axven-native-trust-transition-envelope-v1"
+          TRANSITION_TYPE = "application/vnd.axven.native-trust-transition.v1+json"
+          MATERIAL_TYPE = "application/vnd.axven.native-build-materials.v1+json"
+          DOMAIN = b"AXVEN_NATIVE_TRUST_TRANSITION_V1\x00"
+
+          def canonical(value):
+              return (json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+
+          def signed_message(payload):
+              return DOMAIN + len(payload).to_bytes(8, "big") + payload
+
+          source_sha = os.environ["AXVEN_SOURCE_SHA"]
+          if len(source_sha) != 40 or any(ch not in "0123456789abcdef" for ch in source_sha):
+              raise AssertionError("invalid RUST-030 source SHA")
+
+          private = Ed25519PrivateKey.from_private_bytes(OLD_SEED)
+          derived = private.public_key().public_bytes(
+              encoding=serialization.Encoding.Raw,
+              format=serialization.PublicFormat.Raw,
+          )
+          if derived != OLD_PUBLIC or OLD_PUBLIC == NEW_PUBLIC:
+              raise AssertionError("RUST-030 TEST-ONLY root pin mismatch")
+
+          genesis = {
+              "schema": STATE_SCHEMA,
+              "sequence": 0,
+              "scope": MATERIAL_TYPE,
+              "key_id": OLD_KEY_ID,
+              "public_key": OLD_PUBLIC.hex(),
+              "activation_source_commit": None,
+              "predecessor_sha256": None,
+              "transition_sha256": None,
+              "production": False,
+          }
+          transition = {
+              "schema": TRANSITION_SCHEMA,
+              "sequence": 1,
+              "scope": MATERIAL_TYPE,
+              "from_key_id": OLD_KEY_ID,
+              "from_public_key": OLD_PUBLIC.hex(),
+              "to_key_id": NEW_KEY_ID,
+              "to_public_key": NEW_PUBLIC.hex(),
+              "activation_source_commit": source_sha,
+              "production": False,
+          }
+          transition_raw = canonical(transition)
+          signature = private.sign(signed_message(transition_raw))
+          envelope = {
+              "schema": ENVELOPE_SCHEMA,
+              "algorithm": "ed25519",
+              "key_id": OLD_KEY_ID,
+              "payload_type": TRANSITION_TYPE,
+              "payload_sha256": hashlib.sha256(transition_raw).hexdigest(),
+              "signature": base64.b64encode(signature).decode("ascii"),
+          }
+          genesis_raw = canonical(genesis)
+          final = {
+              "schema": STATE_SCHEMA,
+              "sequence": 1,
+              "scope": MATERIAL_TYPE,
+              "key_id": NEW_KEY_ID,
+              "public_key": NEW_PUBLIC.hex(),
+              "activation_source_commit": source_sha,
+              "predecessor_sha256": hashlib.sha256(genesis_raw).hexdigest(),
+              "transition_sha256": hashlib.sha256(transition_raw).hexdigest(),
+              "production": False,
+          }
+
+          root = Path("/tmp/axven-rust030-fixture")
+          for name, value in (
+              ("genesis.json", genesis),
+              ("transition.json", transition),
+              ("transition-envelope.json", envelope),
+              ("final.json", final),
+          ):
+              path = root / name
+              path.write_bytes(canonical(value))
+              if path.is_symlink() or not path.is_file():
+                  raise AssertionError(f"unsafe RUST-030 fixture: {name}")
+          PY
+          test "$(find "$fixture" -maxdepth 1 -type f | wc -l)" -eq 4
+          test "$(find "$fixture" -type l | wc -l)" -eq 0
+
+      - name: Differentially verify fixture with RUST-029
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture=/tmp/axven-rust030-fixture
+          python rust_029_monotonic_trust_state.py verify \
+            "$fixture/genesis.json" \
+            "$fixture/transition.json" \
+            "$fixture/transition-envelope.json" \
+            "$fixture/final.json" \
+            "$AXVEN_SOURCE_SHA"
+          python rust_029_monotonic_trust_state.py selftest \
+            "$fixture/genesis.json" \
+            "$fixture/transition.json" \
+            "$fixture/transition-envelope.json" \
+            "$fixture/final.json" \
+            "$AXVEN_SOURCE_SHA"
+
+      - name: Stage exact detached RUST-030 consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture=/tmp/axven-rust030-fixture
+          consumer=/tmp/axven-rust030-consumer
+          rm -rf "$consumer"
+          mkdir -p "$consumer"
+          cp rust_030_stdlib_monotonic_trust_verify.py "$consumer/"
+          cp "$fixture/genesis.json" "$consumer/"
+          cp "$fixture/transition.json" "$consumer/"
+          cp "$fixture/transition-envelope.json" "$consumer/"
+          cp "$fixture/final.json" "$consumer/"
+          test "$(find "$consumer" -maxdepth 1 -type f | wc -l)" -eq 5
+          test "$(find "$consumer" -type l | wc -l)" -eq 0
+          test ! -e "$consumer/.git"
+
+      - name: Verify detached RUST-030 trust chain with stdlib only
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust030-consumer
+          cd "$consumer"
+          env -i \
+            HOME=/tmp \
+            PATH=/usr/bin:/bin \
+            PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S -c 'import importlib.util,sys; assert all("site-packages" not in p and "dist-packages" not in p for p in sys.path); assert importlib.util.find_spec("cryptography") is None'
+          env -i \
+            HOME=/tmp \
+            PATH=/usr/bin:/bin \
+            PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S rust_030_stdlib_monotonic_trust_verify.py verify \
+              genesis.json transition.json transition-envelope.json final.json "$AXVEN_SOURCE_SHA"
+
+      - name: RUST-030 detached stdlib fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust030-consumer
+          cd "$consumer"
+          env -i \
+            HOME=/tmp \
+            PATH=/usr/bin:/bin \
+            PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S rust_030_stdlib_monotonic_trust_verify.py selftest \
+              genesis.json transition.json transition-envelope.json final.json "$AXVEN_SOURCE_SHA"
+
+      - name: Reverify pristine detached RUST-030 trust chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust030-consumer
+          test "$(find "$consumer" -maxdepth 1 -type f | wc -l)" -eq 5
+          test "$(find "$consumer" -type l | wc -l)" -eq 0
+          cd "$consumer"
+          env -i \
+            HOME=/tmp \
+            PATH=/usr/bin:/bin \
+            PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S rust_030_stdlib_monotonic_trust_verify.py verify \
+              genesis.json transition.json transition-envelope.json final.json "$AXVEN_SOURCE_SHA"
