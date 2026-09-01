@@ -1,0 +1,329 @@
+name: Axven Native Stdlib Monotonic Trust Consumer
+
+on:
+  push:
+    paths:
+      - "native/axven_native/**"
+      - "requirements-native-build.lock"
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "rust_013_reproducible_wheel_spec.py"
+      - "rust_014_reproducible_attestation.py"
+      - "rust_018_detached_rebuild_verify.py"
+      - "rust_019_offline_dependency_closure.py"
+      - "rust_020_verified_vendor.py"
+      - "rust_021_verified_dependency_rebuild_spec.py"
+      - "rust_023_rust_toolchain_closure.py"
+      - "rust_024_upstream_rust_distribution.py"
+      - "rust_025_upstream_authenticated_detached_build.sh"
+      - "rust_025_upstream_authenticated_detached_build_policy_spec.py"
+      - "rust_026_build_material_attestation.py"
+      - "rust_028_trust_root_rotation_verify.py"
+      - "rust_029_monotonic_trust_state.py"
+      - "rust_029_monotonic_trust_state_policy_spec.py"
+      - "rust_030_stdlib_material_verify.py"
+      - "rust_030_stdlib_material_verify_policy_spec.py"
+      - "RUST_031.md"
+      - "rust_031_stdlib_trust_state_material_verify.py"
+      - "rust_031_stdlib_trust_state_material_verify_policy_spec.py"
+      - ".github/workflows/native-stdlib-monotonic-trust-consumer.yml"
+  pull_request:
+    paths:
+      - "native/axven_native/**"
+      - "requirements-native-build.lock"
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "rust_013_reproducible_wheel_spec.py"
+      - "rust_014_reproducible_attestation.py"
+      - "rust_018_detached_rebuild_verify.py"
+      - "rust_019_offline_dependency_closure.py"
+      - "rust_020_verified_vendor.py"
+      - "rust_021_verified_dependency_rebuild_spec.py"
+      - "rust_023_rust_toolchain_closure.py"
+      - "rust_024_upstream_rust_distribution.py"
+      - "rust_025_upstream_authenticated_detached_build.sh"
+      - "rust_025_upstream_authenticated_detached_build_policy_spec.py"
+      - "rust_026_build_material_attestation.py"
+      - "rust_028_trust_root_rotation_verify.py"
+      - "rust_029_monotonic_trust_state.py"
+      - "rust_029_monotonic_trust_state_policy_spec.py"
+      - "rust_030_stdlib_material_verify.py"
+      - "rust_030_stdlib_material_verify_policy_spec.py"
+      - "RUST_031.md"
+      - "rust_031_stdlib_trust_state_material_verify.py"
+      - "rust_031_stdlib_trust_state_material_verify_policy_spec.py"
+      - ".github/workflows/native-stdlib-monotonic-trust-consumer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MANYLINUX_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7
+  RUST_URL: https://static.rust-lang.org/dist/2026-08-20/rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz
+  RUST_SHA256: ed8ee2df70909c88cbaf87a6cfa3920dac00b537de12a6abe6906641e0f5952f
+  RUST_ARCHIVE_NAME: rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz
+  RUST_ARCHIVE_ROOT: rust-1.98.0-x86_64-unknown-linux-gnu
+  TOOLCHAIN_NAME: 1.98.0-x86_64-unknown-linux-gnu
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  stdlib-monotonic-trust-consumer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked producer/runtime dependencies
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: Install exact host Rust toolchain for RUST-025 dependency collection
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+          rustc --version | grep -F "rustc 1.98.0 "
+          cargo --version | grep -F "cargo 1.98.0 "
+
+      - name: RUST-031 static stdlib monotonic trust policy
+        run: python rust_031_stdlib_trust_state_material_verify_policy_spec.py
+
+      - name: Reapply supporting static policies
+        run: |
+          python rust_030_stdlib_material_verify_policy_spec.py
+          python rust_029_monotonic_trust_state_policy_spec.py
+          python rust_025_upstream_authenticated_detached_build_policy_spec.py
+
+      - name: Derive source-bound reproducibility epoch
+        id: epoch
+        shell: bash
+        run: |
+          set -euo pipefail
+          checkout="$(git rev-parse HEAD)"
+          test "$checkout" = "$AXVEN_SOURCE_SHA"
+          source_epoch="$(git show -s --format=%ct "$AXVEN_SOURCE_SHA")"
+          case "$source_epoch" in
+            ''|*[!0-9]*) exit 1 ;;
+          esac
+          test "$source_epoch" -ge 315532800
+          printf 'epoch=%s\n' "$source_epoch" >> "$GITHUB_OUTPUT"
+
+      - name: Reproduce complete RUST-025 upstream-authenticated detached build
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: bash rust_025_upstream_authenticated_detached_build.sh
+
+      - name: Bridge RUST-023 manifest canonical encoding
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("/tmp/axven-rust025-toolchain.json")
+          raw = path.read_bytes()
+          value = json.loads(raw.decode("utf-8"))
+          if not isinstance(value, dict):
+              raise AssertionError("RUST-023 toolchain manifest must be a JSON object")
+          source = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+          if raw != source:
+              raise AssertionError("RUST-023 toolchain manifest source encoding mismatch")
+          path.write_bytes(source + b"\n")
+          print("RUST-031 canonical bridge: RUST-023 manifest semantics preserved")
+          PY
+
+      - name: Produce and seal RUST-026 TEST-ONLY materials
+        shell: bash
+        run: |
+          set -euo pipefail
+          wheel="$(find /tmp/axven-rust025-consumer/rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
+          test -n "$wheel"
+          python rust_026_build_material_attestation.py generate \
+            "$wheel" "/tmp/$RUST_ARCHIVE_NAME" /tmp/axven-rust025-toolchain.json \
+            /tmp/axven-rust025-dependencies /tmp/axven-rust025-vendor \
+            /tmp/axven-rust025-consumer/rebuild-source/native/axven_native/Cargo.lock \
+            /tmp/axven-rust025-consumer/source-inputs/requirements-native-build.lock \
+            "$AXVEN_SOURCE_SHA" /tmp/axven-rust031-materials.json
+          python rust_026_build_material_attestation.py seal \
+            /tmp/axven-rust031-materials.json /tmp/axven-rust031-old-attestation.json
+
+      - name: Issue RUST-028/RUST-029 TEST-ONLY successor evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+          OLD_KEY_ID = "rust-026-test-only-ed25519-v1"
+          OLD_SEED = bytes.fromhex("da8a182c808371700b7b10e9408ef5e97b62a9018a8426cfd489adcacc24a9aa")
+          OLD_PUBLIC = bytes.fromhex("4dd000548d1ed66588e6c23531163bd12c9c5dbca5eb932d4c6a75cde6525064")
+          NEW_KEY_ID = "rust-028-test-only-ed25519-v2"
+          NEW_SEED = bytes.fromhex("589be518b62ec07c6cf256dcc651f856cc4b2684ad8daaa5a2180704721dd300")
+          NEW_PUBLIC = bytes.fromhex("158d55a155c9191d0783d48c1a1a1531fe65a783356c5b221e6952e57d58fdb3")
+          STATE_SCHEMA = "axven-native-trust-state-v1"
+          TRANSITION_SCHEMA = "axven-native-trust-transition-v1"
+          TRANSITION_ENVELOPE_SCHEMA = "axven-native-trust-transition-envelope-v1"
+          MATERIAL_ENVELOPE_SCHEMA = "axven-native-build-material-attestation-envelope-v1"
+          TRANSITION_TYPE = "application/vnd.axven.native-trust-transition.v1+json"
+          MATERIAL_TYPE = "application/vnd.axven.native-build-materials.v1+json"
+          TRANSITION_DOMAIN = b"AXVEN_NATIVE_TRUST_TRANSITION_V1\x00"
+          MATERIAL_DOMAIN = b"AXVEN_NATIVE_BUILD_MATERIAL_ATTESTATION_V1\x00"
+
+          def canonical(value):
+              return (json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode("utf-8")
+
+          def message(domain, payload):
+              return domain + len(payload).to_bytes(8, "big") + payload
+
+          source_sha = os.environ["AXVEN_SOURCE_SHA"]
+          if len(source_sha) != 40 or any(ch not in "0123456789abcdef" for ch in source_sha):
+              raise AssertionError("invalid RUST-031 source SHA")
+
+          old_private = Ed25519PrivateKey.from_private_bytes(OLD_SEED)
+          new_private = Ed25519PrivateKey.from_private_bytes(NEW_SEED)
+          old_derived = old_private.public_key().public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+          new_derived = new_private.public_key().public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+          if old_derived != OLD_PUBLIC or new_derived != NEW_PUBLIC or OLD_PUBLIC == NEW_PUBLIC:
+              raise AssertionError("RUST-031 TEST-ONLY key pin mismatch")
+
+          materials_path = Path("/tmp/axven-rust031-materials.json")
+          materials_raw = materials_path.read_bytes()
+          materials = json.loads(materials_raw.decode("utf-8"))
+          if materials_raw != canonical(materials) or materials["source"]["commit"] != source_sha:
+              raise AssertionError("RUST-031 material source/canonical mismatch")
+
+          genesis = {
+              "schema": STATE_SCHEMA,
+              "sequence": 0,
+              "scope": MATERIAL_TYPE,
+              "key_id": OLD_KEY_ID,
+              "public_key": OLD_PUBLIC.hex(),
+              "activation_source_commit": None,
+              "predecessor_sha256": None,
+              "transition_sha256": None,
+              "production": False,
+          }
+          transition = {
+              "schema": TRANSITION_SCHEMA,
+              "sequence": 1,
+              "scope": MATERIAL_TYPE,
+              "from_key_id": OLD_KEY_ID,
+              "from_public_key": OLD_PUBLIC.hex(),
+              "to_key_id": NEW_KEY_ID,
+              "to_public_key": NEW_PUBLIC.hex(),
+              "activation_source_commit": source_sha,
+              "production": False,
+          }
+          genesis_raw = canonical(genesis)
+          transition_raw = canonical(transition)
+          transition_envelope = {
+              "schema": TRANSITION_ENVELOPE_SCHEMA,
+              "algorithm": "ed25519",
+              "key_id": OLD_KEY_ID,
+              "payload_type": TRANSITION_TYPE,
+              "payload_sha256": hashlib.sha256(transition_raw).hexdigest(),
+              "signature": base64.b64encode(old_private.sign(message(TRANSITION_DOMAIN, transition_raw))).decode("ascii"),
+          }
+          final_state = {
+              "schema": STATE_SCHEMA,
+              "sequence": 1,
+              "scope": MATERIAL_TYPE,
+              "key_id": NEW_KEY_ID,
+              "public_key": NEW_PUBLIC.hex(),
+              "activation_source_commit": source_sha,
+              "predecessor_sha256": hashlib.sha256(genesis_raw).hexdigest(),
+              "transition_sha256": hashlib.sha256(transition_raw).hexdigest(),
+              "production": False,
+          }
+          new_envelope = {
+              "schema": MATERIAL_ENVELOPE_SCHEMA,
+              "algorithm": "ed25519",
+              "key_id": NEW_KEY_ID,
+              "payload_type": MATERIAL_TYPE,
+              "payload_sha256": hashlib.sha256(materials_raw).hexdigest(),
+              "signature": base64.b64encode(new_private.sign(message(MATERIAL_DOMAIN, materials_raw))).decode("ascii"),
+          }
+          root = Path("/tmp")
+          root.joinpath("axven-rust031-state-0.json").write_bytes(genesis_raw)
+          root.joinpath("axven-rust031-transition-1.json").write_bytes(transition_raw)
+          root.joinpath("axven-rust031-transition-1-envelope.json").write_bytes(canonical(transition_envelope))
+          root.joinpath("axven-rust031-state-1.json").write_bytes(canonical(final_state))
+          root.joinpath("axven-rust031-new-attestation.json").write_bytes(canonical(new_envelope))
+          print("RUST-031 TEST-ONLY successor evidence issued: sequence 0 -> 1")
+          PY
+
+      - name: Detached RUST-031 stdlib monotonic trust consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust031-consumer
+          rm -rf "$consumer"
+          mkdir -p "$consumer"
+          cp rust_030_stdlib_material_verify.py "$consumer/"
+          cp rust_031_stdlib_trust_state_material_verify.py "$consumer/"
+          cp /tmp/axven-rust031-materials.json "$consumer/materials.json"
+          cp /tmp/axven-rust031-old-attestation.json "$consumer/old-attestation.json"
+          cp /tmp/axven-rust031-state-0.json "$consumer/state-0.json"
+          cp /tmp/axven-rust031-transition-1.json "$consumer/transition-1.json"
+          cp /tmp/axven-rust031-transition-1-envelope.json "$consumer/transition-1-envelope.json"
+          cp /tmp/axven-rust031-state-1.json "$consumer/state-1.json"
+          cp /tmp/axven-rust031-new-attestation.json "$consumer/new-attestation.json"
+          test "$(find "$consumer" -maxdepth 1 -type f | wc -l)" -eq 9
+          test "$(find "$consumer" -type l | wc -l)" -eq 0
+          test ! -e "$consumer/.git"
+          if grep -Eq 'TEST_SEED|Ed25519PrivateKey|def seal|def issue|import axven|subprocess|requests|urllib|socket' "$consumer"/*.py; then exit 1; fi
+          /usr/bin/python3 -S -c 'import sys; assert not any("site-packages" in p for p in sys.path), sys.path'
+          wheel="$(find /tmp/axven-rust025-consumer/rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
+          cd /tmp
+          env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONUTF8=1 PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S "$consumer/rust_031_stdlib_trust_state_material_verify.py" verify \
+              "$wheel" "/tmp/$RUST_ARCHIVE_NAME" /tmp/axven-rust025-toolchain.json \
+              /tmp/axven-rust025-dependencies /tmp/axven-rust025-vendor \
+              /tmp/axven-rust025-consumer/rebuild-source/native/axven_native/Cargo.lock \
+              /tmp/axven-rust025-consumer/source-inputs/requirements-native-build.lock \
+              "$AXVEN_SOURCE_SHA" "$consumer/materials.json" "$consumer/old-attestation.json" \
+              "$consumer/state-0.json" "$consumer/transition-1.json" "$consumer/transition-1-envelope.json" \
+              "$consumer/state-1.json" "$consumer/new-attestation.json"
+          env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONUTF8=1 PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S "$consumer/rust_031_stdlib_trust_state_material_verify.py" selftest \
+              "$consumer/materials.json" "$consumer/old-attestation.json" "$consumer/state-0.json" \
+              "$consumer/transition-1.json" "$consumer/transition-1-envelope.json" \
+              "$consumer/state-1.json" "$consumer/new-attestation.json" "$AXVEN_SOURCE_SHA"
+
+      - name: Reverify pristine RUST-031 successor trust
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust031-consumer
+          wheel="$(find /tmp/axven-rust025-consumer/rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
+          cd /tmp
+          env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONUTF8=1 PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S "$consumer/rust_031_stdlib_trust_state_material_verify.py" verify \
+              "$wheel" "/tmp/$RUST_ARCHIVE_NAME" /tmp/axven-rust025-toolchain.json \
+              /tmp/axven-rust025-dependencies /tmp/axven-rust025-vendor \
+              /tmp/axven-rust025-consumer/rebuild-source/native/axven_native/Cargo.lock \
+              /tmp/axven-rust025-consumer/source-inputs/requirements-native-build.lock \
+              "$AXVEN_SOURCE_SHA" "$consumer/materials.json" "$consumer/old-attestation.json" \
+              "$consumer/state-0.json" "$consumer/transition-1.json" "$consumer/transition-1-envelope.json" \
+              "$consumer/state-1.json" "$consumer/new-attestation.json"
