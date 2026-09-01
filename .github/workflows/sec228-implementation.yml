@@ -1,0 +1,172 @@
+name: SEC-228 implementation
+
+on:
+  push:
+    branches:
+      - security-sec228-runtime-directory-identity
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    if: ${{ !contains(github.event.head_commit.message, '[sec228-impl]') }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13.15'
+      - name: Apply SEC-228 production fix and refresh manifest
+        shell: python
+        run: |
+          from pathlib import Path
+          import hashlib
+          import json
+
+          ROOT = Path.cwd()
+
+          def read_lf(name: str) -> str:
+              return (ROOT / name).read_bytes().decode('utf-8').replace('\r\n', '\n')
+
+          def write_lf(name: str, text: str) -> None:
+              (ROOT / name).write_bytes(text.replace('\r\n', '\n').encode('utf-8'))
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              if old not in text:
+                  raise SystemExit(f'missing patch anchor: {label}')
+              return text.replace(old, new, 1)
+
+          # Python provenance layer: reject a symlink/reparse-point .venv and
+          # require its resolved parent to remain the validated runtime root.
+          name = 'runtime_provenance.py'
+          text = read_lf(name)
+          if 'def _assert_local_runtime_directory(' not in text:
+              anchor = '\n\ndef _read_regular_bounded('
+              guard = '''
+
+          def _is_reparse_point(metadata: object) -> bool:
+              """Return True for Windows filesystem reparse-point metadata."""
+              attributes = getattr(metadata, "st_file_attributes", 0)
+              flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+              return bool(attributes & flag)
+
+
+          def _assert_local_runtime_directory(root: Path = ROOT) -> None:
+              """Require .venv to be a real directory rooted directly under root."""
+              runtime_dir = Path(root) / ".venv"
+              try:
+                  metadata = runtime_dir.lstat()
+              except OSError as exc:
+                  raise RuntimeError("validated runtime directory is missing") from exc
+              if stat.S_ISLNK(metadata.st_mode) or _is_reparse_point(metadata):
+                  raise RuntimeError(
+                      "validated runtime directory is a symlink or reparse point"
+                  )
+              if not stat.S_ISDIR(metadata.st_mode):
+                  raise RuntimeError("validated runtime path is not a directory")
+              try:
+                  resolved_root = Path(root).resolve(strict=True)
+                  resolved_runtime = runtime_dir.resolve(strict=True)
+              except (OSError, RuntimeError) as exc:
+                  raise RuntimeError("validated runtime directory is unresolved") from exc
+              if resolved_runtime.parent != resolved_root:
+                  raise RuntimeError("validated runtime directory escapes runtime root")
+          '''
+              text = replace_once(text, anchor, guard + anchor, 'runtime directory helper')
+          old = '''    if profile is None:
+              profile = _runtime_profile()
+              _assert_expected_interpreter(root)
+          '''
+          # The source indentation in the repository is four spaces. Build the
+          # exact anchor without relying on YAML indentation.
+          old = '    if profile is None:\n        profile = _runtime_profile()\n    _assert_expected_interpreter(root)\n'
+          new = '    if profile is None:\n        profile = _runtime_profile()\n    _assert_local_runtime_directory(root)\n    _assert_expected_interpreter(root)\n'
+          if text.count(old) != 2:
+              raise SystemExit(f'expected two stamp/check anchors, found {text.count(old)}')
+          text = text.replace(old, new, 2)
+          write_lf(name, text)
+
+          # POSIX launch/validation: reject a symlinked or non-directory .venv
+          # before any venv Python path is considered.
+          posix_guard = '''
+          if [[ -L .venv ]]; then
+            echo "Axven validated runtime directory must not be a symlink; remove .venv and rerun validation" >&2
+            exit 2
+          fi
+          if [[ -e .venv && ! -d .venv ]]; then
+            echo "Axven validated runtime path is not a directory; remove .venv and rerun validation" >&2
+            exit 2
+          fi
+          '''
+          for name in ('validate_linux_macos.sh', 'ensure_runtime.sh'):
+              text = read_lf(name)
+              if '-L .venv' not in text:
+                  text = replace_once(text, 'cd "$(dirname "$0")"\n', 'cd "$(dirname "$0")"\n' + posix_guard, f'{name} POSIX guard')
+              write_lf(name, text)
+
+          # Windows launch/validation: Test-Path follows junctions, so inspect
+          # the directory item itself and reject ReparsePoint before venv Python.
+          windows_guard = '''
+          function Assert-AxvenLocalRuntimeDirectory {
+              param([switch]$AllowMissing)
+              if (-not (Test-Path -LiteralPath ".venv")) {
+                  if ($AllowMissing) { return }
+                  throw "Axven validated runtime directory is missing"
+              }
+              $Item = Get-Item -LiteralPath ".venv" -Force
+              if (-not $Item.PSIsContainer) {
+                  throw "Axven validated runtime path is not a directory; remove .venv and rerun validation"
+              }
+              if (($Item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                  throw "Axven validated runtime directory must not be a reparse point; remove .venv and rerun validation"
+              }
+          }
+
+          Assert-AxvenLocalRuntimeDirectory -AllowMissing
+          '''
+          for name in ('validate_windows.ps1', 'ensure_runtime.ps1'):
+              text = read_lf(name)
+              if 'Assert-AxvenLocalRuntimeDirectory' not in text:
+                  text = replace_once(text, 'Set-Location $PSScriptRoot\n', 'Set-Location $PSScriptRoot\n' + windows_guard, f'{name} Windows guard')
+              if name == 'validate_windows.ps1' and text.count('Assert-AxvenLocalRuntimeDirectory') < 3:
+                  text = replace_once(text, '\n$Python = Join-Path $PSScriptRoot ".venv\\Scripts\\python.exe"', '\nAssert-AxvenLocalRuntimeDirectory\n\n$Python = Join-Path $PSScriptRoot ".venv\\Scripts\\python.exe"', 'validate_windows post-create guard')
+              if name == 'ensure_runtime.ps1' and text.count('Assert-AxvenLocalRuntimeDirectory') < 3:
+                  text = replace_once(text, '\nif (-not (Test-AxvenValidatedRuntime)) {\n    throw "Axven runtime provenance validation failed"\n}', '\nAssert-AxvenLocalRuntimeDirectory\n\nif (-not (Test-AxvenValidatedRuntime)) {\n    throw "Axven runtime provenance validation failed"\n}', 'ensure_runtime final guard')
+              write_lf(name, text)
+
+          # Normalize the regression itself to LF before hashing it.
+          spec = 'security_sec228_runtime_directory_identity_spec.py'
+          write_lf(spec, read_lf(spec))
+
+          manifest_path = ROOT / 'release_manifest.json'
+          manifest = json.loads(manifest_path.read_bytes().decode('utf-8'))
+          changed = (
+              'runtime_provenance.py',
+              'ensure_runtime.ps1',
+              'ensure_runtime.sh',
+              'validate_windows.ps1',
+              'validate_linux_macos.sh',
+              spec,
+          )
+          for filename in changed:
+              raw = (ROOT / filename).read_bytes()
+              manifest['files'][filename] = {
+                  'bytes': len(raw),
+                  'sha256': hashlib.sha256(raw).hexdigest(),
+              }
+          manifest_path.write_bytes((json.dumps(manifest, indent=2, sort_keys=True) + '\n').encode('utf-8'))
+
+          print('SEC-228 deterministic implementation staged')
+      - name: Commit implementation
+        shell: pwsh
+        run: |
+          git config user.name "AxvenLabs"
+          git config user.email "dogacan432@gmail.com"
+          git add runtime_provenance.py ensure_runtime.ps1 ensure_runtime.sh validate_windows.ps1 validate_linux_macos.sh security_sec228_runtime_directory_identity_spec.py release_manifest.json
+          git diff --cached --check
+          git diff --cached --stat
+          git commit -m "SEC-228: bind validated runtime to local directory [sec228-impl]"
+          git push origin HEAD:security-sec228-runtime-directory-identity
