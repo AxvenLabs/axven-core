@@ -66,10 +66,10 @@ jobs:
           check-latest: false
 
       - name: Install hash-locked Axven runtime dependencies
-        run: |
-          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+        run: python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
 
       - name: Install exact host Rust toolchain for controlled mounts
+        shell: bash
         run: |
           set -euo pipefail
           rustup toolchain install 1.98.0 --profile minimal
@@ -112,115 +112,72 @@ jobs:
           docker pull "$MANYLINUX_IMAGE"
           resolved="$(docker image inspect "$MANYLINUX_IMAGE" --format '{{index .RepoDigests 0}}')"
           test "$resolved" = "$MANYLINUX_IMAGE"
-          printf 'RUST-018 pinned image: %s\n' "$resolved"
 
-      - name: Build RUST-018 reference candidate A
+      - name: Build RUST-018 reference candidates
         shell: bash
         env:
           SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
         run: |
           set -euo pipefail
-          rm -rf wheelhouse-repro-a .rust018-target-a .rust018-tools-a
-          mkdir -p wheelhouse-repro-a .rust018-tools-a
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -e HOME=/tmp \
-            -e CARGO_HOME=/cargo \
-            -e RUSTUP_HOME=/rustup \
-            -e RUSTUP_TOOLCHAIN=1.98.0 \
-            -e PYO3_PYTHON=/opt/python/cp313-cp313/bin/python \
-            -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
-            -e CARGO_INCREMENTAL=0 \
-            -e PYTHONHASHSEED=0 \
-            -e TZ=UTC \
-            -e LC_ALL=C.UTF-8 \
-            -e CARGO_TARGET_DIR=/work/.rust018-target-a \
-            -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-            -v "$GITHUB_WORKSPACE:/work" \
-            -v "$HOME/.cargo:/cargo" \
-            -v "$HOME/.rustup:/rustup:ro" \
-            -w /work \
-            "$MANYLINUX_IMAGE" \
-            /bin/bash -lc '
-              set -euo pipefail
-              python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
-              rustc --version | grep -F "rustc 1.98.0 "
-              cargo --version | grep -F "cargo 1.98.0 "
-              test "$SOURCE_DATE_EPOCH" -ge 315532800
-              python -m pip install --no-deps --only-binary=:all: --require-hashes --target /work/.rust018-tools-a -r /work/requirements-native-build.lock
-              export PYTHONPATH=/work/.rust018-tools-a
-              export PATH=/work/.rust018-tools-a/bin:$PATH
-              test "$(maturin --version)" = "maturin 1.15.0"
-              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /work/wheelhouse-repro-a
-              auditwheel show /work/wheelhouse-repro-a/*.whl
-            '
-
-      - name: Separate RUST-018 reference build wall clocks
-        run: sleep 2
-
-      - name: Build RUST-018 reference candidate B
-        shell: bash
-        env:
-          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
-        run: |
-          set -euo pipefail
-          rm -rf wheelhouse-repro-b .rust018-target-b .rust018-tools-b
-          mkdir -p wheelhouse-repro-b .rust018-tools-b
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -e HOME=/tmp \
-            -e CARGO_HOME=/cargo \
-            -e RUSTUP_HOME=/rustup \
-            -e RUSTUP_TOOLCHAIN=1.98.0 \
-            -e PYO3_PYTHON=/opt/python/cp313-cp313/bin/python \
-            -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
-            -e CARGO_INCREMENTAL=0 \
-            -e PYTHONHASHSEED=0 \
-            -e TZ=UTC \
-            -e LC_ALL=C.UTF-8 \
-            -e CARGO_TARGET_DIR=/work/.rust018-target-b \
-            -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-            -v "$GITHUB_WORKSPACE:/work" \
-            -v "$HOME/.cargo:/cargo" \
-            -v "$HOME/.rustup:/rustup:ro" \
-            -w /work \
-            "$MANYLINUX_IMAGE" \
-            /bin/bash -lc '
-              set -euo pipefail
-              python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
-              rustc --version | grep -F "rustc 1.98.0 "
-              cargo --version | grep -F "cargo 1.98.0 "
-              test "$SOURCE_DATE_EPOCH" -ge 315532800
-              python -m pip install --no-deps --only-binary=:all: --require-hashes --target /work/.rust018-tools-b -r /work/requirements-native-build.lock
-              export PYTHONPATH=/work/.rust018-tools-b
-              export PATH=/work/.rust018-tools-b/bin:$PATH
-              test "$(maturin --version)" = "maturin 1.15.0"
-              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /work/wheelhouse-repro-b
-              auditwheel show /work/wheelhouse-repro-b/*.whl
-            '
+          for candidate in a b; do
+            target=".rust018-target-$candidate"
+            tools=".rust018-tools-$candidate"
+            wheelhouse="wheelhouse-repro-$candidate"
+            rm -rf "$target" "$tools" "$wheelhouse"
+            mkdir -p "$tools" "$wheelhouse"
+            docker run --rm \
+              --user "$(id -u):$(id -g)" \
+              -e HOME=/tmp \
+              -e CARGO_HOME=/cargo \
+              -e RUSTUP_HOME=/rustup \
+              -e RUSTUP_TOOLCHAIN=1.98.0 \
+              -e PYO3_PYTHON=/opt/python/cp313-cp313/bin/python \
+              -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
+              -e CARGO_INCREMENTAL=0 \
+              -e PYTHONHASHSEED=0 \
+              -e TZ=UTC \
+              -e LC_ALL=C.UTF-8 \
+              -e CARGO_TARGET_DIR="/work/$target" \
+              -e CANDIDATE_TOOLS="/work/$tools" \
+              -e CANDIDATE_WHEELHOUSE="/work/$wheelhouse" \
+              -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+              -v "$GITHUB_WORKSPACE:/work" \
+              -v "$HOME/.cargo:/cargo" \
+              -v "$HOME/.rustup:/rustup:ro" \
+              -w /work \
+              "$MANYLINUX_IMAGE" \
+              /bin/bash -lc '
+                set -euo pipefail
+                python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
+                rustc --version | grep -F "rustc 1.98.0 "
+                cargo --version | grep -F "cargo 1.98.0 "
+                python -m pip install --no-deps --only-binary=:all: --require-hashes --target "$CANDIDATE_TOOLS" -r /work/requirements-native-build.lock
+                export PYTHONPATH="$CANDIDATE_TOOLS"
+                export PATH="$CANDIDATE_TOOLS/bin:$PATH"
+                test "$(maturin --version)" = "maturin 1.15.0"
+                maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out "$CANDIDATE_WHEELHOUSE"
+                auditwheel show "$CANDIDATE_WHEELHOUSE"/*.whl
+              '
+            if [[ "$candidate" = a ]]; then sleep 2; fi
+          done
 
       - name: Prove RUST-018 reference reproducibility
+        shell: bash
         env:
           SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
         run: |
           set -euo pipefail
           sha256sum wheelhouse-repro-a/*.whl wheelhouse-repro-b/*.whl
           python rust_013_reproducible_wheel_spec.py wheelhouse-repro-a wheelhouse-repro-b "$SOURCE_DATE_EPOCH"
-
-      - name: Recheck portable wheel contract for both references
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf wheelhouse-portable
-          mkdir wheelhouse-portable
-          cp -- wheelhouse-repro-a/*.whl wheelhouse-portable/
-          python rust_009_portable_linux_wheel_spec.py
-          rm -rf wheelhouse-portable
-          mkdir wheelhouse-portable
-          cp -- wheelhouse-repro-b/*.whl wheelhouse-portable/
-          python rust_009_portable_linux_wheel_spec.py
+          for candidate in a b; do
+            rm -rf wheelhouse-portable
+            mkdir wheelhouse-portable
+            cp -- "wheelhouse-repro-$candidate"/*.whl wheelhouse-portable/
+            python rust_009_portable_linux_wheel_spec.py
+          done
 
       - name: Generate and seal RUST-014 TEST-ONLY reference evidence
+        shell: bash
         env:
           SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
         run: |
@@ -280,11 +237,7 @@ jobs:
           root_tree="$(git rev-parse "$AXVEN_SOURCE_SHA^{tree}")"
           tree_paths=("" ".github" ".github/workflows" "native" "native/axven_native" "native/axven_native/src")
           for tree_path in "${tree_paths[@]}"; do
-            if [[ -z "$tree_path" ]]; then
-              oid="$root_tree"
-            else
-              oid="$(git rev-parse "$AXVEN_SOURCE_SHA:$tree_path")"
-            fi
+            if [[ -z "$tree_path" ]]; then oid="$root_tree"; else oid="$(git rev-parse "$AXVEN_SOURCE_SHA:$tree_path")"; fi
             git cat-file tree "$oid" > "$consumer/git-objects/trees/$oid.tree"
             test "$(git hash-object -t tree --stdin < "$consumer/git-objects/trees/$oid.tree")" = "$oid"
           done
@@ -303,12 +256,7 @@ jobs:
           cd "$consumer"
           wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
           wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
-          env -i \
-            HOME=/tmp \
-            PATH="$PATH" \
-            PYTHONUTF8=1 \
-            PYTHONIOENCODING=utf-8 \
-            PYTHONDONTWRITEBYTECODE=1 \
+          env -i HOME=/tmp PATH="$PATH" PYTHONUTF8=1 PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1 \
             python rust_018_detached_rebuild_verify.py sourcecheck \
               "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json \
               source-inputs git-objects rebuild-source
@@ -356,24 +304,25 @@ jobs:
             -e CARGO_TARGET_DIR=/tmp/axven-rust018-target \
             -e PYTHONPATH=/tools \
             -e PATH=/cargo/bin:/tools/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-            -v "$rebuild_source/native/axven_native:/src:ro" \
+            -v "$rebuild_source/native/axven_native:/work/native/axven_native:ro" \
             -v "$rebuild_tools:/tools:ro" \
             -v "$rebuild_cargo:/cargo" \
             -v "$HOME/.rustup:/rustup:ro" \
             -v "$rebuild_output:/out" \
-            -w /src \
+            -w /work \
             "$MANYLINUX_IMAGE" \
             /bin/bash -lc '
               set -euo pipefail
-              test ! -e /src/.git
-              test "$(find /src -type f | wc -l)" -eq 5
+              test ! -e /work/.git
+              test ! -e /work/native/axven_native/.git
+              test "$(find /work/native/axven_native -type f | wc -l)" -eq 5
               python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
               rustc --version | grep -F "rustc 1.98.0 "
               cargo --version | grep -F "cargo 1.98.0 "
               test "$(maturin --version)" = "maturin 1.15.0"
               test "$CARGO_NET_OFFLINE" = "true"
               test "$SOURCE_DATE_EPOCH" -ge 315532800
-              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /src/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /out
+              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /out
               auditwheel show /out/*.whl
             '
           test "$(find "$rebuild_output" -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 1
@@ -387,12 +336,7 @@ jobs:
           wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
           wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
           rebuilt="$(find rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
-          env -i \
-            HOME=/tmp \
-            PATH="$PATH" \
-            PYTHONUTF8=1 \
-            PYTHONIOENCODING=utf-8 \
-            PYTHONDONTWRITEBYTECODE=1 \
+          env -i HOME=/tmp PATH="$PATH" PYTHONUTF8=1 PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1 \
             python rust_018_detached_rebuild_verify.py verify \
               "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json \
               source-inputs git-objects rebuild-source "$rebuilt"
@@ -406,12 +350,7 @@ jobs:
           wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
           wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
           rebuilt="$(find rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
-          env -i \
-            HOME=/tmp \
-            PATH="$PATH" \
-            PYTHONUTF8=1 \
-            PYTHONIOENCODING=utf-8 \
-            PYTHONDONTWRITEBYTECODE=1 \
+          env -i HOME=/tmp PATH="$PATH" PYTHONUTF8=1 PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1 \
             python rust_018_detached_rebuild_verify.py selftest \
               "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json \
               source-inputs git-objects rebuild-source "$rebuilt"
@@ -425,12 +364,7 @@ jobs:
           wheel_a="$(find build-a -maxdepth 1 -type f -name '*.whl' -print)"
           wheel_b="$(find build-b -maxdepth 1 -type f -name '*.whl' -print)"
           rebuilt="$(find rebuilt-wheel -maxdepth 1 -type f -name '*.whl' -print)"
-          env -i \
-            HOME=/tmp \
-            PATH="$PATH" \
-            PYTHONUTF8=1 \
-            PYTHONIOENCODING=utf-8 \
-            PYTHONDONTWRITEBYTECODE=1 \
+          env -i HOME=/tmp PATH="$PATH" PYTHONUTF8=1 PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1 \
             python rust_018_detached_rebuild_verify.py verify \
               "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json \
               source-inputs git-objects rebuild-source "$rebuilt"
