@@ -1,0 +1,353 @@
+name: Axven Native Verified Dependency Rebuild
+
+on:
+  push:
+    paths:
+      - "native/axven_native/**"
+      - "requirements-native-build.lock"
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "rust_013_reproducible_wheel_spec.py"
+      - "rust_019_offline_dependency_closure.py"
+      - "rust_020_verified_vendor.py"
+      - "RUST_021.md"
+      - "rust_021_verified_dependency_rebuild_spec.py"
+      - "rust_021_verified_dependency_rebuild_policy_spec.py"
+      - ".github/workflows/native-verified-dependency-rebuild.yml"
+  pull_request:
+    paths:
+      - "native/axven_native/**"
+      - "requirements-native-build.lock"
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "rust_013_reproducible_wheel_spec.py"
+      - "rust_019_offline_dependency_closure.py"
+      - "rust_020_verified_vendor.py"
+      - "RUST_021.md"
+      - "rust_021_verified_dependency_rebuild_spec.py"
+      - "rust_021_verified_dependency_rebuild_policy_spec.py"
+      - ".github/workflows/native-verified-dependency-rebuild.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MANYLINUX_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7
+
+jobs:
+  verified-dependency-rebuild:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked Axven runtime dependencies
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: Install exact Rust toolchain for controlled mounts
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+          python -c "import platform; assert platform.python_version() == '3.13.15', platform.python_version()"
+          rustc --version | grep -F "rustc 1.98.0 "
+          cargo --version | grep -F "cargo 1.98.0 "
+
+      - name: RUST-021 static verified dependency rebuild policy
+        run: python rust_021_verified_dependency_rebuild_policy_spec.py
+
+      - name: Derive source-bound reproducibility epoch
+        id: epoch
+        shell: bash
+        run: |
+          set -euo pipefail
+          checkout="$(git rev-parse HEAD)"
+          test "$checkout" = "$AXVEN_SOURCE_SHA"
+          source_epoch="$(git show -s --format=%ct "$AXVEN_SOURCE_SHA")"
+          case "$source_epoch" in
+            ''|*[!0-9]*) exit 1 ;;
+          esac
+          test "$source_epoch" -ge 315532800
+          printf 'epoch=%s\n' "$source_epoch" >> "$GITHUB_OUTPUT"
+          printf 'RUST-021 SOURCE_DATE_EPOCH=%s source=%s\n' "$source_epoch" "$AXVEN_SOURCE_SHA"
+
+      - name: Pull and verify immutable manylinux image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$MANYLINUX_IMAGE"
+          resolved="$(docker image inspect "$MANYLINUX_IMAGE" --format '{{index .RepoDigests 0}}')"
+          test "$resolved" = "$MANYLINUX_IMAGE"
+
+      - name: Materialize canonical Cargo registry source root
+        id: registry-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo metadata --locked --manifest-path native/axven_native/Cargo.toml --format-version 1 > /tmp/rust021-host-metadata.json
+          test -s /tmp/rust021-host-metadata.json
+          registry_src="$HOME/.cargo/registry/src"
+          test -d "$registry_src"
+          mapfile -t roots < <(find "$registry_src" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+          test "${#roots[@]}" -eq 1
+          case "${roots[0]}" in
+            index.crates.io-*) ;;
+            *) exit 1 ;;
+          esac
+          printf 'dir=%s\n' "${roots[0]}" >> "$GITHUB_OUTPUT"
+          printf 'RUST-021 canonical registry source root=%s\n' "${roots[0]}"
+
+      - name: Build RUST-021 reference wheel
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+          REGISTRY_SOURCE_DIR: ${{ steps.registry-source.outputs.dir }}
+        run: |
+          set -euo pipefail
+          rm -rf wheelhouse-rust021-reference .rust021-reference-target .rust021-reference-tools
+          mkdir -p wheelhouse-rust021-reference .rust021-reference-tools
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e CARGO_HOME=/cargo \
+            -e RUSTUP_HOME=/rustup \
+            -e RUSTUP_TOOLCHAIN=1.98.0 \
+            -e PYO3_PYTHON=/opt/python/cp313-cp313/bin/python \
+            -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
+            -e CARGO_INCREMENTAL=0 \
+            -e PYTHONHASHSEED=0 \
+            -e TZ=UTC \
+            -e LC_ALL=C.UTF-8 \
+            -e REGISTRY_SOURCE_DIR="$REGISTRY_SOURCE_DIR" \
+            -e RUSTFLAGS="--remap-path-prefix=/cargo/registry/src/$REGISTRY_SOURCE_DIR=/axven/vendor" \
+            -e CARGO_TARGET_DIR=/work/.rust021-reference-target \
+            -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -v "$HOME/.cargo:/cargo" \
+            -v "$HOME/.rustup:/rustup:ro" \
+            -w /work \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              test -d "/cargo/registry/src/$REGISTRY_SOURCE_DIR"
+              test "$RUSTFLAGS" = "--remap-path-prefix=/cargo/registry/src/$REGISTRY_SOURCE_DIR=/axven/vendor"
+              python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
+              rustc --version | grep -F "rustc 1.98.0 "
+              cargo --version | grep -F "cargo 1.98.0 "
+              python -m pip install --no-deps --only-binary=:all: --require-hashes --target /work/.rust021-reference-tools -r /work/requirements-native-build.lock
+              export PYTHONPATH=/work/.rust021-reference-tools
+              export PATH=/work/.rust021-reference-tools/bin:$PATH
+              test "$(maturin --version)" = "maturin 1.15.0"
+              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /work/wheelhouse-rust021-reference
+              auditwheel show /work/wheelhouse-rust021-reference/*.whl
+            '
+
+      - name: Populate locked Cargo archive cache for closure collection
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fetch --locked --manifest-path native/axven_native/Cargo.toml
+
+      - name: Collect RUST-019 dependency inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=/tmp/axven-rust021-dependencies
+          rm -rf "$bundle"
+          mkdir -p "$bundle/cargo-crates" "$bundle/python-wheels"
+          python rust_019_offline_dependency_closure.py collect-crates \
+            native/axven_native/Cargo.lock "$HOME/.cargo" "$bundle/cargo-crates"
+          python -m pip download \
+            --no-deps \
+            --only-binary=:all: \
+            --require-hashes \
+            -r requirements-native-build.lock \
+            --dest "$bundle/python-wheels"
+          test "$(find "$bundle/python-wheels" -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 1
+          test "$(find "$bundle" -type l | wc -l)" -eq 0
+
+      - name: Verify RUST-019 dependency inputs before consumption
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=/tmp/axven-rust021-dependencies
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_019_offline_dependency_closure.py verify \
+              native/axven_native/Cargo.lock requirements-native-build.lock \
+              "$bundle/cargo-crates" "$bundle/python-wheels"
+
+      - name: Build and verify RUST-020 Cargo vendor tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=/tmp/axven-rust021-dependencies
+          vendor_dir=/tmp/axven-rust021-vendor
+          rm -rf "$vendor_dir"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_020_verified_vendor.py build \
+              native/axven_native/Cargo.lock "$bundle/cargo-crates" "$vendor_dir"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_020_verified_vendor.py verify \
+              native/axven_native/Cargo.lock "$vendor_dir"
+          test "$(find "$vendor_dir" -type l | wc -l)" -eq 0
+
+      - name: Prepare clean RUST-021 Cargo home and tool/output directories
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo_home=/tmp/axven-rust021-cargo-home
+          tools=/tmp/axven-rust021-tools
+          output=/tmp/axven-rust021-offline-wheel
+          rm -rf "$cargo_home" "$tools" "$output"
+          mkdir -p "$cargo_home" "$tools" "$output"
+          python rust_020_verified_vendor.py write-config "$cargo_home"
+          test ! -e "$cargo_home/registry"
+          test ! -e "$cargo_home/git"
+          test "$(find "$tools" -mindepth 1 | wc -l)" -eq 0
+          test "$(find "$output" -mindepth 1 | wc -l)" -eq 0
+
+      - name: Build RUST-021 wheel from verified dependencies with network disabled
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          bundle=/tmp/axven-rust021-dependencies
+          vendor_dir=/tmp/axven-rust021-vendor
+          cargo_home=/tmp/axven-rust021-cargo-home
+          tools=/tmp/axven-rust021-tools
+          output=/tmp/axven-rust021-offline-wheel
+          docker run --rm --network none \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e CARGO_HOME=/cargo-home \
+            -e RUSTUP_HOME=/rustup \
+            -e RUSTUP_TOOLCHAIN=1.98.0 \
+            -e PYO3_PYTHON=/opt/python/cp313-cp313/bin/python \
+            -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
+            -e CARGO_INCREMENTAL=0 \
+            -e CARGO_NET_OFFLINE=true \
+            -e PYTHONHASHSEED=0 \
+            -e TZ=UTC \
+            -e LC_ALL=C.UTF-8 \
+            -e PIP_NO_CACHE_DIR=1 \
+            -e RUSTFLAGS=--remap-path-prefix=/vendor=/axven/vendor \
+            -e CARGO_TARGET_DIR=/tmp/axven-rust021-target \
+            -e PATH=/cargo-bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$vendor_dir:/vendor:ro" \
+            -v "$bundle/python-wheels:/python-wheels:ro" \
+            -v "$cargo_home:/cargo-home" \
+            -v "$tools:/tools" \
+            -v "$output:/out" \
+            -v "$HOME/.cargo/bin:/cargo-bin:ro" \
+            -v "$HOME/.rustup:/rustup:ro" \
+            -v "$GITHUB_WORKSPACE/native/axven_native:/work/native/axven_native:ro" \
+            -w /work/native/axven_native \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              test "$CARGO_NET_OFFLINE" = "true"
+              test "$RUSTFLAGS" = "--remap-path-prefix=/vendor=/axven/vendor"
+              test ! -e /cargo-home/registry
+              test ! -e /cargo-home/git
+              python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
+              rustc --version | grep -F "rustc 1.98.0 "
+              cargo --version | grep -F "cargo 1.98.0 "
+              python -m pip install --no-index --no-deps --no-cache-dir --target /tools /python-wheels/*.whl
+              export PYTHONPATH=/tools
+              export PATH=/tools/bin:$PATH
+              test "$(maturin --version)" = "maturin 1.15.0"
+              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /out
+              auditwheel show /out/*.whl
+              test ! -e /cargo-home/registry/index
+              test ! -e /cargo-home/registry/cache
+              test ! -e /cargo-home/registry/src
+              test ! -e /cargo-home/git
+            '
+          test "$(find "$output" -maxdepth 1 -type f -name '*.whl' | wc -l)" -eq 1
+          test ! -e "$cargo_home/registry/index"
+          test ! -e "$cargo_home/registry/cache"
+          test ! -e "$cargo_home/registry/src"
+          test ! -e "$cargo_home/git"
+
+      - name: Verify RUST-021 offline wheel identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python rust_021_verified_dependency_rebuild_spec.py verify \
+            wheelhouse-rust021-reference /tmp/axven-rust021-offline-wheel
+
+      - name: RUST-021 wheel identity mutation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python rust_021_verified_dependency_rebuild_spec.py selftest \
+            wheelhouse-rust021-reference /tmp/axven-rust021-offline-wheel
+
+      - name: Reapply reproducible and portable wheel contracts
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          python rust_013_reproducible_wheel_spec.py \
+            wheelhouse-rust021-reference /tmp/axven-rust021-offline-wheel "$SOURCE_DATE_EPOCH"
+          rm -rf wheelhouse-portable
+          mkdir wheelhouse-portable
+          cp -- /tmp/axven-rust021-offline-wheel/*.whl wheelhouse-portable/
+          python rust_009_portable_linux_wheel_spec.py
+
+      - name: Reverify dependency inputs and vendor after build
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=/tmp/axven-rust021-dependencies
+          vendor_dir=/tmp/axven-rust021-vendor
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_019_offline_dependency_closure.py verify \
+              native/axven_native/Cargo.lock requirements-native-build.lock \
+              "$bundle/cargo-crates" "$bundle/python-wheels"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_020_verified_vendor.py verify \
+              native/axven_native/Cargo.lock "$vendor_dir"
