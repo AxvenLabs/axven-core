@@ -9,7 +9,7 @@ import rust_014_reproducible_attestation as producer
 import rust_018_detached_rebuild_verify as consumer
 
 ROOT = Path(__file__).resolve().parent
-WORKFLOW = ROOT / ".github/workflows/native-reproducible-build.yml"
+WORKFLOW = ROOT / ".github/workflows/native-detached-source-rebuild.yml"
 PRODUCTION = ("axven.py", "core.py", "p2p.py", "rpc.py", "wallet.py", "axven_core.py")
 EXPECTED_REBUILD_SOURCE = frozenset(
     {
@@ -80,7 +80,7 @@ def main() -> None:
         "gitcheck._verify(",
         'gitcheck._git_oid("commit", commit_payload)',
         'gitcheck._git_oid("blob", path.read_bytes())',
-        "rebuilt.read_bytes()" if False else "rebuilt_wheel.read_bytes()",
+        "rebuilt_wheel.read_bytes()",
         "evidence._validate_wheel_zip(rebuilt_wheel",
         "RUST-018 detached source rebuild fail-closed contract: 8/8 GREEN",
     ):
@@ -116,9 +116,8 @@ def main() -> None:
     build_at = workflow.index("Build RUST-018 detached source with network disabled")
     verify_at = workflow.index("Verify RUST-018 detached rebuild equivalence")
     assert sourcecheck_at < build_at < verify_at
-    build_end = workflow.index("Verify RUST-018 detached rebuild equivalence")
-    build_segment = workflow[build_at:build_end]
-    assert 'GITHUB_WORKSPACE' not in build_segment
+    build_segment = workflow[build_at:verify_at]
+    assert "GITHUB_WORKSPACE" not in build_segment
     assert '-v "$rebuild_source/native/axven_native:/src:ro"' in build_segment
     assert '-v "$rebuild_tools:/tools:ro"' in build_segment
     assert '-e CARGO_NET_OFFLINE=true' in build_segment
