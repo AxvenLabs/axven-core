@@ -40,6 +40,8 @@ SHA-256 is supplied by the upstream `sha2` crate. RUST-002 does not implement a 
 
 Rust unit tests also pin the fixed oracle vectors independently of Python execution.
 
+The clean review head must pass the ordinary Axven Validation suite, Axven Fuzz Smoke, and Axven Native Smoke. Native Smoke builds the PyO3 extension from the locked Rust dependency graph before executing both the RUST-001 boundary contract and the RUST-002 differential contract.
+
 ## Trust boundary
 
 The mirror remains pure and side-effect free. It opens no sockets or files, reads no environment variables, clocks, randomness, process state, or persistent state, and contains no Ed25519, ML-DSA, or ML-KEM implementation.
