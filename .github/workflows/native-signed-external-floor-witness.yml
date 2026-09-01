@@ -51,7 +51,8 @@ jobs:
           check-latest: false
 
       - name: Install hash-locked producer dependency
-        run: python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
 
       - name: RUST-033 static signed-floor policy
         run: |
