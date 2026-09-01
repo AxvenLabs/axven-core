@@ -74,7 +74,7 @@ def main() -> None:
     checks += 1
     print("[GREEN] validator stamps provenance only after the complete security gate succeeds")
 
-    assert runtime_provenance.RECEIPT_SCHEMA == 2
+    assert runtime_provenance.RECEIPT_SCHEMA == 3
     assert "release_manifest.json" in runtime_provenance.TRUST_INPUTS
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)

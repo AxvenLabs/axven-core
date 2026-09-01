@@ -13,9 +13,12 @@ from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parent
 REQUIRED_PYTHON = "3.13.15"
-RECEIPT_SCHEMA = 2
+RECEIPT_SCHEMA = 3
 RECEIPT_NAME = ".axven-runtime-provenance.json"
+PYTHON_DIGEST_NAME = ".axven-python.sha256"
 MAX_RECEIPT_BYTES = 32 * 1024
+MAX_PYTHON_DIGEST_BYTES = 128
+MAX_INTERPRETER_BYTES = 64 * 1024 * 1024
 MAX_TRUST_INPUT_BYTES = 2 * 1024 * 1024
 MAX_RELEASE_MANIFEST_BYTES = 1024 * 1024
 MAX_RELEASE_FILES = 4096
@@ -269,16 +272,39 @@ def _runtime_profile() -> str:
     raise RuntimeError(f"unsupported runtime provenance platform: {system}")
 
 
-def build_receipt(root: Path, *, python_version: str, profile: str = "windows") -> dict:
+def _measure_interpreter(interpreter_path: Path | str) -> dict[str, int | str]:
+    try:
+        resolved = Path(interpreter_path).resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise RuntimeError("Python interpreter is missing or unresolved") from exc
+    data = _read_regular_bounded(
+        resolved,
+        label="Python interpreter",
+        max_bytes=MAX_INTERPRETER_BYTES,
+        allow_empty=False,
+    )
+    return {"bytes": len(data), "sha256": _sha256(data)}
+
+
+def build_receipt(
+    root: Path,
+    *,
+    python_version: str,
+    profile: str = "windows",
+    interpreter_path: Path | str | None = None,
+) -> dict:
     if python_version != REQUIRED_PYTHON:
         raise RuntimeError(f"Python {REQUIRED_PYTHON} is required")
     inputs: dict[str, dict[str, int | str]] = {}
     for name in _trust_inputs_for_profile(profile):
         data = _read_trust_input(root / name, name)
         inputs[name] = {"bytes": len(data), "sha256": _sha256(data)}
+    if interpreter_path is None:
+        interpreter_path = Path(sys.executable)
     return {
         "schema": RECEIPT_SCHEMA,
         "python_version": python_version,
+        "python_executable": _measure_interpreter(interpreter_path),
         "inputs": inputs,
     }
 
@@ -287,24 +313,28 @@ def receipt_path(root: Path = ROOT) -> Path:
     return root / ".venv" / RECEIPT_NAME
 
 
-def _assert_expected_interpreter(root: Path = ROOT) -> None:
-    venv = (root / ".venv").resolve()
-    executable = Path(sys.executable).resolve()
-    if executable.parent.parent != venv:
-        raise RuntimeError(f"runtime receipt must be managed by {venv}")
+def python_digest_path(root: Path = ROOT) -> Path:
+    return root / ".venv" / PYTHON_DIGEST_NAME
 
 
-def stamp(root: Path = ROOT, *, profile: str | None = None) -> None:
-    if profile is None:
-        profile = _runtime_profile()
-    _assert_expected_interpreter(root)
-    _verify_manifest_payloads(root)
-    receipt = build_receipt(root, python_version=platform.python_version(), profile=profile)
-    path = receipt_path(root)
+def _read_python_digest(path: Path) -> str:
+    try:
+        raw = _read_regular_bounded(
+            path,
+            label="Python interpreter digest",
+            max_bytes=MAX_PYTHON_DIGEST_BYTES,
+            allow_empty=False,
+        )
+        value = raw.decode("ascii").strip()
+    except UnicodeError as exc:
+        raise RuntimeError("Python interpreter digest is invalid") from exc
+    if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):
+        raise RuntimeError("Python interpreter digest is invalid")
+    return value
+
+
+def _atomic_write_private(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = (json.dumps(receipt, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
-    if len(payload) > MAX_RECEIPT_BYTES:
-        raise RuntimeError("runtime provenance receipt exceeds size budget")
     tmp = path.with_name(path.name + f".tmp-{os.getpid()}")
     try:
         with open(tmp, "xb") as handle:
@@ -321,6 +351,38 @@ def stamp(root: Path = ROOT, *, profile: str | None = None) -> None:
             tmp.unlink()
         except FileNotFoundError:
             pass
+
+
+def _assert_expected_interpreter(root: Path = ROOT) -> None:
+    # Preserve the lexical venv path on POSIX: venv/bin/python is normally a
+    # symlink to the base interpreter. Binary identity is measured separately.
+    venv = Path(os.path.abspath(root / ".venv"))
+    executable = Path(os.path.abspath(sys.executable))
+    profile = _runtime_profile()
+    relative = Path("Scripts/python.exe") if profile == "windows" else Path("bin/python")
+    expected = venv / relative
+    if os.path.normcase(str(executable)) != os.path.normcase(str(expected)):
+        raise RuntimeError(f"runtime receipt must be managed by {expected}")
+
+
+def stamp(root: Path = ROOT, *, profile: str | None = None) -> None:
+    if profile is None:
+        profile = _runtime_profile()
+    _assert_expected_interpreter(root)
+    _verify_manifest_payloads(root)
+    receipt = build_receipt(
+        root,
+        python_version=platform.python_version(),
+        profile=profile,
+        interpreter_path=Path(sys.executable),
+    )
+    path = receipt_path(root)
+    payload = (json.dumps(receipt, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    if len(payload) > MAX_RECEIPT_BYTES:
+        raise RuntimeError("runtime provenance receipt exceeds size budget")
+    _atomic_write_private(path, payload)
+    digest = receipt["python_executable"]["sha256"]
+    _atomic_write_private(python_digest_path(root), (digest + "\n").encode("ascii"))
     print("Axven runtime provenance receipt: STAMPED")
 
 
@@ -337,7 +399,15 @@ def check(root: Path = ROOT, *, profile: str | None = None) -> None:
     except (UnicodeError, json.JSONDecodeError) as exc:
         raise RuntimeError("runtime provenance receipt is unreadable") from exc
     _verify_manifest_payloads(root)
-    expected = build_receipt(root, python_version=platform.python_version(), profile=profile)
+    expected = build_receipt(
+        root,
+        python_version=platform.python_version(),
+        profile=profile,
+        interpreter_path=Path(sys.executable),
+    )
+    published_digest = _read_python_digest(python_digest_path(root))
+    if not hmac.compare_digest(published_digest, expected["python_executable"]["sha256"]):
+        raise RuntimeError("Python interpreter digest is stale or mismatched")
     if actual != expected:
         raise RuntimeError("runtime provenance receipt is stale or mismatched")
     print("Axven runtime provenance receipt: GREEN")

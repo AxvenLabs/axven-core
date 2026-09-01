@@ -285,12 +285,12 @@
       "sha256": "950bf9aa08618b893a40716978fd361e7c4ee32150f95271d285553d2193c1a7"
     },
     "ensure_runtime.ps1": {
-      "bytes": 851,
-      "sha256": "ae182611d8d2614317f9f05c5b29007ed7f39a841c2fe9f6b756a2de5f7be9b5"
+      "bytes": 1639,
+      "sha256": "a684b05df38d9d0bef4001d01d8d60d759371c18e4ce5243f5fb67edd62a345c"
     },
     "ensure_runtime.sh": {
-      "bytes": 271,
-      "sha256": "d27d13ad3080abd534439b0933cf52fd6a9a35019b3764c1532b81dc3c529f4c"
+      "bytes": 1174,
+      "sha256": "7715cced3a248bf24d64711d13c5d68cdcee7b445a6518083867bc2bb635a44e"
     },
     "explorer.py": {
       "bytes": 9267,
@@ -381,8 +381,8 @@
       "sha256": "35f82cd5d9dfbb136eed077c0d8051c8fab758c65922328ee816fe748013c2b8"
     },
     "runtime_provenance.py": {
-      "bytes": 13938,
-      "sha256": "59d32c1c19c05d477b6cc96b2f16ac5a888be74eb851923166e50b63d0b03d8d"
+      "bytes": 16434,
+      "sha256": "4eda953975aab24a5c4c43d222db830fda37526d8e8f02416317dc00d65941a0"
     },
     "security_sec014_atomic_read_spec.py": {
       "bytes": 5624,
@@ -1182,7 +1182,7 @@
     },
     "security_sec213_windows_launcher_runtime_provenance_spec.py": {
       "bytes": 6190,
-      "sha256": "af8659c814ad453411446baeb7e5bb1f06d14363bd32621e6ec2969a74fe855d"
+      "sha256": "0d5cb144aaf59b1b96cec3fa44be632544fc0f195d67ea2b6f5b1fce6d20775a"
     },
     "security_sec214_windows_operator_runtime_provenance_spec.py": {
       "bytes": 4011,
@@ -1201,8 +1201,8 @@
       "sha256": "c6593459b55103ca8c9b22772a0e3e4b4782e39fe863def846264b0cff35d0e8"
     },
     "security_sec218_posix_runtime_provenance_spec.py": {
-      "bytes": 5056,
-      "sha256": "f22e5d21394fb3086b9de5a70cf5ff07a3646edf479ffd19b98d85e78e7e4183"
+      "bytes": 5090,
+      "sha256": "cf2f16d1b302668714fb1330520da0fc49368247ddf799d739264efde6b3bc91"
     },
     "security_sec219_posix_operator_runtime_provenance_spec.py": {
       "bytes": 3444,
@@ -1231,6 +1231,10 @@
     "security_sec225_bounded_daemon_retry_fanout_spec.py": {
       "bytes": 4206,
       "sha256": "b78f66c5458f33f310ea9eec43b8ade55c72aee87ead6da5f913260ebea5746d"
+    },
+    "security_sec226_interpreter_runtime_attestation_spec.py": {
+      "bytes": 4718,
+      "sha256": "7f9c1091e61f1cc3188a8afd0d89d9c9f96999126d7e2ca8ae65bd4aa86d54c3"
     },
     "setup.cmd": {
       "bytes": 326,
@@ -1285,12 +1289,12 @@
       "sha256": "ae6c641c215cb8eacc94595a0fdb7d34b73ea836e0ce9842781520d68dcffd28"
     },
     "validate_linux_macos.sh": {
-      "bytes": 1664,
-      "sha256": "a8d7ab7be5787803921fddad6fbd1a9c591a48e6675f09161629bb3ea05a8584"
+      "bytes": 2625,
+      "sha256": "3099835cae8602b1bf7fe4582286447afbcb1aeb356c7780a43c7b91ce5f0b8a"
     },
     "validate_windows.ps1": {
-      "bytes": 2303,
-      "sha256": "f69b3a2eedc7b0a3d3d666018ecac8d74d869cd038f8e85131bba05079a7d8ac"
+      "bytes": 3091,
+      "sha256": "c3bed30e9c5a0faee126ee9a03ff73d9e7eb9e69230ac2ac6b4c658a81db152e"
     },
     "verify_release.py": {
       "bytes": 15838,

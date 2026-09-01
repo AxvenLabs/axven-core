@@ -10,12 +10,28 @@ $RequiredPython = "3.13.15"
 py -3.13 -c "import platform,sys; raise SystemExit(0 if platform.python_version() == '$RequiredPython' else 2)"
 if ($LASTEXITCODE -ne 0) { throw "Python $RequiredPython is required" }
 
+$CreatedVenv = $false
 if (-not (Test-Path ".venv")) {
     py -3.13 -m venv .venv
     if ($LASTEXITCODE -ne 0) { throw "virtualenv creation failed" }
+    $CreatedVenv = $true
 }
 
 $Python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+$PythonDigest = Join-Path $PSScriptRoot ".venv\.axven-python.sha256"
+if (-not $CreatedVenv) {
+    if (-not (Test-Path $Python -PathType Leaf) -or -not (Test-Path $PythonDigest -PathType Leaf)) {
+        throw "existing .venv lacks interpreter attestation; remove it and rerun"
+    }
+    $ExpectedDigest = (Get-Content -LiteralPath $PythonDigest -Raw).Trim()
+    if ($ExpectedDigest -notmatch "^[0-9a-f]{64}$") {
+        throw "existing .venv interpreter attestation is invalid; remove it and rerun"
+    }
+    $ActualDigest = (Get-FileHash -LiteralPath $Python -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($ActualDigest -ne $ExpectedDigest) {
+        throw "existing .venv interpreter attestation mismatch; remove it and rerun"
+    }
+}
 & $Python -c "import platform,sys; raise SystemExit(0 if platform.python_version() == '$RequiredPython' else 2)"
 if ($LASTEXITCODE -ne 0) {
     throw "existing .venv is not Python $RequiredPython; remove it and rerun"

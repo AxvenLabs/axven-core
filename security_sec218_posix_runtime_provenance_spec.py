@@ -49,9 +49,9 @@ def main() -> None:
             profile="windows",
         )
         assert set(win["inputs"]) == set(runtime_provenance.WINDOWS_TRUST_INPUTS)
-        assert set(win) == {"schema", "python_version", "inputs"}
+        assert set(win) == {"schema", "python_version", "python_executable", "inputs"}
     checks += 1
-    print("[GREEN] Windows receipt format and trust boundary remain unchanged")
+    print("[GREEN] Windows receipt preserves trust inputs and adds interpreter measurement")
 
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)

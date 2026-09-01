@@ -2,9 +2,22 @@ $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
 $Python = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+$PythonDigest = Join-Path $PSScriptRoot ".venv\.axven-python.sha256"
+
+function Test-AxvenInterpreterDigest {
+    if (-not (Test-Path $Python -PathType Leaf)) { return $false }
+    if (-not (Test-Path $PythonDigest -PathType Leaf)) { return $false }
+    $Expected = (Get-Content -LiteralPath $PythonDigest -Raw).Trim()
+    if ($Expected -notmatch "^[0-9a-f]{64}$") { return $false }
+    $Actual = (Get-FileHash -LiteralPath $Python -Algorithm SHA256).Hash.ToLowerInvariant()
+    return $Actual -eq $Expected
+}
 
 function Test-AxvenValidatedRuntime {
     if (-not (Test-Path $Python -PathType Leaf)) {
+        return $false
+    }
+    if (-not (Test-AxvenInterpreterDigest)) {
         return $false
     }
 
@@ -19,6 +32,10 @@ function Test-AxvenValidatedRuntime {
     }
 
     return $true
+}
+
+if ((Test-Path $Python -PathType Leaf) -and -not (Test-AxvenInterpreterDigest)) {
+    throw "Axven runtime interpreter attestation is missing or mismatched; remove .venv and rerun validate_windows.ps1"
 }
 
 if (-not (Test-AxvenValidatedRuntime)) {
