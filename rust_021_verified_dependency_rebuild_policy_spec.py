@@ -88,6 +88,7 @@ def main() -> None:
         '-v "$bundle/python-wheels:/python-wheels:ro"',
         '-v "$HOME/.rustup:/rustup:ro"',
         '-v "$GITHUB_WORKSPACE/native/axven_native:/work/native/axven_native:ro"',
+        '-e REGISTRY_SOURCE_DIR="$REGISTRY_SOURCE_DIR"',
         'RUSTFLAGS="--remap-path-prefix=/cargo/registry/src/$REGISTRY_SOURCE_DIR=/axven/vendor"',
         "RUSTFLAGS=--remap-path-prefix=/vendor=/axven/vendor",
         "test \"$RUSTFLAGS\" = \"--remap-path-prefix=/vendor=/axven/vendor\"",
