@@ -15,6 +15,7 @@ import axven_native
 
 ROOT = Path(__file__).resolve().parent
 SAMPLES = 5
+_HEX = frozenset("0123456789abcdef")
 
 
 def _make_utxo(count: int):
@@ -43,6 +44,13 @@ def _rows(utxo):
         )
         for op, value in utxo.items()
     ]
+
+
+def _assert_root_shape(value: object) -> str:
+    assert type(value) is str
+    assert len(value) == 64
+    assert all(ch in _HEX for ch in value)
+    return value
 
 
 def _bench(fn: Callable[[], object], iterations: int, samples: int = SAMPLES):
@@ -81,15 +89,16 @@ def _measure_case(count: int, python_iterations: int, native_iterations: int):
     rows = _rows(utxo)
 
     # Correctness is an absolute prerequisite for timing.
-    python_root = axven.smt_root_reference(utxo)
-    native_root = axven_native.smt_root_mirror(rows)
+    python_root = _assert_root_shape(axven.smt_root_reference(utxo))
+    native_root = _assert_root_shape(axven_native.smt_root_mirror(rows))
     assert native_root == python_root, (count, native_root, python_root)
 
-    reversed_rows = list(reversed(rows))
-    assert axven_native.smt_root_mirror(reversed_rows) == python_root
+    reversed_root = _assert_root_shape(axven_native.smt_root_mirror(list(reversed(rows))))
+    assert reversed_root == python_root
     if rows:
         rotated_rows = rows[1:] + rows[:1]
-        assert axven_native.smt_root_mirror(rotated_rows) == python_root
+        rotated_root = _assert_root_shape(axven_native.smt_root_mirror(rotated_rows))
+        assert rotated_root == python_root
 
     python_result = _bench(
         lambda: axven.smt_root_reference(utxo),
