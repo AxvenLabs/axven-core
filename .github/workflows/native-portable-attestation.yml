@@ -61,7 +61,7 @@ jobs:
         run: |
           rustup toolchain install 1.98.0 --profile minimal
           rustup override set 1.98.0
-          python --version
+          python -c "import platform; assert platform.python_version() == '3.13.15', platform.python_version()"
           rustc --version
           cargo --version
 
@@ -98,7 +98,7 @@ jobs:
             "$MANYLINUX_IMAGE" \
             /bin/bash -lc '
               set -euo pipefail
-              python -c "import platform; assert platform.python_version() == \"3.13.15\", platform.python_version()"
+              python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
               rustc --version | grep -F "rustc 1.98.0 "
               cargo --version | grep -F "cargo 1.98.0 "
               python -m pip install --no-deps --only-binary=:all: --require-hashes --target /work/.rust011-tools -r /work/requirements-native-build.lock
