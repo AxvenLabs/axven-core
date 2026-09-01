@@ -25,6 +25,10 @@ def main() -> None:
     assert "permissions:\n  contents: read" in workflow
     assert "persist-credentials: false" in workflow
     assert 'python-version: "3.13.15"' in workflow
+    assert "platform.python_version() == '3.13.15'" in workflow
+    assert 'platform.python_version() == \\"3.13.13\\"' in workflow
+    assert att.HOST_PYTHON == "3.13.15"
+    assert att.BUILDER_PYTHON == "3.13.13"
     assert "rustup toolchain install 1.98.0 --profile minimal" in workflow
     assert "requirements-native-build.lock" in workflow
     assert "requirements-ci-runtime-posix.lock" in workflow
@@ -32,7 +36,7 @@ def main() -> None:
     assert att.MANYLINUX_IMAGE in workflow
     assert "docker image inspect" in workflow
     checks += 1
-    print("[GREEN] source, toolchain, and immutable portable builder identity are pinned")
+    print("[GREEN] source, host verifier, actual builder interpreter, toolchain, and immutable image are pinned")
 
     lower = workflow.lower()
     forbidden = (
@@ -58,17 +62,22 @@ def main() -> None:
     assert att.ALGORITHM == "ed25519"
     assert att.KEY_ID == "rust-011-test-only-ed25519-v1"
     assert att.DOMAIN == b"AXVEN_NATIVE_PORTABLE_ATTESTATION_V1\x00"
+    assert att.RUST_VERSION == "1.98.0"
+    assert att.MATURIN_VERSION == "1.15.0"
+    assert att.PYO3_VERSION == "0.29.2"
     assert att.PINNED_PUBLIC_KEY.hex() == "36868181c4f61de13030919ed7d03d6f517a7a1a9e15fde821579e09852c6722"
     assert "public_key" not in att.ENVELOPE_KEYS
     assert "TEST_SEED" in source
+    assert '"python": BUILDER_PYTHON' in source
     assert "header_bytes = _canonical(header)" in source
     assert "+ header_bytes" in source
     assert "+ payload" in source
     assert "test-only" in doc.lower()
     assert "not production release authentication" in doc.lower()
+    assert "builder and verifier python versions are intentionally distinguished" in doc.lower()
     assert "cryptography==50.0.1" in runtime_lock
     checks += 1
-    print("[GREEN] portable policy header and payload are jointly domain-separated under a pinned TEST-ONLY trust root")
+    print("[GREEN] truthful builder provenance and joint header/payload domain separation are locked")
 
     for command in (
         "python rust_009_portable_linux_wheel_spec.py",
