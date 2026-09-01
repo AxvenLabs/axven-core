@@ -30,7 +30,7 @@ def start_daemon(datadir,rpc_port,p2p_port,pw):
     env=os.environ.copy(); env["AXVEN_WALLET_PASSPHRASE"]=pw
     return subprocess.Popen(
         [sys.executable,"axven_core.py","--datadir",datadir,"run",
-         "--rpc-port",str(rpc_port),"--p2p-port",str(p2p_port)],
+         "--rpc-port",str(rpc_port),"--p2p-port",str(p2p_port),"--explorer-port","0"],
         cwd=os.path.dirname(__file__),env=env,text=True,
         stdout=subprocess.PIPE,stderr=subprocess.PIPE
     )

@@ -99,7 +99,7 @@ def start_daemon(datadir, rpc_port, p2p_port):
             "--datadir", str(datadir),
             "run",
             "--rpc-port", str(rpc_port),
-            "--p2p-port", str(p2p_port),
+            "--p2p-port", str(p2p_port),"--explorer-port","0",
             "--sync-interval", "0.5",
         ],
         cwd=os.path.dirname(__file__),

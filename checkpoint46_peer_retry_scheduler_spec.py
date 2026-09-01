@@ -115,7 +115,7 @@ try:
             "--datadir",root,
             "run",
             "--rpc-port",str(rpc_port),
-            "--p2p-port",str(local_p2p),
+            "--p2p-port",str(local_p2p),"--explorer-port","0",
             "--sync-interval","1.0",
         ],
         cwd=os.path.dirname(__file__),
