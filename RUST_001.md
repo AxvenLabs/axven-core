@@ -45,10 +45,10 @@ Initial boundary rules:
 ## Toolchain pins
 
 - Rust: `1.98.0`
-- PyO3: `0.29.0`
+- PyO3: `0.29.2`
 - maturin: `1.15.0`
 
-The Rust dependency graph must be committed through `Cargo.lock` before RUST-001 is eligible to merge.
+PyO3 is pinned to the current 0.29 patch line rather than the initial 0.29.0 release so that the binding includes the upstream 0.29.1/0.29.2 FFI, reference-counting, and platform regression fixes. The Rust dependency graph is committed through `Cargo.lock`.
 
 ## RUST-002 gate
 

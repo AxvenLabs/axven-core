@@ -16,7 +16,7 @@ def main() -> None:
 
     cargo = tomllib.loads((NATIVE / "Cargo.toml").read_text(encoding="utf-8"))
     pyo3 = cargo["dependencies"]["pyo3"]
-    assert pyo3["version"] == "=0.29.0"
+    assert pyo3["version"] == "=0.29.2"
     assert "abi3-py313" in pyo3["features"]
     assert cargo["features"]["default"] == []
     assert cargo["features"]["extension-module"] == ["pyo3/extension-module"]
