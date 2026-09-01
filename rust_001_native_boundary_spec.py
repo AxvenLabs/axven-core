@@ -23,6 +23,17 @@ def main() -> None:
     checks += 1
     print("[GREEN] PyO3 dependency and extension feature are exactly pinned")
 
+    lock = tomllib.loads((NATIVE / "Cargo.lock").read_text(encoding="utf-8"))
+    packages = {(pkg["name"], pkg["version"]): pkg for pkg in lock["package"]}
+    assert ("pyo3", "0.29.2") in packages
+    assert ("pyo3-build-config", "0.29.2") in packages
+    assert ("pyo3-ffi", "0.29.2") in packages
+    assert ("pyo3-macros", "0.29.2") in packages
+    for name in ("pyo3", "pyo3-build-config", "pyo3-ffi", "pyo3-macros"):
+        assert packages[(name, "0.29.2")].get("checksum")
+    checks += 1
+    print("[GREEN] Cargo.lock freezes the PyO3 0.29.2 dependency graph with registry checksums")
+
     pyproject = tomllib.loads((NATIVE / "pyproject.toml").read_text(encoding="utf-8"))
     assert pyproject["build-system"]["requires"] == ["maturin==1.15.0"]
     assert pyproject["project"]["requires-python"] == ">=3.13.15,<3.14"
@@ -84,8 +95,8 @@ def main() -> None:
     checks += 1
     print("[GREEN] RUST-001 leaves canonical chain and PQ activation identity unchanged")
 
-    assert checks == 7, checks
-    print("RUST-001 native boundary skeleton: 7/7 GREEN")
+    assert checks == 8, checks
+    print("RUST-001 native boundary skeleton: 8/8 GREEN")
 
 
 if __name__ == "__main__":

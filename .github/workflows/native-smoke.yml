@@ -1,0 +1,59 @@
+name: Axven Native Smoke
+
+on:
+  push:
+    paths:
+      - "native/**"
+      - "RUST_001.md"
+      - "rust_001_native_boundary_spec.py"
+      - ".github/workflows/native-smoke.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - "RUST_001.md"
+      - "rust_001_native_boundary_spec.py"
+      - ".github/workflows/native-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYO3_PYTHON: python
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install exact Rust toolchain
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt,clippy
+          rustup override set 1.98.0
+          python --version
+          rustc --version
+          cargo --version
+
+      - name: Rust formatting
+        run: cargo fmt --manifest-path native/axven_native/Cargo.toml -- --check
+
+      - name: Rust clippy
+        run: cargo clippy --locked --manifest-path native/axven_native/Cargo.toml --all-targets -- -D warnings
+
+      - name: Rust unit tests
+        run: cargo test --locked --manifest-path native/axven_native/Cargo.toml
+
+      - name: PyO3 extension compile check
+        run: cargo check --locked --manifest-path native/axven_native/Cargo.toml --features extension-module
+
+      - name: RUST-001 boundary contract
+        run: python rust_001_native_boundary_spec.py
