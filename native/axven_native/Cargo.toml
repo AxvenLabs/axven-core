@@ -1,0 +1,18 @@
+[package]
+name = "axven-native"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Dormant deterministic native acceleration boundary for Axven"
+license = "MIT"
+
+[lib]
+name = "axven_native"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = []
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+pyo3 = { version = "=0.29.0", features = ["abi3-py313"] }
