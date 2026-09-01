@@ -5,8 +5,6 @@ Axven Core is the reference node/wallet implementation for the canonical
 
 Current stage: **canonical devnet / pre-public release hardening**.
 
-Website: https://axven.org
-
 ## What is implemented
 
 - PoW chain with cumulative-chainwork fork choice
