@@ -20,14 +20,40 @@ case "$os:$arch" in
     ;;
 esac
 
+created_venv=0
 if [[ ! -d .venv ]]; then
   python3 -m venv .venv
+  created_venv=1
 fi
 
 venv_python=".venv/bin/python"
+digest_path=".venv/.axven-python.sha256"
 if [[ ! -x "$venv_python" ]]; then
   echo "existing .venv has no executable Python; remove it and rerun" >&2
   exit 2
+fi
+if [[ "$created_venv" -eq 0 ]]; then
+  if [[ ! -f "$digest_path" || -L "$digest_path" ]]; then
+    echo "existing .venv lacks interpreter attestation; remove it and rerun" >&2
+    exit 2
+  fi
+  IFS= read -r expected_digest < "$digest_path" || true
+  if [[ ! "$expected_digest" =~ ^[0-9a-f]{64}$ ]]; then
+    echo "existing .venv interpreter attestation is invalid; remove it and rerun" >&2
+    exit 2
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual_digest="$(sha256sum -- "$venv_python" | awk '{print $1}')"
+  elif command -v shasum >/dev/null 2>&1; then
+    actual_digest="$(shasum -a 256 -- "$venv_python" | awk '{print $1}')"
+  else
+    echo "Axven validation requires sha256sum or shasum" >&2
+    exit 2
+  fi
+  if [[ "$actual_digest" != "$expected_digest" ]]; then
+    echo "existing .venv interpreter attestation mismatch; remove it and rerun" >&2
+    exit 2
+  fi
 fi
 
 venv_version="$($venv_python -c 'import platform; print(platform.python_version())')"
