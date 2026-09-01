@@ -7,6 +7,9 @@ on:
       - "RUST_013.md"
       - "rust_013_reproducible_wheel_spec.py"
       - "rust_013_reproducible_build_policy_spec.py"
+      - "RUST_014.md"
+      - "rust_014_reproducible_attestation.py"
+      - "rust_014_reproducible_attestation_policy_spec.py"
       - "rust_009_portable_linux_wheel_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
@@ -17,6 +20,9 @@ on:
       - "RUST_013.md"
       - "rust_013_reproducible_wheel_spec.py"
       - "rust_013_reproducible_build_policy_spec.py"
+      - "RUST_014.md"
+      - "rust_014_reproducible_attestation.py"
+      - "rust_014_reproducible_attestation_policy_spec.py"
       - "rust_009_portable_linux_wheel_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
@@ -63,6 +69,9 @@ jobs:
 
       - name: RUST-013 static reproducible build policy
         run: python rust_013_reproducible_build_policy_spec.py
+
+      - name: RUST-014 static reproducibility attestation policy
+        run: python rust_014_reproducible_attestation_policy_spec.py
 
       - name: Derive source-bound reproducibility epoch
         id: epoch
@@ -202,3 +211,39 @@ jobs:
           mkdir wheelhouse-portable
           cp -- wheelhouse-repro-b/*.whl wheelhouse-portable/
           python rust_009_portable_linux_wheel_spec.py
+
+      - name: Generate RUST-014 reproducibility-bound provenance
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          rm -f reproducible-provenance.json reproducible-attestation.json
+          python rust_014_reproducible_attestation.py generate reproducible-provenance.json
+
+      - name: Seal RUST-014 TEST-ONLY reproducibility attestation
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          python rust_014_reproducible_attestation.py seal reproducible-provenance.json reproducible-attestation.json
+
+      - name: Verify RUST-014 reproducibility attestation
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          python rust_014_reproducible_attestation.py verify reproducible-provenance.json reproducible-attestation.json
+
+      - name: RUST-014 fail-closed mutation contract
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          python rust_014_reproducible_attestation.py selftest reproducible-provenance.json reproducible-attestation.json
+
+      - name: Reverify original RUST-014 evidence
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          python rust_014_reproducible_attestation.py verify reproducible-provenance.json reproducible-attestation.json
