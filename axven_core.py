@@ -2,9 +2,14 @@
 """Axven Core daemon / maintenance CLI — checkpoint 7."""
 from __future__ import annotations
 import argparse, getpass, json, os, signal, sys, time
+from concurrent.futures import ThreadPoolExecutor
 from datadir import DataDir
 from rpc import RPCServer
 from explorer import ExplorerServer
+
+# SEC-225: periodic outbound retry scheduling must not serialize network
+# latency across configured peers or build an unbounded executor queue.
+MAX_DAEMON_SYNC_WORKERS=16
 
 def _schedule_peer_retry_if_configured(core, peer, delay, base_interval):
     """Atomically publish retry metadata only for a configured peer."""
@@ -16,15 +21,77 @@ def _schedule_peer_retry_if_configured(core, peer, delay, base_interval):
         return True
 
 def _reschedule_peer_after_sync(core, peer, base_interval, cap=60.0):
-    """Atomically compute/publish retry state after an outbound sync."""
+    """Return/publish retry state atomically after an outbound sync."""
     addr=core._parse_peer(peer)
     with core._peer_lock:
         if addr not in core.outbound_peers:
             return None
+
+        # When daemon retry publication is configured, sync_outbound_peer()
+        # already published the authoritative observable schedule before the
+        # worker Future became done. Reuse that exact delay so the scheduler
+        # does not advance the public timestamp a second time.
+        if (
+            core._peer_retry_publication_base_interval is not None
+            and addr in core.peer_retry_delay_seconds
+        ):
+            return core.peer_retry_delay_seconds[addr]
+
+        # Preserve the helper's pre-SEC-225 atomic behavior for callers that
+        # have not enabled automatic retry publication (including SEC-103).
         retry_delay=core.peer_retry_delay(addr,base_interval,cap)
         core.set_peer_retry_schedule(addr,retry_delay,base_interval)
         core.record_peer_health_transition(addr)
         return retry_delay
+
+def _sync_outbound_peer_for_daemon(core, addr):
+    """Run one daemon retry through the canonical single-peer sync path."""
+    return core.sync_outbound_peer(addr)
+
+def _reap_completed_peer_syncs(
+    core, peer_sync_futures, peer_next_sync, base_interval
+):
+    """Consume completed daemon syncs and advance only private scheduling."""
+    completed=0
+    for future,addr in list(peer_sync_futures.items()):
+        if not future.done():
+            continue
+        # sync_outbound_peer owns normal network-error containment and atomically
+        # publishes health + observable retry metadata before its Future becomes
+        # done. The atomic helper below reuses that publication when enabled.
+        future.result()
+        peer_sync_futures.pop(future,None)
+        retry_delay=_reschedule_peer_after_sync(
+            core,addr,base_interval,60.0
+        )
+        if retry_delay is None:
+            peer_next_sync.pop(addr,None)
+        else:
+            peer_next_sync[addr]=time.monotonic()+retry_delay
+        completed+=1
+    return completed
+
+def _submit_due_peer_syncs(
+    core, executor, peer_sync_futures, peer_next_sync, now
+):
+    """Submit only as many due peers as there are bounded worker slots."""
+    slots=max(0,MAX_DAEMON_SYNC_WORKERS-len(peer_sync_futures))
+    if slots == 0:
+        return 0
+    active=set(peer_sync_futures.values())
+    submitted=0
+    for addr in core.outbound_peer_addresses():
+        if submitted >= slots:
+            break
+        if addr in active:
+            continue
+        if now < peer_next_sync.get(addr,now):
+            continue
+        future=executor.submit(_sync_outbound_peer_for_daemon,core,addr)
+        peer_sync_futures[future]=addr
+        active.add(addr)
+        submitted+=1
+    return submitted
 
 def _shutdown_services_and_persist(dd,core,rpc,explorer):
     """Quiesce every runtime service before writing the final chain snapshot."""
@@ -108,6 +175,11 @@ def main():
                 nonlocal stop; stop=True
             signal.signal(signal.SIGINT,halt)
             signal.signal(signal.SIGTERM,halt)
+            peer_sync_executor=ThreadPoolExecutor(
+                max_workers=MAX_DAEMON_SYNC_WORKERS,
+                thread_name_prefix="axven-peer-sync",
+            )
+            peer_sync_futures={}
             try:
                 peer_next_sync={
                     addr:time.monotonic()+base_sync_interval
@@ -143,25 +215,26 @@ def main():
                             ):
                                 peer_next_sync[addr]=now+base_sync_interval
 
-                    # Each peer is scheduled independently. A failing peer's
-                    # backoff must never slow healthy peers.
-                    for addr in core.outbound_peer_addresses():
-                        if now < peer_next_sync.get(addr,now):
-                            continue
-
-                        core.sync_outbound_peer(addr)
-
-                        retry_delay=_reschedule_peer_after_sync(
-                            core,addr,base_sync_interval,60.0
-                        )
-                        if retry_delay is None:
-                            peer_next_sync.pop(addr,None)
-                            continue
-
-                        peer_next_sync[addr]=(
-                            time.monotonic()+retry_delay
-                        )
+                    # Reap only completed work, then fill at most the remaining
+                    # bounded worker slots. Slow peers therefore cannot serialize
+                    # healthy peers and no unbounded Future queue can accumulate.
+                    _reap_completed_peer_syncs(
+                        core,
+                        peer_sync_futures,
+                        peer_next_sync,
+                        base_sync_interval,
+                    )
+                    _submit_due_peer_syncs(
+                        core,
+                        peer_sync_executor,
+                        peer_sync_futures,
+                        peer_next_sync,
+                        now,
+                    )
             finally:
+                # Outbound sync may mutate chain state. Quiesce all retry workers
+                # before service shutdown and the final persisted chain snapshot.
+                peer_sync_executor.shutdown(wait=True, cancel_futures=False)
                 _shutdown_services_and_persist(dd,core,rpc,explorer)
 
 if __name__=="__main__": main()
