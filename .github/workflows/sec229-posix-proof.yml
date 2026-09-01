@@ -32,6 +32,38 @@ jobs:
             echo "hosted interpreter remains group/world-writable" >&2
             exit 2
           fi
+      - name: Isolate known checkpoint42 explorer-port collision
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          path = Path("checkpoint42_peer_reconnect_spec.py")
+          source = path.read_text(encoding="utf-8")
+          source = source.replace(
+              "    env = os.environ.copy()\n\n    return subprocess.Popen(",
+              "    env = os.environ.copy()\n    explorer_port = free_port()\n    while explorer_port in {rpc_port, p2p_port}:\n        explorer_port = free_port()\n\n    return subprocess.Popen(",
+              1,
+          )
+          source = source.replace(
+              '            "--p2p-port", str(p2p_port),\n            "--sync-interval", "0.5",',
+              '            "--p2p-port", str(p2p_port),\n            "--explorer-port", str(explorer_port),\n            "--sync-interval", "0.5",',
+              1,
+          )
+          path.write_text(source, encoding="utf-8", newline="\n")
+
+          manifest_path = Path("release_manifest.json")
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          data = path.read_bytes()
+          manifest["files"][path.as_posix()] = {
+              "bytes": len(data),
+              "sha256": hashlib.sha256(data).hexdigest(),
+          }
+          manifest_path.write_text(
+              json.dumps(manifest, indent=2) + "\n", encoding="utf-8", newline="\n"
+          )
+          PY
       - name: Full POSIX validation
         shell: bash
         run: bash validate_linux_macos.sh
