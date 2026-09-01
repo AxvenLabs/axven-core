@@ -39,13 +39,18 @@ def main() -> None:
     checks = 0
     workflow = text(WORKFLOW)
     source = text("rust_017_offline_git_tree_verify.py")
+    sourcecheck_source = text("rust_016_offline_build_input_verify.py")
     doc = text("RUST_017.md")
 
     assert consumer.BUILD_INPUT_KEYS == sourcecheck.BUILD_INPUT_KEYS
     assert consumer.BUILD_INPUT_KEYS == frozenset(producer.BUILD_INPUTS)
     assert consumer.EXPECTED_TREE_COUNT == 6
+    assert "sys.dont_write_bytecode = True" in sourcecheck_source
+    assert sourcecheck_source.index("sys.dont_write_bytecode = True") < sourcecheck_source.index(
+        "import rust_015_offline_repro_consumer_verify as upstream"
+    )
     checks += 1
-    print("[GREEN] RUST-017 pins the exact RUST-014/RUST-016 signed input set and six-tree closure")
+    print("[GREEN] RUST-017 pins the exact signed input set, six-tree closure, and cache-free upstream verifier")
 
     for marker in FORBIDDEN_CONSUMER_PATTERNS:
         assert marker not in source, marker
@@ -79,8 +84,6 @@ def main() -> None:
         'git cat-file tree "$oid"',
         "git hash-object -t commit --stdin",
         "git hash-object -t tree --stdin",
-        'find "$consumer" -type d -name \'__pycache__\' -prune -exec rm -rf {} +',
-        'test "$(find "$consumer" -type f \\( -name \'*.pyc\' -o -name \'*.pyo\' \\) | wc -l)" -eq 0',
         'test ! -e "$consumer/.git"',
         'test "$(find "$consumer" -type f | wc -l)" -eq 25',
         'test "$(find "$consumer/git-objects" -type f | wc -l)" -eq 7',
@@ -94,7 +97,7 @@ def main() -> None:
         "Prepare detached RUST-017 Git object bundle"
     )
     checks += 1
-    print("[GREEN] workflow exports a cache-free minimum raw Git object closure and verifies it only after RUST-016")
+    print("[GREEN] workflow exports the minimum raw Git object closure and verifies it only after RUST-016")
 
     lower = workflow.lower()
     assert "permissions:\n  contents: read" in workflow
