@@ -1,0 +1,219 @@
+name: Axven Native Verified Offline Vendor
+
+on:
+  push:
+    paths:
+      - "native/axven_native/Cargo.toml"
+      - "native/axven_native/Cargo.lock"
+      - "rust_019_offline_dependency_closure.py"
+      - "requirements-ci-runtime-posix.lock"
+      - "RUST_020.md"
+      - "rust_020_verified_vendor.py"
+      - "rust_020_verified_vendor_policy_spec.py"
+      - ".github/workflows/native-verified-offline-vendor.yml"
+  pull_request:
+    paths:
+      - "native/axven_native/Cargo.toml"
+      - "native/axven_native/Cargo.lock"
+      - "rust_019_offline_dependency_closure.py"
+      - "requirements-ci-runtime-posix.lock"
+      - "RUST_020.md"
+      - "rust_020_verified_vendor.py"
+      - "rust_020_verified_vendor_policy_spec.py"
+      - ".github/workflows/native-verified-offline-vendor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MANYLINUX_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7
+
+jobs:
+  verified-offline-vendor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked Axven runtime dependencies
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: Install exact Rust toolchain for archive collection and controlled mount
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+          python -c "import platform; assert platform.python_version() == '3.13.15', platform.python_version()"
+          rustc --version | grep -F "rustc 1.98.0 "
+          cargo --version | grep -F "cargo 1.98.0 "
+
+      - name: RUST-020 static verified offline vendor policy
+        run: python rust_020_verified_vendor_policy_spec.py
+
+      - name: Pull and verify immutable manylinux image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$MANYLINUX_IMAGE"
+          resolved="$(docker image inspect "$MANYLINUX_IMAGE" --format '{{index .RepoDigests 0}}')"
+          test "$resolved" = "$MANYLINUX_IMAGE"
+
+      - name: Populate locked Cargo archive cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fetch --locked --manifest-path native/axven_native/Cargo.toml
+
+      - name: Collect exact RUST-019 Cargo archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=/tmp/axven-rust020-inputs
+          rm -rf "$bundle"
+          mkdir -p "$bundle/cargo-crates"
+          python rust_019_offline_dependency_closure.py collect-crates \
+            native/axven_native/Cargo.lock "$HOME/.cargo" "$bundle/cargo-crates"
+          test "$(find "$bundle/cargo-crates" -maxdepth 1 -type f -name '*.crate' | wc -l)" -gt 0
+          test "$(find "$bundle" -type l | wc -l)" -eq 0
+
+      - name: Verify authenticated RUST-019 crate archive closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=/tmp/axven-rust020-inputs
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python -c 'from pathlib import Path; import rust_019_offline_dependency_closure as closure; closure.verify_crates(Path("native/axven_native/Cargo.lock"), Path("/tmp/axven-rust020-inputs/cargo-crates"))'
+
+      - name: Build verified RUST-020 Cargo vendor tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle=/tmp/axven-rust020-inputs
+          vendor_dir=/tmp/axven-rust020-vendor
+          rm -rf "$vendor_dir"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_020_verified_vendor.py build \
+              native/axven_native/Cargo.lock "$bundle/cargo-crates" "$vendor_dir"
+          test "$(find "$vendor_dir" -type l | wc -l)" -eq 0
+
+      - name: Verify RUST-020 Cargo vendor tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          vendor_dir=/tmp/axven-rust020-vendor
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_020_verified_vendor.py verify \
+              native/axven_native/Cargo.lock "$vendor_dir"
+
+      - name: RUST-020 vendor mutation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          vendor_dir=/tmp/axven-rust020-vendor
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_020_verified_vendor.py selftest \
+              native/axven_native/Cargo.lock "$vendor_dir"
+
+      - name: Reverify RUST-020 Cargo vendor tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          vendor_dir=/tmp/axven-rust020-vendor
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_020_verified_vendor.py verify \
+              native/axven_native/Cargo.lock "$vendor_dir"
+
+      - name: Prepare clean RUST-020 Cargo home
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo_home=/tmp/axven-rust020-cargo-home
+          rm -rf "$cargo_home"
+          mkdir -p "$cargo_home"
+          python rust_020_verified_vendor.py write-config "$cargo_home"
+          test ! -e "$cargo_home/registry"
+          test "$(find "$cargo_home" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
+          test -f "$cargo_home/config.toml"
+
+      - name: Resolve locked graph from verified vendor with network disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          vendor_dir=/tmp/axven-rust020-vendor
+          cargo_home=/tmp/axven-rust020-cargo-home
+          test ! -e "$cargo_home/registry"
+          docker run --rm --network none \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e CARGO_HOME=/cargo-home \
+            -e RUSTUP_HOME=/rustup \
+            -e RUSTUP_TOOLCHAIN=1.98.0 \
+            -e CARGO_NET_OFFLINE=true \
+            -e PATH=/cargo-bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$vendor_dir:/vendor:ro" \
+            -v "$cargo_home:/cargo-home" \
+            -v "$HOME/.cargo/bin:/cargo-bin:ro" \
+            -v "$HOME/.rustup:/rustup:ro" \
+            -v "$GITHUB_WORKSPACE/native/axven_native:/work/native/axven_native:ro" \
+            -w /work/native/axven_native \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              test "$CARGO_NET_OFFLINE" = "true"
+              test ! -e /cargo-home/registry
+              rustc --version | grep -F "rustc 1.98.0 "
+              cargo --version | grep -F "cargo 1.98.0 "
+              cargo metadata --offline --locked --manifest-path /work/native/axven_native/Cargo.toml --format-version 1 > /tmp/rust020-metadata.json
+              test -s /tmp/rust020-metadata.json
+              grep -F "\"name\":\"axven-native\"" /tmp/rust020-metadata.json
+              test ! -e /cargo-home/registry
+            '
+          test ! -e "$cargo_home/registry"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_020_verified_vendor.py verify \
+              native/axven_native/Cargo.lock "$vendor_dir"
