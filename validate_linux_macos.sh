@@ -2,6 +2,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+if [[ -L .venv ]]; then
+  echo "Axven validated runtime directory must not be a symlink; remove .venv and rerun validation" >&2
+  exit 2
+fi
+if [[ -e .venv && ! -d .venv ]]; then
+  echo "Axven validated runtime path is not a directory; remove .venv and rerun validation" >&2
+  exit 2
+fi
+
 required_python="3.13.15"
 actual_python="$(python3 -c 'import platform; print(platform.python_version())')"
 if [[ "$actual_python" != "$required_python" ]]; then

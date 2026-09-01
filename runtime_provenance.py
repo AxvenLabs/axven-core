@@ -60,6 +60,35 @@ def _same_file(before: os.stat_result, opened: os.stat_result) -> bool:
         return (before.st_dev, before.st_ino) == (opened.st_dev, opened.st_ino)
 
 
+def _is_reparse_point(metadata: object) -> bool:
+    """Return True for Windows filesystem reparse-point metadata."""
+    attributes = getattr(metadata, "st_file_attributes", 0)
+    flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return bool(attributes & flag)
+
+
+def _assert_local_runtime_directory(root: Path = ROOT) -> None:
+    """Require .venv to be a real directory rooted directly under root."""
+    runtime_dir = Path(root) / ".venv"
+    try:
+        metadata = runtime_dir.lstat()
+    except OSError as exc:
+        raise RuntimeError("validated runtime directory is missing") from exc
+    if stat.S_ISLNK(metadata.st_mode) or _is_reparse_point(metadata):
+        raise RuntimeError(
+            "validated runtime directory is a symlink or reparse point"
+        )
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise RuntimeError("validated runtime path is not a directory")
+    try:
+        resolved_root = Path(root).resolve(strict=True)
+        resolved_runtime = runtime_dir.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise RuntimeError("validated runtime directory is unresolved") from exc
+    if resolved_runtime.parent != resolved_root:
+        raise RuntimeError("validated runtime directory escapes runtime root")
+
+
 def _read_regular_bounded(path: Path, *, label: str, max_bytes: int, allow_empty: bool) -> bytes:
     """Read one regular file through a descriptor bound to the lstat-checked object."""
     try:
@@ -390,6 +419,7 @@ def _assert_expected_interpreter(root: Path = ROOT) -> None:
 def stamp(root: Path = ROOT, *, profile: str | None = None) -> None:
     if profile is None:
         profile = _runtime_profile()
+    _assert_local_runtime_directory(root)
     _assert_expected_interpreter(root)
     _verify_manifest_payloads(root)
     receipt = build_receipt(
@@ -416,6 +446,7 @@ def stamp(root: Path = ROOT, *, profile: str | None = None) -> None:
 def check(root: Path = ROOT, *, profile: str | None = None) -> None:
     if profile is None:
         profile = _runtime_profile()
+    _assert_local_runtime_directory(root)
     _assert_expected_interpreter(root)
     path = receipt_path(root)
     try:
