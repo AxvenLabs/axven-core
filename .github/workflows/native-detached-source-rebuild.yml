@@ -304,6 +304,7 @@ jobs:
             -e CARGO_TARGET_DIR=/tmp/axven-rust018-target \
             -e PYTHONPATH=/tools \
             -e PATH=/cargo/bin:/tools/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$rebuild_source/native/axven_native:/src:ro" \
             -v "$rebuild_source/native/axven_native:/work/native/axven_native:ro" \
             -v "$rebuild_tools:/tools:ro" \
             -v "$rebuild_cargo:/cargo" \
