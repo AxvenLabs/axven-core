@@ -1,0 +1,204 @@
+name: Axven Native Reproducible Build
+
+on:
+  push:
+    paths:
+      - "native/**"
+      - "RUST_013.md"
+      - "rust_013_reproducible_wheel_spec.py"
+      - "rust_013_reproducible_build_policy_spec.py"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "requirements-native-build.lock"
+      - "requirements-ci-runtime-posix.lock"
+      - ".github/workflows/native-reproducible-build.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - "RUST_013.md"
+      - "rust_013_reproducible_wheel_spec.py"
+      - "rust_013_reproducible_build_policy_spec.py"
+      - "rust_009_portable_linux_wheel_spec.py"
+      - "requirements-native-build.lock"
+      - "requirements-ci-runtime-posix.lock"
+      - ".github/workflows/native-reproducible-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MANYLINUX_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7
+
+jobs:
+  reproducible-portable-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked Axven runtime dependencies
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: Install exact host Rust toolchain for controlled mounts
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+          python -c "import platform; assert platform.python_version() == '3.13.15', platform.python_version()"
+          rustc --version | grep -F "rustc 1.98.0 "
+          cargo --version | grep -F "cargo 1.98.0 "
+
+      - name: RUST-013 static reproducible build policy
+        run: python rust_013_reproducible_build_policy_spec.py
+
+      - name: Derive source-bound reproducibility epoch
+        id: epoch
+        shell: bash
+        run: |
+          set -euo pipefail
+          checkout="$(git rev-parse HEAD)"
+          test "$checkout" = "$AXVEN_SOURCE_SHA"
+          source_epoch="$(git show -s --format=%ct "$AXVEN_SOURCE_SHA")"
+          case "$source_epoch" in
+            ''|*[!0-9]*) exit 1 ;;
+          esac
+          test "$source_epoch" -ge 315532800
+          printf 'epoch=%s\n' "$source_epoch" >> "$GITHUB_OUTPUT"
+          printf 'RUST-013 SOURCE_DATE_EPOCH=%s source=%s\n' "$source_epoch" "$AXVEN_SOURCE_SHA"
+
+      - name: Pull and verify immutable manylinux image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$MANYLINUX_IMAGE"
+          resolved="$(docker image inspect "$MANYLINUX_IMAGE" --format '{{index .RepoDigests 0}}')"
+          test "$resolved" = "$MANYLINUX_IMAGE"
+          printf 'RUST-013 pinned image: %s\n' "$resolved"
+
+      - name: Build reproducibility candidate A in isolated target
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          rm -rf wheelhouse-repro-a .rust013-target-a .rust013-tools-a
+          mkdir -p wheelhouse-repro-a .rust013-tools-a
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e CARGO_HOME=/cargo \
+            -e RUSTUP_HOME=/rustup \
+            -e RUSTUP_TOOLCHAIN=1.98.0 \
+            -e PYO3_PYTHON=/opt/python/cp313-cp313/bin/python \
+            -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
+            -e CARGO_INCREMENTAL=0 \
+            -e PYTHONHASHSEED=0 \
+            -e TZ=UTC \
+            -e LC_ALL=C.UTF-8 \
+            -e CARGO_TARGET_DIR=/work/.rust013-target-a \
+            -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -v "$HOME/.cargo:/cargo" \
+            -v "$HOME/.rustup:/rustup:ro" \
+            -w /work \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
+              rustc --version | grep -F "rustc 1.98.0 "
+              cargo --version | grep -F "cargo 1.98.0 "
+              test "$SOURCE_DATE_EPOCH" -ge 315532800
+              test "$CARGO_INCREMENTAL" = "0"
+              test "$PYTHONHASHSEED" = "0"
+              test "$TZ" = "UTC"
+              python -m pip install --no-deps --only-binary=:all: --require-hashes --target /work/.rust013-tools-a -r /work/requirements-native-build.lock
+              export PYTHONPATH=/work/.rust013-tools-a
+              export PATH=/work/.rust013-tools-a/bin:$PATH
+              test "$(maturin --version)" = "maturin 1.15.0"
+              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /work/wheelhouse-repro-a
+              auditwheel show /work/wheelhouse-repro-a/*.whl
+            '
+
+      - name: Separate build wall clocks
+        run: sleep 2
+
+      - name: Build reproducibility candidate B in isolated target
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          rm -rf wheelhouse-repro-b .rust013-target-b .rust013-tools-b
+          mkdir -p wheelhouse-repro-b .rust013-tools-b
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e CARGO_HOME=/cargo \
+            -e RUSTUP_HOME=/rustup \
+            -e RUSTUP_TOOLCHAIN=1.98.0 \
+            -e PYO3_PYTHON=/opt/python/cp313-cp313/bin/python \
+            -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
+            -e CARGO_INCREMENTAL=0 \
+            -e PYTHONHASHSEED=0 \
+            -e TZ=UTC \
+            -e LC_ALL=C.UTF-8 \
+            -e CARGO_TARGET_DIR=/work/.rust013-target-b \
+            -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$GITHUB_WORKSPACE:/work" \
+            -v "$HOME/.cargo:/cargo" \
+            -v "$HOME/.rustup:/rustup:ro" \
+            -w /work \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
+              rustc --version | grep -F "rustc 1.98.0 "
+              cargo --version | grep -F "cargo 1.98.0 "
+              test "$SOURCE_DATE_EPOCH" -ge 315532800
+              test "$CARGO_INCREMENTAL" = "0"
+              test "$PYTHONHASHSEED" = "0"
+              test "$TZ" = "UTC"
+              python -m pip install --no-deps --only-binary=:all: --require-hashes --target /work/.rust013-tools-b -r /work/requirements-native-build.lock
+              export PYTHONPATH=/work/.rust013-tools-b
+              export PATH=/work/.rust013-tools-b/bin:$PATH
+              test "$(maturin --version)" = "maturin 1.15.0"
+              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /work/native/axven_native/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /work/wheelhouse-repro-b
+              auditwheel show /work/wheelhouse-repro-b/*.whl
+            '
+
+      - name: Prove wheel byte reproducibility
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          sha256sum wheelhouse-repro-a/*.whl wheelhouse-repro-b/*.whl
+          python rust_013_reproducible_wheel_spec.py wheelhouse-repro-a wheelhouse-repro-b "$SOURCE_DATE_EPOCH"
+
+      - name: Recheck RUST-009 contract for build A
+        run: |
+          set -euo pipefail
+          rm -rf wheelhouse-portable
+          mkdir wheelhouse-portable
+          cp -- wheelhouse-repro-a/*.whl wheelhouse-portable/
+          python rust_009_portable_linux_wheel_spec.py
+
+      - name: Recheck RUST-009 contract for build B
+        run: |
+          set -euo pipefail
+          rm -rf wheelhouse-portable
+          mkdir wheelhouse-portable
+          cp -- wheelhouse-repro-b/*.whl wheelhouse-portable/
+          python rust_009_portable_linux_wheel_spec.py
