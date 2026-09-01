@@ -1,0 +1,186 @@
+name: Axven Native Upstream Rust Distribution
+
+on:
+  push:
+    paths:
+      - "RUST_024.md"
+      - "rust_024_upstream_rust_distribution.py"
+      - "rust_024_upstream_rust_distribution_policy_spec.py"
+      - "rust_023_rust_toolchain_closure.py"
+      - ".github/workflows/native-upstream-rust-distribution.yml"
+  pull_request:
+    paths:
+      - "RUST_024.md"
+      - "rust_024_upstream_rust_distribution.py"
+      - "rust_024_upstream_rust_distribution_policy_spec.py"
+      - "rust_023_rust_toolchain_closure.py"
+      - ".github/workflows/native-upstream-rust-distribution.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  RUST_URL: https://static.rust-lang.org/dist/2026-08-20/rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz
+  RUST_SHA256: ed8ee2df70909c88cbaf87a6cfa3920dac00b537de12a6abe6906641e0f5952f
+  RUST_ARCHIVE_NAME: rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz
+  RUST_ARCHIVE_ROOT: rust-1.98.0-x86_64-unknown-linux-gnu
+  TOOLCHAIN_NAME: 1.98.0-x86_64-unknown-linux-gnu
+  MANYLINUX_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  upstream-rust-distribution:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: RUST-024 static upstream distribution policy
+        run: python rust_024_upstream_rust_distribution_policy_spec.py
+
+      - name: RUST-024 archive verifier mutation contract
+        run: python rust_024_upstream_rust_distribution.py selftest
+
+      - name: Download exact pinned Rust Project distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="/tmp/$RUST_ARCHIVE_NAME"
+          rm -f "$archive"
+          curl --proto "=https" --tlsv1.2 --fail --location --silent --show-error "$RUST_URL" --output "$archive"
+          test -s "$archive"
+          test ! -L "$archive"
+          test "$(sha256sum "$archive" | awk '{print $1}')" = "$RUST_SHA256"
+
+      - name: Verify pinned Rust distribution before extraction or execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          python rust_024_upstream_rust_distribution.py verify-archive "/tmp/$RUST_ARCHIVE_NAME"
+
+      - name: Safely extract authenticated Rust distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          destination=/tmp/axven-rust024-extracted
+          rm -rf "$destination"
+          python rust_024_upstream_rust_distribution.py extract "/tmp/$RUST_ARCHIVE_NAME" "$destination"
+          test -d "$destination/$RUST_ARCHIVE_ROOT"
+          test -f "$destination/$RUST_ARCHIVE_ROOT/install.sh"
+          test ! -L "$destination/$RUST_ARCHIVE_ROOT/install.sh"
+
+      - name: Pull and verify immutable manylinux image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$MANYLINUX_IMAGE"
+          resolved="$(docker image inspect "$MANYLINUX_IMAGE" --format '{{index .RepoDigests 0}}')"
+          test "$resolved" = "$MANYLINUX_IMAGE"
+
+      - name: Install authenticated Rust distribution with network disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          dist_root="/tmp/axven-rust024-extracted/$RUST_ARCHIVE_ROOT"
+          install_parent=/tmp/axven-rust024-installed
+          rm -rf "$install_parent"
+          mkdir -p "$install_parent"
+          docker run --rm --network none \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -v "$dist_root:/dist:ro" \
+            -v "$install_parent:/install" \
+            -w /dist \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              test -f ./install.sh
+              test ! -L ./install.sh
+              ./install.sh --prefix=/install/1.98.0-x86_64-unknown-linux-gnu --disable-ldconfig
+            '
+          prefix="$install_parent/$TOOLCHAIN_NAME"
+          test -d "$prefix"
+          test ! -L "$prefix"
+
+      - name: Verify exact installed Rust identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="/tmp/axven-rust024-installed/$TOOLCHAIN_NAME"
+          test "$("$prefix/bin/rustc" --version)" = "rustc 1.98.0 (88d9e12ae 2026-08-18)"
+          test "$("$prefix/bin/cargo" --version)" = "cargo 1.98.0 (797e8a9bc 2026-08-05)"
+          test -d "$prefix/lib/rustlib/x86_64-unknown-linux-gnu"
+
+      - name: Capture and verify installed RUST-023 filesystem closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="/tmp/axven-rust024-installed/$TOOLCHAIN_NAME"
+          manifest=/tmp/axven-rust024-installed-toolchain.json
+          rm -f "$manifest"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_023_rust_toolchain_closure.py collect "$prefix" "$manifest"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_023_rust_toolchain_closure.py verify "$prefix" "$manifest"
+
+      - name: Consume upstream-authenticated toolchain read-only with network disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="/tmp/axven-rust024-installed/$TOOLCHAIN_NAME"
+          work=/tmp/axven-rust024-smoke
+          rm -rf "$work"
+          mkdir -p "$work"
+          docker run --rm --network none \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e PATH=/rust-toolchain/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$prefix:/rust-toolchain:ro" \
+            -v "$work:/work" \
+            -w /work \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              test "$(rustc --version)" = "rustc 1.98.0 (88d9e12ae 2026-08-18)"
+              test "$(cargo --version)" = "cargo 1.98.0 (797e8a9bc 2026-08-05)"
+              printf "fn main(){println!(\"RUST-024-GREEN\");}\n" > main.rs
+              rustc --target x86_64-unknown-linux-gnu main.rs -o rust024-smoke
+              test -x rust024-smoke
+              test "$(./rust024-smoke)" = "RUST-024-GREEN"
+            '
+
+      - name: Reverify upstream archive and installed closure after consumption
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="/tmp/axven-rust024-installed/$TOOLCHAIN_NAME"
+          python rust_024_upstream_rust_distribution.py verify-archive "/tmp/$RUST_ARCHIVE_NAME"
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_023_rust_toolchain_closure.py verify \
+              "$prefix" /tmp/axven-rust024-installed-toolchain.json
