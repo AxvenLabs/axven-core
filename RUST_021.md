@@ -25,6 +25,14 @@ The candidate build runs in the immutable manylinux image with:
 - the same source-bound `SOURCE_DATE_EPOCH` and deterministic environment used by the reproducible-build series;
 - the native crate mounted read-only at the canonical `/work/native/axven_native` source path so source-path identity matches the reference build.
 
+### Canonical dependency source paths
+
+The first dependency-consumption experiment successfully produced the offline wheel but exposed an 11-byte artifact difference: the reference build compiled registry dependencies from Cargo's physical `/cargo/registry/src/index.crates.io-...` tree, while the authenticated offline build compiled the same dependency bytes from `/vendor`. Rust can retain those absolute source paths in native output even though the source bytes and compiler inputs are otherwise equivalent.
+
+RUST-021 therefore treats dependency source location as a reproducibility input and canonicalizes it rather than weakening artifact equality. Before the reference build, CI materializes the Cargo registry source tree and fails unless there is exactly one `index.crates.io-*` source root. The reference compiler remaps that exact root to `/axven/vendor`; the offline compiler independently remaps `/vendor` to the same `/axven/vendor` namespace using `--remap-path-prefix`.
+
+This does not authorize or substitute any dependency bytes. RUST-019 checksum verification and RUST-020 vendor verification still determine which dependency content is accepted. The remap removes only non-semantic physical build-host path variation. Full wheel SHA-256, length and byte equality remain mandatory and fail closed.
+
 The resulting wheel must be byte-for-byte, SHA-256-for-SHA-256 and length-for-length identical to the reference wheel. RUST-013 reproducible-wheel checks and the portable-wheel contract are re-applied to the offline candidate.
 
 ## Security boundary
