@@ -25,6 +25,11 @@ PAYLOAD_TYPE = "application/vnd.axven.native-portable-provenance.v1+json"
 ALGORITHM = "ed25519"
 KEY_ID = "rust-011-test-only-ed25519-v1"
 DOMAIN = b"AXVEN_NATIVE_PORTABLE_ATTESTATION_V1\x00"
+HOST_PYTHON = "3.13.15"
+BUILDER_PYTHON = "3.13.13"
+RUST_VERSION = "1.98.0"
+MATURIN_VERSION = "1.15.0"
+PYO3_VERSION = "0.29.2"
 MANYLINUX_IMAGE = (
     "quay.io/pypa/manylinux_2_28_x86_64@"
     "sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7"
@@ -115,8 +120,7 @@ def _single_wheel() -> Path:
 def _build_inputs() -> dict:
     result: dict[str, str] = {}
     for relative in BUILD_INPUTS:
-        path = ROOT / relative
-        digest = _sha256_file(path)
+        digest = _sha256_file(ROOT / relative)
         if not _lower_hex(digest, 64):
             raise AssertionError((relative, digest))
         result[relative] = digest
@@ -135,10 +139,10 @@ def _expected_provenance() -> dict:
             "image": MANYLINUX_IMAGE,
             "compatibility": "manylinux_2_28",
             "architecture": "x86_64",
-            "python": "3.13.15",
-            "rust": "1.98.0",
-            "maturin": "1.15.0",
-            "pyo3": "0.29.2",
+            "python": BUILDER_PYTHON,
+            "rust": RUST_VERSION,
+            "maturin": MATURIN_VERSION,
+            "pyo3": PYO3_VERSION,
         },
         "artifact": {
             "filename": wheel.name,
@@ -156,7 +160,7 @@ def generate(provenance_path: Path) -> None:
     print(
         "RUST-011 portable provenance generated "
         f"artifact_sha256={provenance['artifact']['sha256']} "
-        f"source={provenance['source']['commit']}"
+        f"source={provenance['source']['commit']} builder_python={BUILDER_PYTHON}"
     )
 
 
