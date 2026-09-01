@@ -63,7 +63,7 @@ def main() -> None:
     assert '"smt_activation_height":10000' in axven_source
     assert '"pq_hybrid_activation_height":2000' in axven_source
     assert '"pq_pure_activation_height":5000' in axven_source
-    assert "production consensus continues to use the Python state-root oracle" in doc
+    assert "production axven consensus continues to use the python state-root oracle" in doc.lower()
     checks += 1
     print("[GREEN] RUST-003 leaves canonical chain and activation identity unchanged")
 
