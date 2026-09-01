@@ -1,0 +1,3 @@
+# FUZZ-001: exact Linux x86_64 / CPython 3.13 Atheris wheel for bounded CI fuzzing.
+atheris==3.1.0 \
+  --hash=sha256:f8a9f51ce8369026e8eb7b7174835e8c4c85a1a6db5d9add36c15100779d2a39
