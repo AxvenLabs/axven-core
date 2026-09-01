@@ -22,6 +22,20 @@ jobs:
         with:
           python-version: "3.13.15"
           check-latest: false
-      - name: Full POSIX validation
+      - name: Full POSIX validation with permission diagnostics
         shell: bash
-        run: bash validate_linux_macos.sh
+        run: |
+          set +e
+          bash validate_linux_macos.sh
+          rc=$?
+          if [[ -e .venv/bin/python || -L .venv/bin/python ]]; then
+            echo "--- SEC-229 interpreter permission diagnostics ---"
+            stat -c 'lexical mode=%a type=%F path=%n' .venv/bin/python || true
+            stat -L -c 'target mode=%a type=%F path=%n' .venv/bin/python || true
+            resolved="$(readlink -f .venv/bin/python || true)"
+            echo "resolved=$resolved"
+            if [[ -n "$resolved" ]]; then
+              stat -c 'resolved mode=%a type=%F path=%n' "$resolved" || true
+            fi
+          fi
+          exit "$rc"
