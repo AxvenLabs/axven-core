@@ -56,6 +56,8 @@ def main() -> None:
     ):
         assert workflow.count(marker) == 2, marker
     for marker in (
+        "Materialize canonical Cargo registry source root",
+        "cargo metadata --locked --manifest-path native/axven_native/Cargo.toml",
         "python rust_019_offline_dependency_closure.py verify",
         "python rust_020_verified_vendor.py build",
         "python rust_020_verified_vendor.py verify",
@@ -86,6 +88,9 @@ def main() -> None:
         '-v "$bundle/python-wheels:/python-wheels:ro"',
         '-v "$HOME/.rustup:/rustup:ro"',
         '-v "$GITHUB_WORKSPACE/native/axven_native:/work/native/axven_native:ro"',
+        'RUSTFLAGS="--remap-path-prefix=/cargo/registry/src/$REGISTRY_SOURCE_DIR=/axven/vendor"',
+        "RUSTFLAGS=--remap-path-prefix=/vendor=/axven/vendor",
+        "test \"$RUSTFLAGS\" = \"--remap-path-prefix=/vendor=/axven/vendor\"",
         "test ! -e /cargo-home/registry/index",
         "test ! -e /cargo-home/registry/cache",
         "test ! -e /cargo-home/registry/src",
@@ -94,12 +99,15 @@ def main() -> None:
         "--no-index",
     ):
         assert marker in workflow, marker
+    assert 'case "${roots[0]}" in' in workflow
+    assert "index.crates.io-*" in workflow
+    assert 'test "${#roots[@]}" -eq 1' in workflow
     offline_block = workflow[workflow.index("Build RUST-021 wheel from verified dependencies with network disabled") :]
     assert '-v "$HOME/.cargo:/cargo"' not in offline_block
     assert "cargo fetch" not in offline_block
     assert "pip download" not in offline_block
     checks += 1
-    print("[GREEN] offline candidate has only verified vendor/Maturin dependencies and no producer Cargo cache or network fetch path")
+    print("[GREEN] dependency source paths are canonicalized while offline candidate keeps only verified vendor/Maturin inputs")
 
     lower = workflow.lower()
     assert "permissions:\n  contents: read" in workflow
