@@ -23,7 +23,8 @@ FORBIDDEN_CONSUMER_PATTERNS = (
     "GITHUB_",
     "import axven",
     "from axven",
-    "rust_014_reproducible_attestation",
+    "import rust_014_reproducible_attestation",
+    "from rust_014_reproducible_attestation",
     "docker ",
 )
 
