@@ -172,6 +172,7 @@ jobs:
           mkdir -p "$cargo_home"
           python rust_020_verified_vendor.py write-config "$cargo_home"
           test ! -e "$cargo_home/registry"
+          test ! -e "$cargo_home/git"
           test "$(find "$cargo_home" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
           test -f "$cargo_home/config.toml"
 
@@ -182,6 +183,7 @@ jobs:
           vendor_dir=/tmp/axven-rust020-vendor
           cargo_home=/tmp/axven-rust020-cargo-home
           test ! -e "$cargo_home/registry"
+          test ! -e "$cargo_home/git"
           docker run --rm --network none \
             --user "$(id -u):$(id -g)" \
             -e HOME=/tmp \
@@ -201,14 +203,21 @@ jobs:
               set -euo pipefail
               test "$CARGO_NET_OFFLINE" = "true"
               test ! -e /cargo-home/registry
+              test ! -e /cargo-home/git
               rustc --version | grep -F "rustc 1.98.0 "
               cargo --version | grep -F "cargo 1.98.0 "
               cargo metadata --offline --locked --manifest-path /work/native/axven_native/Cargo.toml --format-version 1 > /tmp/rust020-metadata.json
               test -s /tmp/rust020-metadata.json
-              grep -F "\"name\":\"axven-native\"" /tmp/rust020-metadata.json
-              test ! -e /cargo-home/registry
+              grep -Fq "\"name\":\"axven-native\"" /tmp/rust020-metadata.json
+              test ! -e /cargo-home/registry/index
+              test ! -e /cargo-home/registry/cache
+              test ! -e /cargo-home/registry/src
+              test ! -e /cargo-home/git
             '
-          test ! -e "$cargo_home/registry"
+          test ! -e "$cargo_home/registry/index"
+          test ! -e "$cargo_home/registry/cache"
+          test ! -e "$cargo_home/registry/src"
+          test ! -e "$cargo_home/git"
           env -i \
             HOME=/tmp \
             PATH="$PATH" \
