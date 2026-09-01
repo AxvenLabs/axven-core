@@ -196,10 +196,7 @@ mod tests {
 
     #[test]
     fn empty_smt_root_is_stable() {
-        assert_eq!(
-            smt_root_mirror_impl(&[]),
-            smt_root_mirror_impl(&[])
-        );
+        assert_eq!(smt_root_mirror_impl(&[]), smt_root_mirror_impl(&[]));
     }
 
     #[test]
