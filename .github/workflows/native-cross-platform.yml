@@ -1,0 +1,67 @@
+name: Axven Native Cross Platform
+
+on:
+  push:
+    paths:
+      - "native/**"
+      - "RUST_006.md"
+      - "rust_006_cross_platform_native_abi_spec.py"
+      - ".github/workflows/native-cross-platform.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - "RUST_006.md"
+      - "rust_006_cross_platform_native_abi_spec.py"
+      - ".github/workflows/native-cross-platform.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-cross-platform:
+    name: native-${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - windows-2025
+          - macos-15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    env:
+      PYO3_PYTHON: python
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install exact Rust toolchain
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+          python --version
+          rustc --version
+          cargo --version
+
+      # CPython extension modules on macOS intentionally resolve Python C API
+      # symbols from the host interpreter at load time instead of linking a
+      # private libpython into the extension.
+      - name: Configure macOS Python extension linking
+        if: runner.os == 'macOS'
+        run: echo "RUSTFLAGS=-C link-arg=-undefined -C link-arg=dynamic_lookup" >> "$GITHUB_ENV"
+
+      - name: Build locked release PyO3 extension
+        run: cargo build --release --locked --manifest-path native/axven_native/Cargo.toml --features extension-module
+
+      - name: Verify cross-platform native ABI contract
+        run: python rust_006_cross_platform_native_abi_spec.py
