@@ -1,0 +1,165 @@
+name: Axven Native Rust Toolchain Closure
+
+on:
+  push:
+    paths:
+      - "RUST_023.md"
+      - "rust_023_rust_toolchain_closure.py"
+      - "rust_023_rust_toolchain_closure_policy_spec.py"
+      - ".github/workflows/native-rust-toolchain-closure.yml"
+  pull_request:
+    paths:
+      - "RUST_023.md"
+      - "rust_023_rust_toolchain_closure.py"
+      - "rust_023_rust_toolchain_closure_policy_spec.py"
+      - ".github/workflows/native-rust-toolchain-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MANYLINUX_IMAGE: quay.io/pypa/manylinux_2_28_x86_64@sha256:443eabd378e140996780a772e12c1a1ef10551da933fe76d74a1bab61f68a7b7
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  rust-toolchain-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install exact minimal Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+          rustc --version | grep -F "rustc 1.98.0 (88d9e12ae 2026-08-18)"
+          cargo --version | grep -F "cargo 1.98.0 (797e8a9bc 2026-08-05)"
+          mapfile -t installed < <(rustup component list --toolchain 1.98.0 --installed | sed 's/ (installed)$//' | sort)
+          printf '%s\n' "${installed[@]}"
+          test "${#installed[@]}" -eq 3
+          test "${installed[0]}" = "cargo-x86_64-unknown-linux-gnu"
+          test "${installed[1]}" = "rust-std-x86_64-unknown-linux-gnu"
+          test "${installed[2]}" = "rustc-x86_64-unknown-linux-gnu"
+
+      - name: RUST-023 static verified toolchain closure policy
+        run: python rust_023_rust_toolchain_closure_policy_spec.py
+
+      - name: Resolve canonical Rust toolchain root
+        id: toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustc_path="$(rustup which --toolchain 1.98.0 rustc)"
+          toolchain_root="$(dirname "$(dirname "$rustc_path")")"
+          test -d "$toolchain_root"
+          test "$(basename "$toolchain_root")" = "1.98.0-x86_64-unknown-linux-gnu"
+          case "$toolchain_root" in
+            "$HOME/.rustup/toolchains/"*) ;;
+            *) exit 1 ;;
+          esac
+          printf 'root=%s\n' "$toolchain_root" >> "$GITHUB_OUTPUT"
+
+      - name: Collect exact RUST-023 Rust toolchain closure
+        shell: bash
+        env:
+          TOOLCHAIN_ROOT: ${{ steps.toolchain.outputs.root }}
+        run: |
+          set -euo pipefail
+          manifest=/tmp/axven-rust023-toolchain.json
+          rm -f "$manifest"
+          python rust_023_rust_toolchain_closure.py collect "$TOOLCHAIN_ROOT" "$manifest"
+          test -s "$manifest"
+          test ! -L "$manifest"
+
+      - name: Verify exact RUST-023 Rust toolchain closure
+        shell: bash
+        env:
+          TOOLCHAIN_ROOT: ${{ steps.toolchain.outputs.root }}
+        run: |
+          set -euo pipefail
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_023_rust_toolchain_closure.py verify \
+              "$TOOLCHAIN_ROOT" /tmp/axven-rust023-toolchain.json
+
+      - name: RUST-023 Rust toolchain closure mutation contract
+        shell: bash
+        env:
+          TOOLCHAIN_ROOT: ${{ steps.toolchain.outputs.root }}
+        run: |
+          set -euo pipefail
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_023_rust_toolchain_closure.py selftest \
+              "$TOOLCHAIN_ROOT" /tmp/axven-rust023-toolchain.json
+
+      - name: Pull and verify immutable manylinux image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$MANYLINUX_IMAGE"
+          resolved="$(docker image inspect "$MANYLINUX_IMAGE" --format '{{index .RepoDigests 0}}')"
+          test "$resolved" = "$MANYLINUX_IMAGE"
+
+      - name: Consume verified Rust toolchain read-only with network disabled
+        shell: bash
+        env:
+          TOOLCHAIN_ROOT: ${{ steps.toolchain.outputs.root }}
+        run: |
+          set -euo pipefail
+          work=/tmp/axven-rust023-smoke
+          rm -rf "$work"
+          mkdir -p "$work"
+          docker run --rm --network none \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e PATH=/rust-toolchain/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$TOOLCHAIN_ROOT:/rust-toolchain:ro" \
+            -v "$work:/work" \
+            -w /work \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              rustc --version | grep -F "rustc 1.98.0 (88d9e12ae 2026-08-18)"
+              cargo --version | grep -F "cargo 1.98.0 (797e8a9bc 2026-08-05)"
+              printf "fn main(){println!(\"RUST-023-GREEN\");}\n" > main.rs
+              rustc --target x86_64-unknown-linux-gnu main.rs -o rust023-smoke
+              test -x rust023-smoke
+              test "$(./rust023-smoke)" = "RUST-023-GREEN"
+            '
+
+      - name: Reverify exact RUST-023 Rust toolchain closure after consumption
+        shell: bash
+        env:
+          TOOLCHAIN_ROOT: ${{ steps.toolchain.outputs.root }}
+        run: |
+          set -euo pipefail
+          env -i \
+            HOME=/tmp \
+            PATH="$PATH" \
+            PYTHONUTF8=1 \
+            PYTHONIOENCODING=utf-8 \
+            PYTHONDONTWRITEBYTECODE=1 \
+            python rust_023_rust_toolchain_closure.py verify \
+              "$TOOLCHAIN_ROOT" /tmp/axven-rust023-toolchain.json
