@@ -145,6 +145,7 @@ print(json.dumps({{"boundary": axven_native.boundary_version(), "root": root, "d
 def _static_contract() -> None:
     workflow = (ROOT / ".github/workflows/native-portable-linux.yml").read_text(encoding="utf-8")
     doc = (ROOT / "RUST_009.md").read_text(encoding="utf-8")
+    assert not (ROOT / ".github/workflows/rust009-image-discovery.yml").exists()
     assert IMAGE in workflow
     assert IMAGE in doc
     assert "permissions:\n  contents: read" in workflow
