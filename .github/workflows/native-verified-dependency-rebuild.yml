@@ -95,10 +95,29 @@ jobs:
           resolved="$(docker image inspect "$MANYLINUX_IMAGE" --format '{{index .RepoDigests 0}}')"
           test "$resolved" = "$MANYLINUX_IMAGE"
 
+      - name: Materialize canonical Cargo registry source root
+        id: registry-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo metadata --locked --manifest-path native/axven_native/Cargo.toml --format-version 1 > /tmp/rust021-host-metadata.json
+          test -s /tmp/rust021-host-metadata.json
+          registry_src="$HOME/.cargo/registry/src"
+          test -d "$registry_src"
+          mapfile -t roots < <(find "$registry_src" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
+          test "${#roots[@]}" -eq 1
+          case "${roots[0]}" in
+            index.crates.io-*) ;;
+            *) exit 1 ;;
+          esac
+          printf 'dir=%s\n' "${roots[0]}" >> "$GITHUB_OUTPUT"
+          printf 'RUST-021 canonical registry source root=%s\n' "${roots[0]}"
+
       - name: Build RUST-021 reference wheel
         shell: bash
         env:
           SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+          REGISTRY_SOURCE_DIR: ${{ steps.registry-source.outputs.dir }}
         run: |
           set -euo pipefail
           rm -rf wheelhouse-rust021-reference .rust021-reference-target .rust021-reference-tools
@@ -115,6 +134,7 @@ jobs:
             -e PYTHONHASHSEED=0 \
             -e TZ=UTC \
             -e LC_ALL=C.UTF-8 \
+            -e RUSTFLAGS="--remap-path-prefix=/cargo/registry/src/$REGISTRY_SOURCE_DIR=/axven/vendor" \
             -e CARGO_TARGET_DIR=/work/.rust021-reference-target \
             -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
             -v "$GITHUB_WORKSPACE:/work" \
@@ -124,6 +144,8 @@ jobs:
             "$MANYLINUX_IMAGE" \
             /bin/bash -lc '
               set -euo pipefail
+              test -d "/cargo/registry/src/$REGISTRY_SOURCE_DIR"
+              test "$RUSTFLAGS" = "--remap-path-prefix=/cargo/registry/src/$REGISTRY_SOURCE_DIR=/axven/vendor"
               python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
               rustc --version | grep -F "rustc 1.98.0 "
               cargo --version | grep -F "cargo 1.98.0 "
@@ -239,6 +261,7 @@ jobs:
             -e TZ=UTC \
             -e LC_ALL=C.UTF-8 \
             -e PIP_NO_CACHE_DIR=1 \
+            -e RUSTFLAGS=--remap-path-prefix=/vendor=/axven/vendor \
             -e CARGO_TARGET_DIR=/tmp/axven-rust021-target \
             -e PATH=/cargo-bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
             -v "$vendor_dir:/vendor:ro" \
@@ -254,6 +277,7 @@ jobs:
             /bin/bash -lc '
               set -euo pipefail
               test "$CARGO_NET_OFFLINE" = "true"
+              test "$RUSTFLAGS" = "--remap-path-prefix=/vendor=/axven/vendor"
               test ! -e /cargo-home/registry
               test ! -e /cargo-home/git
               python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
