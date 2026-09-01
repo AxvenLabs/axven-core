@@ -13,6 +13,9 @@ on:
       - "RUST_015.md"
       - "rust_015_offline_repro_consumer_verify.py"
       - "rust_015_offline_repro_consumer_policy_spec.py"
+      - "RUST_016.md"
+      - "rust_016_source_closure_spec.py"
+      - "rust_016_hermetic_source_closure_policy_spec.py"
       - "rust_009_portable_linux_wheel_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
@@ -29,6 +32,9 @@ on:
       - "RUST_015.md"
       - "rust_015_offline_repro_consumer_verify.py"
       - "rust_015_offline_repro_consumer_policy_spec.py"
+      - "RUST_016.md"
+      - "rust_016_source_closure_spec.py"
+      - "rust_016_hermetic_source_closure_policy_spec.py"
       - "rust_009_portable_linux_wheel_spec.py"
       - "requirements-native-build.lock"
       - "requirements-ci-runtime-posix.lock"
@@ -82,6 +88,9 @@ jobs:
       - name: RUST-015 static detached reproducibility consumer policy
         run: python rust_015_offline_repro_consumer_policy_spec.py
 
+      - name: RUST-016 static hermetic source-closure policy
+        run: python rust_016_hermetic_source_closure_policy_spec.py
+
       - name: Derive source-bound reproducibility epoch
         id: epoch
         shell: bash
@@ -96,6 +105,21 @@ jobs:
           test "$source_epoch" -ge 315532800
           printf 'epoch=%s\n' "$source_epoch" >> "$GITHUB_OUTPUT"
           printf 'RUST-013 SOURCE_DATE_EPOCH=%s source=%s\n' "$source_epoch" "$AXVEN_SOURCE_SHA"
+
+      - name: Stage exact RUST-016 native source closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          closure=/tmp/axven-rust016-source
+          rm -rf "$closure"
+          mkdir -p "$closure/src"
+          install -m 0444 native/axven_native/Cargo.toml "$closure/Cargo.toml"
+          install -m 0444 native/axven_native/Cargo.lock "$closure/Cargo.lock"
+          install -m 0444 native/axven_native/src/lib.rs "$closure/src/lib.rs"
+          test ! -e "$closure/.git"
+          test "$(find "$closure" -type f | wc -l)" -eq 3
+          test "$(find "$closure" -type l | wc -l)" -eq 0
+          python rust_016_source_closure_spec.py "$closure"
 
       - name: Pull and verify immutable manylinux image
         shell: bash
@@ -324,3 +348,74 @@ jobs:
             PYTHONIOENCODING=utf-8 \
             python rust_015_offline_repro_consumer_verify.py verify \
               "$wheel_a" "$wheel_b" reproducible-provenance.json reproducible-attestation.json
+
+      - name: Build RUST-016 repository-blind source closure
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          closure=/tmp/axven-rust016-source
+          python rust_016_source_closure_spec.py "$closure"
+          rm -rf wheelhouse-closure .rust016-target .rust016-tools
+          mkdir -p wheelhouse-closure .rust016-target .rust016-tools
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
+            -e CARGO_HOME=/cargo \
+            -e RUSTUP_HOME=/rustup \
+            -e RUSTUP_TOOLCHAIN=1.98.0 \
+            -e PYO3_PYTHON=/opt/python/cp313-cp313/bin/python \
+            -e SOURCE_DATE_EPOCH="$SOURCE_DATE_EPOCH" \
+            -e CARGO_INCREMENTAL=0 \
+            -e PYTHONHASHSEED=0 \
+            -e TZ=UTC \
+            -e LC_ALL=C.UTF-8 \
+            -e CARGO_TARGET_DIR=/target \
+            -e PATH=/cargo/bin:/opt/python/cp313-cp313/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+            -v "$closure:/src:ro" \
+            -v "$GITHUB_WORKSPACE/requirements-native-build.lock:/requirements-native-build.lock:ro" \
+            -v "$GITHUB_WORKSPACE/wheelhouse-closure:/out" \
+            -v "$GITHUB_WORKSPACE/.rust016-target:/target" \
+            -v "$GITHUB_WORKSPACE/.rust016-tools:/tools" \
+            -v "$HOME/.cargo:/cargo" \
+            -v "$HOME/.rustup:/rustup:ro" \
+            "$MANYLINUX_IMAGE" \
+            /bin/bash -lc '
+              set -euo pipefail
+              python -c "import platform; assert platform.python_version() == \"3.13.13\", platform.python_version()"
+              rustc --version | grep -F "rustc 1.98.0 "
+              cargo --version | grep -F "cargo 1.98.0 "
+              test "$SOURCE_DATE_EPOCH" -ge 315532800
+              test "$CARGO_INCREMENTAL" = "0"
+              test "$PYTHONHASHSEED" = "0"
+              test "$TZ" = "UTC"
+              test "$LC_ALL" = "C.UTF-8"
+              test -r /src/Cargo.toml
+              test -r /src/Cargo.lock
+              test -r /src/src/lib.rs
+              test ! -w /src/Cargo.toml
+              test ! -w /src/Cargo.lock
+              test ! -w /src/src/lib.rs
+              python -m pip install --no-deps --only-binary=:all: --require-hashes --target /tools -r /requirements-native-build.lock
+              export PYTHONPATH=/tools
+              export PATH=/tools/bin:$PATH
+              test "$(maturin --version)" = "maturin 1.15.0"
+              maturin build --release --locked --compatibility manylinux_2_28 --manifest-path /src/Cargo.toml --interpreter /opt/python/cp313-cp313/bin/python --out /out
+              auditwheel show /out/*.whl
+            '
+
+      - name: Prove RUST-016 closure wheel equals ordinary reproducible build
+        shell: bash
+        env:
+          SOURCE_DATE_EPOCH: ${{ steps.epoch.outputs.epoch }}
+        run: |
+          set -euo pipefail
+          closure=/tmp/axven-rust016-source
+          python rust_016_source_closure_spec.py "$closure"
+          sha256sum wheelhouse-repro-a/*.whl wheelhouse-closure/*.whl
+          python rust_013_reproducible_wheel_spec.py wheelhouse-repro-a wheelhouse-closure "$SOURCE_DATE_EPOCH"
+          rm -rf wheelhouse-portable
+          mkdir wheelhouse-portable
+          cp -- wheelhouse-closure/*.whl wheelhouse-portable/
+          python rust_009_portable_linux_wheel_spec.py
