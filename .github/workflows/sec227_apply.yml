@@ -1,0 +1,121 @@
+name: SEC-227 Apply Fix
+
+on:
+  push:
+    branches:
+      - security-sec227-preexecution-provenance-verifier-attestation
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: true
+      - name: Apply SEC-227 verifier pre-execution attestation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+
+          def replace(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'missing patch anchor in {path}: {old[:80]!r}')
+              text=text.replace(old,new,1)
+              p.write_text(text,encoding='utf-8')
+
+          # runtime_provenance.py: publish/check a digest for the verifier itself.
+          replace('runtime_provenance.py',
+              'PYTHON_DIGEST_NAME = ".axven-python.sha256"\nMAX_RECEIPT_BYTES = 32 * 1024\nMAX_PYTHON_DIGEST_BYTES = 128\n',
+              'PYTHON_DIGEST_NAME = ".axven-python.sha256"\nPROVENANCE_VERIFIER_DIGEST_NAME = ".axven-runtime-provenance.sha256"\nMAX_RECEIPT_BYTES = 32 * 1024\nMAX_PYTHON_DIGEST_BYTES = 128\nMAX_PROVENANCE_VERIFIER_DIGEST_BYTES = 128\n')
+          replace('runtime_provenance.py',
+              'def python_digest_path(root: Path = ROOT) -> Path:\n    return root / ".venv" / PYTHON_DIGEST_NAME\n\n\ndef _read_python_digest(path: Path) -> str:\n',
+              'def python_digest_path(root: Path = ROOT) -> Path:\n    return root / ".venv" / PYTHON_DIGEST_NAME\n\n\ndef provenance_verifier_digest_path(root: Path = ROOT) -> Path:\n    return root / ".venv" / PROVENANCE_VERIFIER_DIGEST_NAME\n\n\ndef _read_python_digest(path: Path) -> str:\n')
+          replace('runtime_provenance.py',
+              '    if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):\n        raise RuntimeError("Python interpreter digest is invalid")\n    return value\n\n\ndef _atomic_write_private(path: Path, payload: bytes) -> None:\n',
+              '    if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):\n        raise RuntimeError("Python interpreter digest is invalid")\n    return value\n\n\ndef _read_provenance_verifier_digest(path: Path) -> str:\n    try:\n        raw = _read_regular_bounded(\n            path,\n            label="Python provenance verifier digest",\n            max_bytes=MAX_PROVENANCE_VERIFIER_DIGEST_BYTES,\n            allow_empty=False,\n        )\n        value = raw.decode("ascii").strip()\n    except UnicodeError as exc:\n        raise RuntimeError("Python provenance verifier digest is invalid") from exc\n    if len(value) != 64 or any(ch not in "0123456789abcdef" for ch in value):\n        raise RuntimeError("Python provenance verifier digest is invalid")\n    return value\n\n\ndef _atomic_write_private(path: Path, payload: bytes) -> None:\n')
+          replace('runtime_provenance.py',
+              '    digest = receipt["python_executable"]["sha256"]\n    _atomic_write_private(python_digest_path(root), (digest + "\\n").encode("ascii"))\n    print("Axven runtime provenance receipt: STAMPED")\n',
+              '    digest = receipt["python_executable"]["sha256"]\n    _atomic_write_private(python_digest_path(root), (digest + "\\n").encode("ascii"))\n    verifier_digest = receipt["inputs"]["runtime_provenance.py"]["sha256"]\n    _atomic_write_private(\n        provenance_verifier_digest_path(root),\n        (verifier_digest + "\\n").encode("ascii"),\n    )\n    print("Axven runtime provenance receipt: STAMPED")\n')
+          replace('runtime_provenance.py',
+              '    if not hmac.compare_digest(published_digest, expected["python_executable"]["sha256"]):\n        raise RuntimeError("Python interpreter digest is stale or mismatched")\n    if actual != expected:\n',
+              '    if not hmac.compare_digest(published_digest, expected["python_executable"]["sha256"]):\n        raise RuntimeError("Python interpreter digest is stale or mismatched")\n    published_verifier_digest = _read_provenance_verifier_digest(\n        provenance_verifier_digest_path(root)\n    )\n    expected_verifier_digest = expected["inputs"]["runtime_provenance.py"]["sha256"]\n    if not hmac.compare_digest(published_verifier_digest, expected_verifier_digest):\n        raise RuntimeError("Python provenance verifier digest is stale or mismatched")\n    if actual != expected:\n')
+
+          # Windows launcher: hash verifier before invoking it.
+          replace('ensure_runtime.ps1',
+              '$PythonDigest = Join-Path $PSScriptRoot ".venv\\.axven-python.sha256"\n',
+              '$PythonDigest = Join-Path $PSScriptRoot ".venv\\.axven-python.sha256"\n$Verifier = Join-Path $PSScriptRoot "runtime_provenance.py"\n$VerifierDigest = Join-Path $PSScriptRoot ".venv\\.axven-runtime-provenance.sha256"\n')
+          replace('ensure_runtime.ps1',
+              'function Test-AxvenValidatedRuntime {\n',
+              'function Test-AxvenVerifierDigest {\n    if (-not (Test-Path $Verifier -PathType Leaf)) { return $false }\n    if (-not (Test-Path $VerifierDigest -PathType Leaf)) { return $false }\n    $Expected = (Get-Content -LiteralPath $VerifierDigest -Raw).Trim()\n    if ($Expected -notmatch "^[0-9a-f]{64}$") { return $false }\n    $Actual = (Get-FileHash -LiteralPath $Verifier -Algorithm SHA256).Hash.ToLowerInvariant()\n    return $Actual -eq $Expected\n}\n\nfunction Test-AxvenValidatedRuntime {\n')
+          replace('ensure_runtime.ps1',
+              '    if (-not (Test-AxvenInterpreterDigest)) {\n        return $false\n    }\n\n    & $Python runtime_provenance.py check *> $null\n',
+              '    if (-not (Test-AxvenInterpreterDigest)) {\n        return $false\n    }\n    if (-not (Test-AxvenVerifierDigest)) {\n        return $false\n    }\n\n    & $Python runtime_provenance.py check *> $null\n')
+          replace('ensure_runtime.ps1',
+              'if ((Test-Path $Python -PathType Leaf) -and -not (Test-AxvenInterpreterDigest)) {\n    throw "Axven runtime interpreter attestation is missing or mismatched; remove .venv and rerun validate_windows.ps1"\n}\n\nif (-not (Test-AxvenValidatedRuntime)) {\n',
+              'if ((Test-Path $Python -PathType Leaf) -and -not (Test-AxvenInterpreterDigest)) {\n    throw "Axven runtime interpreter attestation is missing or mismatched; remove .venv and rerun validate_windows.ps1"\n}\nif ((Test-Path $Python -PathType Leaf) -and -not (Test-AxvenVerifierDigest)) {\n    throw "Axven runtime provenance verifier attestation is missing or mismatched; remove .venv and rerun validate_windows.ps1"\n}\n\nif (-not (Test-AxvenValidatedRuntime)) {\n')
+
+          # POSIX launcher: hash verifier before invoking venv Python.
+          replace('ensure_runtime.sh',
+              'digest_path=".venv/.axven-python.sha256"\n',
+              'digest_path=".venv/.axven-python.sha256"\nverifier_path="runtime_provenance.py"\nverifier_digest_path=".venv/.axven-runtime-provenance.sha256"\n')
+          replace('ensure_runtime.sh',
+              'if [[ "$actual_digest" != "$expected_digest" ]]; then\n  echo "Axven runtime interpreter attestation mismatch; remove .venv and rerun: bash validate_linux_macos.sh" >&2\n  exit 2\nfi\n\n"$venv_python" runtime_provenance.py check\n',
+              'if [[ "$actual_digest" != "$expected_digest" ]]; then\n  echo "Axven runtime interpreter attestation mismatch; remove .venv and rerun: bash validate_linux_macos.sh" >&2\n  exit 2\nfi\nif [[ ! -f "$verifier_path" || -L "$verifier_path" || ! -f "$verifier_digest_path" || -L "$verifier_digest_path" ]]; then\n  echo "Axven runtime provenance verifier attestation is missing; remove .venv and rerun: bash validate_linux_macos.sh" >&2\n  exit 2\nfi\nIFS= read -r expected_verifier_digest < "$verifier_digest_path" || true\nif [[ ! "$expected_verifier_digest" =~ ^[0-9a-f]{64}$ ]]; then\n  echo "Axven runtime provenance verifier attestation is invalid" >&2\n  exit 2\nfi\nif command -v sha256sum >/dev/null 2>&1; then\n  actual_verifier_digest="$(sha256sum -- "$verifier_path" | awk \'{print $1}\')"\nelif command -v shasum >/dev/null 2>&1; then\n  actual_verifier_digest="$(shasum -a 256 -- "$verifier_path" | awk \'{print $1}\')"\nelse\n  echo "Axven runtime attestation requires sha256sum or shasum" >&2\n  exit 2\nfi\nif [[ "$actual_verifier_digest" != "$expected_verifier_digest" ]]; then\n  echo "Axven runtime provenance verifier attestation mismatch; remove .venv and rerun: bash validate_linux_macos.sh" >&2\n  exit 2\nfi\n\n"$venv_python" runtime_provenance.py check\n')
+
+          # Windows validator: existing venv must carry verifier attestation before use.
+          replace('validate_windows.ps1',
+              '$PythonDigest = Join-Path $PSScriptRoot ".venv\\.axven-python.sha256"\n',
+              '$PythonDigest = Join-Path $PSScriptRoot ".venv\\.axven-python.sha256"\n$Verifier = Join-Path $PSScriptRoot "runtime_provenance.py"\n$VerifierDigest = Join-Path $PSScriptRoot ".venv\\.axven-runtime-provenance.sha256"\n')
+          replace('validate_windows.ps1',
+              '    if ($ActualDigest -ne $ExpectedDigest) {\n        throw "existing .venv interpreter attestation mismatch; remove it and rerun"\n    }\n}\n& $Python -c',
+              '    if ($ActualDigest -ne $ExpectedDigest) {\n        throw "existing .venv interpreter attestation mismatch; remove it and rerun"\n    }\n    if (-not (Test-Path $Verifier -PathType Leaf) -or -not (Test-Path $VerifierDigest -PathType Leaf)) {\n        throw "existing .venv lacks provenance verifier attestation; remove it and rerun"\n    }\n    $ExpectedVerifierDigest = (Get-Content -LiteralPath $VerifierDigest -Raw).Trim()\n    if ($ExpectedVerifierDigest -notmatch "^[0-9a-f]{64}$") {\n        throw "existing .venv provenance verifier attestation is invalid; remove it and rerun"\n    }\n    $ActualVerifierDigest = (Get-FileHash -LiteralPath $Verifier -Algorithm SHA256).Hash.ToLowerInvariant()\n    if ($ActualVerifierDigest -ne $ExpectedVerifierDigest) {\n        throw "existing .venv provenance verifier attestation mismatch; remove it and rerun"\n    }\n}\n& $Python -c')
+
+          # POSIX validator: equivalent existing-venv pre-execution verifier check.
+          replace('validate_linux_macos.sh',
+              'digest_path=".venv/.axven-python.sha256"\n',
+              'digest_path=".venv/.axven-python.sha256"\nverifier_path="runtime_provenance.py"\nverifier_digest_path=".venv/.axven-runtime-provenance.sha256"\n')
+          replace('validate_linux_macos.sh',
+              '  if [[ "$actual_digest" != "$expected_digest" ]]; then\n    echo "existing .venv interpreter attestation mismatch; remove it and rerun" >&2\n    exit 2\n  fi\nfi\n\nvenv_version=',
+              '  if [[ "$actual_digest" != "$expected_digest" ]]; then\n    echo "existing .venv interpreter attestation mismatch; remove it and rerun" >&2\n    exit 2\n  fi\n  if [[ ! -f "$verifier_path" || -L "$verifier_path" || ! -f "$verifier_digest_path" || -L "$verifier_digest_path" ]]; then\n    echo "existing .venv lacks provenance verifier attestation; remove it and rerun" >&2\n    exit 2\n  fi\n  IFS= read -r expected_verifier_digest < "$verifier_digest_path" || true\n  if [[ ! "$expected_verifier_digest" =~ ^[0-9a-f]{64}$ ]]; then\n    echo "existing .venv provenance verifier attestation is invalid; remove it and rerun" >&2\n    exit 2\n  fi\n  if command -v sha256sum >/dev/null 2>&1; then\n    actual_verifier_digest="$(sha256sum -- "$verifier_path" | awk \'{print $1}\')"\n  elif command -v shasum >/dev/null 2>&1; then\n    actual_verifier_digest="$(shasum -a 256 -- "$verifier_path" | awk \'{print $1}\')"\n  else\n    echo "Axven validation requires sha256sum or shasum" >&2\n    exit 2\n  fi\n  if [[ "$actual_verifier_digest" != "$expected_verifier_digest" ]]; then\n    echo "existing .venv provenance verifier attestation mismatch; remove it and rerun" >&2\n    exit 2\n  fi\nfi\n\nvenv_version=')
+
+          # Tighten Windows source-level checks to the last pre-exec hash call.
+          replace('security_sec227_preexecution_provenance_verifier_attestation_spec.py',
+              '    verifier_hash = ps.index("runtime_provenance.py", ps.index("get-filehash"))\n    verifier_exec = ps.index("& $python runtime_provenance.py check")\n    assert verifier_hash < verifier_exec\n',
+              '    verifier_exec = ps.index("& $python runtime_provenance.py check")\n    assert ps.count("get-filehash") >= 2\n    verifier_hash = ps.rindex("get-filehash", 0, verifier_exec)\n    assert verifier_hash < verifier_exec\n')
+          replace('security_sec227_preexecution_provenance_verifier_attestation_spec.py',
+              '    assert validate_ps.index("get-filehash") < validate_ps.index(\'& $python -c\')\n',
+              '    python_exec = validate_ps.index(\'& $python -c\')\n    assert validate_ps.count("get-filehash", 0, python_exec) >= 2\n    assert validate_ps.rindex("get-filehash", 0, python_exec) < python_exec\n')
+
+          # Refresh release manifest pins for every changed release payload.
+          manifest_path=Path('release_manifest.json')
+          manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
+          names=(
+              'runtime_provenance.py',
+              'ensure_runtime.ps1',
+              'ensure_runtime.sh',
+              'validate_windows.ps1',
+              'validate_linux_macos.sh',
+              'security_sec227_preexecution_provenance_verifier_attestation_spec.py',
+          )
+          for name in names:
+              raw=Path(name).read_bytes()
+              manifest['files'][name]={'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+          manifest['files']=dict(sorted(manifest['files'].items()))
+          manifest_path.write_text(json.dumps(manifest,indent=2)+'\n',encoding='utf-8')
+          PY
+          git diff --check
+      - name: Commit SEC-227 production fix
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add runtime_provenance.py ensure_runtime.ps1 ensure_runtime.sh validate_windows.ps1 validate_linux_macos.sh security_sec227_preexecution_provenance_verifier_attestation_spec.py release_manifest.json
+          git commit -m 'SEC-227: attest provenance verifier before execution'
+          git push origin HEAD:${GITHUB_REF_NAME}
