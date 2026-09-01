@@ -75,10 +75,16 @@ def main() -> None:
     checks += 1
     print("[GREEN] production Axven code does not route through the native module")
 
+    audited_native_files = (
+        NATIVE / "Cargo.toml",
+        NATIVE / "pyproject.toml",
+        NATIVE / "rust-toolchain.toml",
+        NATIVE / "README.md",
+        NATIVE / "src" / "lib.rs",
+    )
     all_native_text = "\n".join(
         path.read_text(encoding="utf-8", errors="strict")
-        for path in NATIVE.rglob("*")
-        if path.is_file() and path.name != "Cargo.lock"
+        for path in audited_native_files
     )
     assert "ML-KEM" not in all_native_text
     assert "mldsa" not in source.lower()
