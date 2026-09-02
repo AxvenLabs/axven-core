@@ -1,0 +1,156 @@
+name: Axven Native Observer Journal Monitor
+
+on:
+  push:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_030_stdlib_material_verify.py"
+      - "rust_031_stdlib_trust_state_material_verify.py"
+      - "rust_032_external_monotonic_floor_verify.py"
+      - "rust_033_external_floor_witness_verify.py"
+      - "rust_034_external_floor_witness_quorum_verify.py"
+      - "rust_035_witness_set_rotation_verify.py"
+      - "rust_036_multistep_witness_rotation_verify.py"
+      - "rust_036_multistep_witness_rotation_fixture.py"
+      - "rust_037_rotation_journal_verify.py"
+      - "rust_037_rotation_journal_fixture.py"
+      - "rust_038_checkpoint_gossip_verify.py"
+      - "rust_038_checkpoint_gossip_fixture.py"
+      - "rust_039_observer_set_rotation_verify.py"
+      - "rust_039_observer_set_rotation_fixture.py"
+      - "rust_039_observer_set_rotation_policy_spec.py"
+      - "rust_040_multistep_observer_rotation_verify.py"
+      - "rust_040_multistep_observer_rotation_fixture.py"
+      - "rust_040_multistep_observer_rotation_policy_spec.py"
+      - "rust_041_observer_rotation_journal_verify.py"
+      - "rust_041_observer_rotation_journal_fixture.py"
+      - "rust_041_observer_rotation_journal_policy_spec.py"
+      - "RUST_042.md"
+      - "rust_042_observer_journal_monitor_verify.py"
+      - "rust_042_observer_journal_monitor_fixture.py"
+      - "rust_042_observer_journal_monitor_selftest.py"
+      - "rust_042_observer_journal_monitor_policy_spec.py"
+      - ".github/workflows/native-observer-journal-monitor.yml"
+  pull_request:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_030_stdlib_material_verify.py"
+      - "rust_031_stdlib_trust_state_material_verify.py"
+      - "rust_032_external_monotonic_floor_verify.py"
+      - "rust_033_external_floor_witness_verify.py"
+      - "rust_034_external_floor_witness_quorum_verify.py"
+      - "rust_035_witness_set_rotation_verify.py"
+      - "rust_036_multistep_witness_rotation_verify.py"
+      - "rust_036_multistep_witness_rotation_fixture.py"
+      - "rust_037_rotation_journal_verify.py"
+      - "rust_037_rotation_journal_fixture.py"
+      - "rust_038_checkpoint_gossip_verify.py"
+      - "rust_038_checkpoint_gossip_fixture.py"
+      - "rust_039_observer_set_rotation_verify.py"
+      - "rust_039_observer_set_rotation_fixture.py"
+      - "rust_039_observer_set_rotation_policy_spec.py"
+      - "rust_040_multistep_observer_rotation_verify.py"
+      - "rust_040_multistep_observer_rotation_fixture.py"
+      - "rust_040_multistep_observer_rotation_policy_spec.py"
+      - "rust_041_observer_rotation_journal_verify.py"
+      - "rust_041_observer_rotation_journal_fixture.py"
+      - "rust_041_observer_rotation_journal_policy_spec.py"
+      - "RUST_042.md"
+      - "rust_042_observer_journal_monitor_verify.py"
+      - "rust_042_observer_journal_monitor_fixture.py"
+      - "rust_042_observer_journal_monitor_selftest.py"
+      - "rust_042_observer_journal_monitor_policy_spec.py"
+      - ".github/workflows/native-observer-journal-monitor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  observer-journal-monitor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked producer dependency
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: RUST-042 static observer journal monitor policy
+        run: |
+          python rust_041_observer_rotation_journal_policy_spec.py
+          python rust_042_observer_journal_monitor_policy_spec.py
+
+      - name: Generate reviewed RUST-036 witness rotation evidence
+        run: python rust_036_multistep_witness_rotation_fixture.py "$AXVEN_SOURCE_SHA"
+      - name: Generate reviewed RUST-037 witness journal evidence
+        run: python rust_037_rotation_journal_fixture.py "$AXVEN_SOURCE_SHA"
+      - name: Generate reviewed RUST-038 observer evidence
+        run: python rust_038_checkpoint_gossip_fixture.py "$AXVEN_SOURCE_SHA"
+      - name: Generate reviewed RUST-039 first observer rotation evidence
+        run: python rust_039_observer_set_rotation_fixture.py "$AXVEN_SOURCE_SHA"
+      - name: Generate reviewed RUST-040 second observer rotation evidence
+        run: python rust_040_multistep_observer_rotation_fixture.py "$AXVEN_SOURCE_SHA"
+      - name: Generate reviewed RUST-041 observer journal evidence
+        run: python rust_041_observer_rotation_journal_fixture.py "$AXVEN_SOURCE_SHA"
+      - name: Generate TEST-only RUST-042 monitor evidence
+        run: python rust_042_observer_journal_monitor_fixture.py "$AXVEN_SOURCE_SHA"
+
+      - name: Make external continuity evidence read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod 0444 /tmp/axven-rust036-*.json /tmp/axven-rust037-*.json /tmp/axven-rust038-*.json /tmp/axven-rust039-*.json /tmp/axven-rust040-*.json /tmp/axven-rust041-*.json
+          chmod 0444 /tmp/axven-rust042-monitor-bundle.json /tmp/axven-rust042-observed-fork-monitor-bundle.json
+          for f in /tmp/axven-rust042-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
+
+      - name: Stage detached RUST-042 consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          c=/tmp/axven-rust042-consumer
+          rm -rf "$c"; mkdir -p "$c"
+          cp rust_030_stdlib_material_verify.py rust_031_stdlib_trust_state_material_verify.py rust_032_external_monotonic_floor_verify.py rust_033_external_floor_witness_verify.py rust_034_external_floor_witness_quorum_verify.py rust_035_witness_set_rotation_verify.py rust_036_multistep_witness_rotation_verify.py rust_037_rotation_journal_verify.py rust_038_checkpoint_gossip_verify.py rust_039_observer_set_rotation_verify.py rust_040_multistep_observer_rotation_verify.py rust_041_observer_rotation_journal_verify.py rust_042_observer_journal_monitor_verify.py rust_042_observer_journal_monitor_selftest.py "$c/"
+          cp /tmp/axven-rust036-final-state.json "$c/final-state.json"
+          test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 15
+          test "$(find "$c" -type l | wc -l)" -eq 0
+          test ! -e "$c/.git"
+          test ! -e "$c/rust_042_observer_journal_monitor_fixture.py"
+
+      - name: Verify detached RUST-042 monitoring and fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/axven-rust042-consumer
+          py=(env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 /usr/bin/python3 -S)
+          base=(
+            final-state.json
+            /tmp/axven-rust036-external-floor.json
+            /tmp/axven-rust036-first-rotation.json /tmp/axven-rust036-first-auth.json /tmp/axven-rust036-first-quorum.json
+            /tmp/axven-rust036-second-rotation.json /tmp/axven-rust036-second-auth.json /tmp/axven-rust036-final-quorum.json
+            /tmp/axven-rust037-prefix-journal.json /tmp/axven-rust037-prefix-checkpoint.json /tmp/axven-rust037-final-journal.json /tmp/axven-rust037-final-checkpoint.json
+            /tmp/axven-rust038-observer-bundle.json
+            /tmp/axven-rust039-observer-set-rotation.json /tmp/axven-rust039-observer-set-rotation-auth.json /tmp/axven-rust039-successor-observer-bundle.json
+            /tmp/axven-rust040-second-observer-set-rotation.json /tmp/axven-rust040-second-observer-set-rotation-auth.json /tmp/axven-rust040-final-observer-bundle.json
+            /tmp/axven-rust041-prefix-observer-journal.json /tmp/axven-rust041-prefix-observer-checkpoint.json /tmp/axven-rust041-final-observer-journal.json /tmp/axven-rust041-final-observer-checkpoint.json
+          )
+          "${py[@]}" rust_042_observer_journal_monitor_verify.py verify "${base[@]}" /tmp/axven-rust042-monitor-bundle.json "$AXVEN_SOURCE_SHA" 1
+          "${py[@]}" rust_042_observer_journal_monitor_selftest.py "${base[@]}" /tmp/axven-rust042-monitor-bundle.json /tmp/axven-rust042-observed-fork-monitor-bundle.json /tmp/axven-rust041-observed-fork-observer-checkpoint.json "$AXVEN_SOURCE_SHA" 1
+          for f in /tmp/axven-rust042-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
+          "${py[@]}" rust_042_observer_journal_monitor_verify.py verify "${base[@]}" /tmp/axven-rust042-monitor-bundle.json "$AXVEN_SOURCE_SHA" 1
