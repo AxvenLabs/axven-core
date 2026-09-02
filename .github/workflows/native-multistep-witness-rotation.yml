@@ -1,0 +1,94 @@
+name: Axven Native Multi-Step Witness Rotation
+on:
+  push:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_030_stdlib_material_verify.py"
+      - "rust_031_stdlib_trust_state_material_verify.py"
+      - "rust_032_external_monotonic_floor_verify.py"
+      - "rust_033_external_floor_witness_verify.py"
+      - "rust_034_external_floor_witness_quorum_verify.py"
+      - "rust_035_witness_set_rotation_verify.py"
+      - "rust_035_witness_set_rotation_policy_spec.py"
+      - "RUST_036.md"
+      - "rust_036_multistep_witness_rotation_verify.py"
+      - "rust_036_multistep_witness_rotation_fixture.py"
+      - "rust_036_multistep_witness_rotation_policy_spec.py"
+      - ".github/workflows/native-multistep-witness-rotation.yml"
+  pull_request:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_030_stdlib_material_verify.py"
+      - "rust_031_stdlib_trust_state_material_verify.py"
+      - "rust_032_external_monotonic_floor_verify.py"
+      - "rust_033_external_floor_witness_verify.py"
+      - "rust_034_external_floor_witness_quorum_verify.py"
+      - "rust_035_witness_set_rotation_verify.py"
+      - "rust_035_witness_set_rotation_policy_spec.py"
+      - "RUST_036.md"
+      - "rust_036_multistep_witness_rotation_verify.py"
+      - "rust_036_multistep_witness_rotation_fixture.py"
+      - "rust_036_multistep_witness_rotation_policy_spec.py"
+      - ".github/workflows/native-multistep-witness-rotation.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+jobs:
+  multistep-witness-rotation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+      - name: Install hash-locked producer dependency
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+      - name: RUST-036 static multi-step rotation policy
+        run: |
+          python rust_035_witness_set_rotation_policy_spec.py
+          python rust_036_multistep_witness_rotation_policy_spec.py
+      - name: Generate two authorized TEST rotations and final quorum
+        run: python rust_036_multistep_witness_rotation_fixture.py "$AXVEN_SOURCE_SHA"
+      - name: Make external evidence read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod 0444 /tmp/axven-rust036-external-floor.json /tmp/axven-rust036-first-rotation.json /tmp/axven-rust036-first-auth.json /tmp/axven-rust036-first-quorum.json /tmp/axven-rust036-second-rotation.json /tmp/axven-rust036-second-auth.json /tmp/axven-rust036-final-quorum.json
+          for f in /tmp/axven-rust036-*.json; do test "$(stat -c '%a' "$f")" = "444" || test "$f" = /tmp/axven-rust036-final-state.json; done
+      - name: Stage detached RUST-036 consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          c=/tmp/axven-rust036-consumer; rm -rf "$c"; mkdir -p "$c"
+          cp rust_030_stdlib_material_verify.py rust_031_stdlib_trust_state_material_verify.py rust_032_external_monotonic_floor_verify.py rust_033_external_floor_witness_verify.py rust_034_external_floor_witness_quorum_verify.py rust_035_witness_set_rotation_verify.py rust_036_multistep_witness_rotation_verify.py "$c/"
+          cp /tmp/axven-rust036-final-state.json "$c/final-state.json"
+          test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 8
+          test "$(find "$c" -type l | wc -l)" -eq 0
+          test ! -e "$c/.git"
+          for f in external-floor first-rotation first-auth first-quorum second-rotation second-auth final-quorum; do test ! -e "$c/$f.json"; done
+      - name: Verify detached RUST-036 two-step continuity
+        shell: bash
+        run: |
+          set -euo pipefail; cd /tmp/axven-rust036-consumer
+          env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 /usr/bin/python3 -S rust_036_multistep_witness_rotation_verify.py verify final-state.json /tmp/axven-rust036-external-floor.json /tmp/axven-rust036-first-rotation.json /tmp/axven-rust036-first-auth.json /tmp/axven-rust036-first-quorum.json /tmp/axven-rust036-second-rotation.json /tmp/axven-rust036-second-auth.json /tmp/axven-rust036-final-quorum.json "$AXVEN_SOURCE_SHA" 1
+      - name: RUST-036 availability and fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail; cd /tmp/axven-rust036-consumer
+          env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 /usr/bin/python3 -S rust_036_multistep_witness_rotation_verify.py selftest final-state.json /tmp/axven-rust036-external-floor.json /tmp/axven-rust036-first-rotation.json /tmp/axven-rust036-first-auth.json /tmp/axven-rust036-first-quorum.json /tmp/axven-rust036-second-rotation.json /tmp/axven-rust036-second-auth.json /tmp/axven-rust036-final-quorum.json "$AXVEN_SOURCE_SHA" 1
+      - name: Reverify pristine TEST-only chain
+        shell: bash
+        run: |
+          set -euo pipefail; cd /tmp/axven-rust036-consumer
+          env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 /usr/bin/python3 -S rust_036_multistep_witness_rotation_verify.py verify final-state.json /tmp/axven-rust036-external-floor.json /tmp/axven-rust036-first-rotation.json /tmp/axven-rust036-first-auth.json /tmp/axven-rust036-first-quorum.json /tmp/axven-rust036-second-rotation.json /tmp/axven-rust036-second-auth.json /tmp/axven-rust036-final-quorum.json "$AXVEN_SOURCE_SHA" 1
