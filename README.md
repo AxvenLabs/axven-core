@@ -5,6 +5,15 @@ Axven Core is the reference node/wallet implementation for the canonical
 
 Current stage: **canonical devnet / pre-public release hardening**.
 
+## Support / Giveth
+
+Axven's official Giveth project page is:
+
+https://giveth.io/project/axven-post-quantum-blockchain-infrastructure
+
+This link is published from the official Axven GitHub repository to establish
+project ownership and provenance for Giveth review and verification.
+
 ## What is implemented
 
 - PoW chain with cumulative-chainwork fork choice
