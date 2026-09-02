@@ -1,0 +1,322 @@
+name: Axven Native Witness Set Rotation
+
+on:
+  push:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_030_stdlib_material_verify.py"
+      - "rust_031_stdlib_trust_state_material_verify.py"
+      - "rust_032_external_monotonic_floor_verify.py"
+      - "rust_033_external_floor_witness_verify.py"
+      - "rust_034_external_floor_witness_quorum_verify.py"
+      - "rust_034_external_floor_witness_quorum_policy_spec.py"
+      - "RUST_035.md"
+      - "rust_035_witness_set_rotation_verify.py"
+      - "rust_035_witness_set_rotation_policy_spec.py"
+      - ".github/workflows/native-witness-set-rotation.yml"
+  pull_request:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_030_stdlib_material_verify.py"
+      - "rust_031_stdlib_trust_state_material_verify.py"
+      - "rust_032_external_monotonic_floor_verify.py"
+      - "rust_033_external_floor_witness_verify.py"
+      - "rust_034_external_floor_witness_quorum_verify.py"
+      - "rust_034_external_floor_witness_quorum_policy_spec.py"
+      - "RUST_035.md"
+      - "rust_035_witness_set_rotation_verify.py"
+      - "rust_035_witness_set_rotation_policy_spec.py"
+      - ".github/workflows/native-witness-set-rotation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  witness-set-rotation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+
+      - name: Install hash-locked producer dependency
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+
+      - name: RUST-035 static witness-set rotation policy
+        run: |
+          python rust_034_external_floor_witness_quorum_policy_spec.py
+          python rust_035_witness_set_rotation_policy_spec.py
+
+      - name: Generate canonical floor, authorized rotation, and successor TEST quorum
+        shell: bash
+        run: |
+          set -euo pipefail
+          fixture=/tmp/axven-rust035-fixture
+          floor=/tmp/axven-rust035-external-floor.json
+          rotation=/tmp/axven-rust035-witness-set-rotation.json
+          rotation_auth=/tmp/axven-rust035-rotation-auth.json
+          successor=/tmp/axven-rust035-successor-quorum.json
+          rm -rf "$fixture" "$floor" "$rotation" "$rotation_auth" "$successor"
+          mkdir -p "$fixture"
+          python - <<'PY'
+          import base64
+          import hashlib
+          import os
+          from pathlib import Path
+
+          from cryptography.hazmat.primitives import serialization
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+          import rust_030_stdlib_material_verify as material_verify
+          import rust_031_stdlib_trust_state_material_verify as trust_verify
+          import rust_035_witness_set_rotation_verify as rotation_verify
+
+          source_sha = os.environ["AXVEN_SOURCE_SHA"]
+          if len(source_sha) != 40 or any(ch not in "0123456789abcdef" for ch in source_sha):
+              raise AssertionError("invalid RUST-035 source SHA")
+
+          genesis = {
+              "schema": trust_verify.STATE_SCHEMA,
+              "sequence": 0,
+              "scope": trust_verify.MATERIAL_PAYLOAD_TYPE,
+              "key_id": trust_verify.OLD_KEY_ID,
+              "public_key": trust_verify.OLD_PUBLIC_KEY.hex(),
+              "activation_source_commit": None,
+              "predecessor_sha256": None,
+              "transition_sha256": None,
+              "production": False,
+          }
+          transition = {
+              "schema": trust_verify.TRANSITION_SCHEMA,
+              "sequence": 1,
+              "scope": trust_verify.MATERIAL_PAYLOAD_TYPE,
+              "from_key_id": trust_verify.OLD_KEY_ID,
+              "from_public_key": trust_verify.OLD_PUBLIC_KEY.hex(),
+              "to_key_id": trust_verify.NEW_KEY_ID,
+              "to_public_key": trust_verify.NEW_PUBLIC_KEY.hex(),
+              "activation_source_commit": source_sha,
+              "production": False,
+          }
+          genesis_raw = material_verify.canonical(genesis)
+          transition_raw = material_verify.canonical(transition)
+          final_state = {
+              "schema": trust_verify.STATE_SCHEMA,
+              "sequence": 1,
+              "scope": trust_verify.MATERIAL_PAYLOAD_TYPE,
+              "key_id": trust_verify.NEW_KEY_ID,
+              "public_key": trust_verify.NEW_PUBLIC_KEY.hex(),
+              "activation_source_commit": source_sha,
+              "predecessor_sha256": hashlib.sha256(genesis_raw).hexdigest(),
+              "transition_sha256": hashlib.sha256(transition_raw).hexdigest(),
+              "production": False,
+          }
+          final_raw = material_verify.canonical(final_state)
+          trust_verify.validate_genesis(genesis_raw, genesis)
+          trust_verify.validate_final_state(final_raw, final_state, genesis_raw, transition_raw, source_sha)
+
+          floor_record = {
+              "schema": "axven-native-external-monotonic-floor-v1",
+              "provider": "test-only-monotonic-floor-simulator",
+              "sequence": 1,
+              "scope": trust_verify.MATERIAL_PAYLOAD_TYPE,
+              "key_id": final_state["key_id"],
+              "public_key": final_state["public_key"],
+              "activation_source_commit": source_sha,
+              "state_sha256": hashlib.sha256(final_raw).hexdigest(),
+              "production": False,
+          }
+          floor_raw = material_verify.canonical(floor_record)
+
+          old_set = rotation_verify.old_witness_set()
+          new_set = rotation_verify.new_witness_set()
+          rotation = {
+              "schema": rotation_verify.ROTATION_SCHEMA,
+              "sequence": rotation_verify.NEW_SET_SEQUENCE,
+              "scope": rotation_verify.FLOOR_PAYLOAD_TYPE,
+              "from_set_sha256": hashlib.sha256(material_verify.canonical(old_set)).hexdigest(),
+              "to_set": new_set,
+              "revoked_key_ids": [rotation_verify.REVOKED_KEY_ID],
+              "activation_source_commit": source_sha,
+              "production": False,
+          }
+          rotation_raw = material_verify.canonical(rotation)
+
+          OLD_TEST_ONLY_SEEDS = {
+              "rust-033-test-only-floor-witness-v1": bytes.fromhex(
+                  "0bcea6c25bf2e920391237f68a9ff4d36f3e8800521f93016ed2b4a10c81a09f"
+              ),
+              "rust-034-test-only-floor-witness-b-v1": bytes.fromhex(
+                  "1111111111111111111111111111111111111111111111111111111111111111"
+              ),
+              "rust-034-test-only-floor-witness-c-v1": bytes.fromhex(
+                  "2222222222222222222222222222222222222222222222222222222222222222"
+              ),
+          }
+          NEW_TEST_ONLY_SEEDS = {
+              "rust-034-test-only-floor-witness-b-v1": OLD_TEST_ONLY_SEEDS["rust-034-test-only-floor-witness-b-v1"],
+              "rust-034-test-only-floor-witness-c-v1": OLD_TEST_ONLY_SEEDS["rust-034-test-only-floor-witness-c-v1"],
+              "rust-035-test-only-floor-witness-d-v1": bytes.fromhex(
+                  "3333333333333333333333333333333333333333333333333333333333333333"
+              ),
+          }
+
+          def signed_rows(seeds, pins, message):
+              rows = []
+              for key_id in sorted(seeds):
+                  private = Ed25519PrivateKey.from_private_bytes(seeds[key_id])
+                  derived_public = private.public_key().public_bytes(
+                      encoding=serialization.Encoding.Raw,
+                      format=serialization.PublicFormat.Raw,
+                  )
+                  if derived_public != pins[key_id]:
+                      raise AssertionError("RUST-035 TEST-ONLY witness public-key pin mismatch")
+                  rows.append({
+                      "key_id": key_id,
+                      "signature": base64.b64encode(private.sign(message)).decode("ascii"),
+                  })
+              return rows
+
+          rotation_auth = {
+              "schema": rotation_verify.ROTATION_AUTH_SCHEMA,
+              "algorithm": rotation_verify.ALGORITHM,
+              "threshold": rotation_verify.THRESHOLD,
+              "payload_type": rotation_verify.ROTATION_PAYLOAD_TYPE,
+              "payload_sha256": hashlib.sha256(rotation_raw).hexdigest(),
+              "witnesses": signed_rows(
+                  OLD_TEST_ONLY_SEEDS,
+                  rotation_verify.OLD_PINNED_WITNESSES,
+                  rotation_verify.rotation_message(rotation_raw),
+              ),
+              "production": False,
+          }
+          successor = {
+              "schema": rotation_verify.SUCCESSOR_QUORUM_SCHEMA,
+              "algorithm": rotation_verify.ALGORITHM,
+              "set_sequence": rotation_verify.NEW_SET_SEQUENCE,
+              "set_sha256": hashlib.sha256(material_verify.canonical(new_set)).hexdigest(),
+              "threshold": rotation_verify.THRESHOLD,
+              "payload_type": rotation_verify.FLOOR_PAYLOAD_TYPE,
+              "payload_sha256": hashlib.sha256(floor_raw).hexdigest(),
+              "witnesses": signed_rows(
+                  NEW_TEST_ONLY_SEEDS,
+                  rotation_verify.NEW_PINNED_WITNESSES,
+                  rotation_verify.successor_message(floor_raw),
+              ),
+              "production": False,
+          }
+
+          Path("/tmp/axven-rust035-fixture/final-state.json").write_bytes(final_raw)
+          Path("/tmp/axven-rust035-external-floor.json").write_bytes(floor_raw)
+          Path("/tmp/axven-rust035-witness-set-rotation.json").write_bytes(rotation_raw)
+          Path("/tmp/axven-rust035-rotation-auth.json").write_bytes(material_verify.canonical(rotation_auth))
+          Path("/tmp/axven-rust035-successor-quorum.json").write_bytes(material_verify.canonical(successor))
+          PY
+          test -f "$fixture/final-state.json"
+          test -f "$floor"
+          test -f "$rotation"
+          test -f "$rotation_auth"
+          test -f "$successor"
+          chmod 0444 "$floor" "$rotation" "$rotation_auth" "$successor"
+          test "$(stat -c '%a' "$floor")" = "444"
+          test "$(stat -c '%a' "$rotation")" = "444"
+          test "$(stat -c '%a' "$rotation_auth")" = "444"
+          test "$(stat -c '%a' "$successor")" = "444"
+
+      - name: Stage detached RUST-035 consumer without external rotation evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust035-consumer
+          rm -rf "$consumer"
+          mkdir -p "$consumer"
+          cp rust_030_stdlib_material_verify.py "$consumer/"
+          cp rust_031_stdlib_trust_state_material_verify.py "$consumer/"
+          cp rust_032_external_monotonic_floor_verify.py "$consumer/"
+          cp rust_033_external_floor_witness_verify.py "$consumer/"
+          cp rust_034_external_floor_witness_quorum_verify.py "$consumer/"
+          cp rust_035_witness_set_rotation_verify.py "$consumer/"
+          cp /tmp/axven-rust035-fixture/final-state.json "$consumer/"
+          test "$(find "$consumer" -maxdepth 1 -type f | wc -l)" -eq 7
+          test "$(find "$consumer" -type l | wc -l)" -eq 0
+          test ! -e "$consumer/.git"
+          test ! -e "$consumer/external-floor.json"
+          test ! -e "$consumer/witness-set-rotation.json"
+          test ! -e "$consumer/rotation-auth.json"
+          test ! -e "$consumer/successor-quorum.json"
+
+      - name: Verify detached RUST-035 witness-set rotation continuity
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust035-consumer
+          floor=/tmp/axven-rust035-external-floor.json
+          rotation=/tmp/axven-rust035-witness-set-rotation.json
+          rotation_auth=/tmp/axven-rust035-rotation-auth.json
+          successor=/tmp/axven-rust035-successor-quorum.json
+          cd "$consumer"
+          env -i \
+            HOME=/tmp \
+            PATH=/usr/bin:/bin \
+            PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S rust_035_witness_set_rotation_verify.py verify \
+              final-state.json "$floor" "$rotation" "$rotation_auth" "$successor" "$AXVEN_SOURCE_SHA" 1
+
+      - name: RUST-035 rotation availability and fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust035-consumer
+          floor=/tmp/axven-rust035-external-floor.json
+          rotation=/tmp/axven-rust035-witness-set-rotation.json
+          rotation_auth=/tmp/axven-rust035-rotation-auth.json
+          successor=/tmp/axven-rust035-successor-quorum.json
+          cd "$consumer"
+          env -i \
+            HOME=/tmp \
+            PATH=/usr/bin:/bin \
+            PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S rust_035_witness_set_rotation_verify.py selftest \
+              final-state.json "$floor" "$rotation" "$rotation_auth" "$successor" "$AXVEN_SOURCE_SHA" 1
+
+      - name: Reverify pristine TEST-ONLY witness-set rotation
+        shell: bash
+        run: |
+          set -euo pipefail
+          consumer=/tmp/axven-rust035-consumer
+          floor=/tmp/axven-rust035-external-floor.json
+          rotation=/tmp/axven-rust035-witness-set-rotation.json
+          rotation_auth=/tmp/axven-rust035-rotation-auth.json
+          successor=/tmp/axven-rust035-successor-quorum.json
+          test "$(stat -c '%a' "$floor")" = "444"
+          test "$(stat -c '%a' "$rotation")" = "444"
+          test "$(stat -c '%a' "$rotation_auth")" = "444"
+          test "$(stat -c '%a' "$successor")" = "444"
+          test ! -e "$consumer/witness-set-rotation.json"
+          test ! -e "$consumer/rotation-auth.json"
+          test ! -e "$consumer/successor-quorum.json"
+          cd "$consumer"
+          env -i \
+            HOME=/tmp \
+            PATH=/usr/bin:/bin \
+            PYTHONDONTWRITEBYTECODE=1 \
+            PYTHONNOUSERSITE=1 \
+            /usr/bin/python3 -S rust_035_witness_set_rotation_verify.py verify \
+              final-state.json "$floor" "$rotation" "$rotation_auth" "$successor" "$AXVEN_SOURCE_SHA" 1
