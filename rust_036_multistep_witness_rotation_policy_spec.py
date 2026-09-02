@@ -34,7 +34,13 @@ def main():
         assert x in w,x
     for x in ("id-token: write","actions/upload-artifact","attest","release","deploy"): assert x not in w.lower()
     checks+=1; print("[GREEN] workflow stays detached, read-only and non-publishing")
-    for x in ("0bcea6c25bf2e920391237f68a9ff4d36f3e8800521f93016ed2b4a10c81a09f","1111111111111111111111111111111111111111111111111111111111111111","2222222222222222222222222222222222222222222222222222222222222222","3333333333333333333333333333333333333333333333333333333333333333","4444444444444444444444444444444444444444444444444444444444444444"):
+    for x in (
+        "0bcea6c25bf2e920391237f68a9ff4d36f3e8800521f93016ed2b4a10c81a09f",
+        "'rust-034-test-only-floor-witness-b-v1':'11'*32",
+        "'rust-034-test-only-floor-witness-c-v1':'22'*32",
+        "'rust-035-test-only-floor-witness-d-v1':'33'*32",
+        "'rust-036-test-only-floor-witness-e-v1':'44'*32",
+    ):
         assert x in f,x
     for x in ("cryptography.hazmat.primitives.asymmetric.ed25519", "Ed25519PrivateKey", "RUST-036 TEST-only public-key pin mismatch"):
         assert x in f,x
