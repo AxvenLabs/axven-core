@@ -1,4 +1,4 @@
-name: Axven Native Multi-step Observer Rotation Journal Monitor Rotation
+name: Axven RUST-060 Multi-step Monitor Rotation
 
 on:
   push:
@@ -23,27 +23,27 @@ env:
   PYTHONIOENCODING: utf-8
 
 jobs:
-  multistep-observer-rotation-journal-monitor-rotation:
+  rust060:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      AXVEN_SOURCE_SHA: "${{ github.event.pull_request.head.sha || github.sha }}"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: "${{ github.event.pull_request.head.sha || github.sha }}"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13.15"
           check-latest: false
       - name: Install hash-locked producer dependency
         run: python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
-      - name: RUST-060 static multi-step monitor rotation policy
+      - name: RUST-060 static policy
         run: |
           python rust_059_observer_rotation_journal_monitor_set_rotation_policy_spec.py
           python rust_060_multistep_observer_rotation_journal_monitor_rotation_policy_spec.py
-      - name: Generate reviewed continuity and monitor rotation evidence
+      - name: Generate reviewed continuity evidence
         run: |
           python rust_036_multistep_witness_rotation_fixture.py "$AXVEN_SOURCE_SHA"
           python rust_037_rotation_journal_fixture.py "$AXVEN_SOURCE_SHA"
@@ -74,21 +74,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          chmod 0444 /tmp/axven-rust036-*.json /tmp/axven-rust037-*.json /tmp/axven-rust038-*.json /tmp/axven-rust039-*.json /tmp/axven-rust040-*.json /tmp/axven-rust041-*.json /tmp/axven-rust042-*.json /tmp/axven-rust043-*.json /tmp/axven-rust044-*.json /tmp/axven-rust045-*.json /tmp/axven-rust046-*.json /tmp/axven-rust047-*.json /tmp/axven-rust048-*.json /tmp/axven-rust049-*.json /tmp/axven-rust050-*.json /tmp/axven-rust051-*.json /tmp/axven-rust052-*.json /tmp/axven-rust053-*.json /tmp/axven-rust054-*.json /tmp/axven-rust055-*.json /tmp/axven-rust056-*.json /tmp/axven-rust057-*.json /tmp/axven-rust058-*.json /tmp/axven-rust059-*.json
-          chmod 0444 /tmp/axven-rust060-*.json
+          chmod 0444 /tmp/axven-rust036-*.json /tmp/axven-rust037-*.json /tmp/axven-rust038-*.json /tmp/axven-rust039-*.json /tmp/axven-rust040-*.json /tmp/axven-rust041-*.json /tmp/axven-rust042-*.json /tmp/axven-rust043-*.json /tmp/axven-rust044-*.json /tmp/axven-rust045-*.json /tmp/axven-rust046-*.json /tmp/axven-rust047-*.json /tmp/axven-rust048-*.json /tmp/axven-rust049-*.json /tmp/axven-rust050-*.json /tmp/axven-rust051-*.json /tmp/axven-rust052-*.json /tmp/axven-rust053-*.json /tmp/axven-rust054-*.json /tmp/axven-rust055-*.json /tmp/axven-rust056-*.json /tmp/axven-rust057-*.json /tmp/axven-rust058-*.json /tmp/axven-rust059-*.json /tmp/axven-rust060-*.json
           for f in /tmp/axven-rust060-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
       - name: Stage detached RUST-060 consumer
         shell: bash
         run: |
           set -euo pipefail
-          c=/tmp/axven-rust060-consumer; rm -rf "$c"; mkdir -p "$c"
+          c=/tmp/axven-rust060-consumer
+          rm -rf "$c"
+          mkdir -p "$c"
           cp rust_030_stdlib_material_verify.py rust_031_stdlib_trust_state_material_verify.py rust_032_external_monotonic_floor_verify.py rust_033_external_floor_witness_verify.py rust_034_external_floor_witness_quorum_verify.py rust_035_witness_set_rotation_verify.py rust_036_multistep_witness_rotation_verify.py rust_037_rotation_journal_verify.py rust_038_checkpoint_gossip_verify.py rust_039_observer_set_rotation_verify.py rust_040_multistep_observer_rotation_verify.py rust_041_observer_rotation_journal_verify.py rust_042_observer_journal_monitor_verify.py rust_043_monitor_set_rotation_verify.py rust_044_multistep_monitor_rotation_verify.py rust_045_monitor_rotation_journal_verify.py rust_046_monitor_journal_gossip_verify.py rust_047_journal_observer_set_rotation_verify.py rust_048_multistep_journal_observer_rotation_verify.py rust_049_journal_observer_rotation_journal_verify.py rust_050_journal_observer_journal_monitor_verify.py rust_051_journal_monitor_set_rotation_verify.py rust_052_multistep_journal_monitor_rotation_verify.py rust_053_journal_monitor_rotation_journal_verify.py rust_054_journal_monitor_journal_gossip_verify.py rust_055_journal_monitor_journal_observer_set_rotation_verify.py rust_056_multistep_journal_monitor_journal_observer_rotation_verify.py rust_057_observer_rotation_journal_verify.py rust_058_observer_rotation_journal_monitor_verify.py rust_059_observer_rotation_journal_monitor_set_rotation_verify.py rust_060_multistep_observer_rotation_journal_monitor_rotation_verify.py rust_060_multistep_observer_rotation_journal_monitor_rotation_selftest.py "$c/"
           cp /tmp/axven-rust036-final-state.json "$c/final-state.json"
           test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 33
           test "$(find "$c" -type l | wc -l)" -eq 0
           test ! -e "$c/.git"
           test ! -e "$c/rust_060_multistep_observer_rotation_journal_monitor_rotation_fixture.py"
-      - name: Verify detached RUST-060 continuity and fail-closed contract
+      - name: Verify detached RUST-060 fail-closed contract
         shell: bash
         run: |
           set -euo pipefail
