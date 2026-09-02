@@ -1,0 +1,256 @@
+#!/usr/bin/env python3
+"""RUST-044: TEST-ONLY multi-step checkpoint-monitor set rotation continuity."""
+from __future__ import annotations
+
+import hashlib
+from pathlib import Path
+import sys
+
+import rust_030_stdlib_material_verify as material_verify
+import rust_032_external_monotonic_floor_verify as floor_verify
+import rust_042_observer_journal_monitor_verify as monitor_verify
+import rust_043_monitor_set_rotation_verify as rotation1_verify
+
+ROTATION_SCHEMA = "axven-native-observer-journal-monitor-set-rotation-v2"
+ROTATION_AUTH_SCHEMA = "axven-native-observer-journal-monitor-set-rotation-quorum-v2"
+ROTATION_PAYLOAD_TYPE = "application/vnd.axven.native-observer-journal-monitor-set-rotation.v2+json"
+FINAL_BUNDLE_SCHEMA = "axven-native-observer-journal-checkpoint-monitor-bundle-v3"
+FINAL_REPORT_SCHEMA = "axven-native-observer-journal-checkpoint-monitor-report-v3"
+FINAL_STATEMENT_SCHEMA = "axven-native-observer-journal-checkpoint-monitor-statement-v3"
+ROTATION_DOMAIN = b"AXVEN_NATIVE_OBSERVER_JOURNAL_MONITOR_SET_ROTATION_V2\x00"
+FINAL_DOMAIN = b"AXVEN_NATIVE_OBSERVER_JOURNAL_CHECKPOINT_MONITOR_V3\x00"
+ALGORITHM = "ed25519"
+THRESHOLD = 2
+PREDECESSOR_SET_SEQUENCE = 1
+FINAL_SET_SEQUENCE = 2
+M5_ID = "rust-044-test-only-monitor-5-v1"
+M5_PUBLIC_KEY = bytes.fromhex("814722de71c5b14e748dff322ae7f7c415cee558766495292cd6c4c0a6a9df28")
+CUMULATIVE_REVOKED_MONITOR_IDS = [rotation1_verify.REVOKED_MONITOR_ID, monitor_verify.MONITOR_2_ID]
+PREDECESSOR_PINNED_MONITORS = dict(rotation1_verify.NEW_PINNED_MONITORS)
+FINAL_PINNED_MONITORS = {
+    monitor_verify.MONITOR_3_ID: monitor_verify.MONITOR_3_PUBLIC_KEY,
+    rotation1_verify.M4_ID: rotation1_verify.M4_PUBLIC_KEY,
+    M5_ID: M5_PUBLIC_KEY,
+}
+ROTATION_KEYS = frozenset({
+    "schema", "sequence", "from_set_sha256", "to_set", "cumulative_revoked_monitor_ids",
+    "predecessor_rotation_sha256", "predecessor_rotation_auth_sha256",
+    "predecessor_successor_bundle_sha256", "checkpoint_sha256", "activation_source_commit", "production",
+})
+AUTH_KEYS = frozenset({"schema", "algorithm", "threshold", "payload_type", "payload_sha256", "monitors", "production"})
+AUTH_MONITOR_KEYS = frozenset({"monitor_id", "signature"})
+FINAL_BUNDLE_KEYS = frozenset({"schema", "monitor_set_sequence", "monitor_set_sha256", "threshold", "reports", "production"})
+FINAL_REPORT_KEYS = frozenset({"schema", "algorithm", "statement", "signature"})
+FINAL_STATEMENT_KEYS = frozenset({
+    "schema", "monitor_id", "monitor_set_sequence", "monitor_set_sha256",
+    "checkpoint_sha256", "observer_set_sequence", "observer_set_sha256", "journal_sha256",
+    "head_entry_sha256", "previous_checkpoint_sha256", "checkpoint_statement_sha256",
+    "activation_source_commit", "production",
+})
+TARGET_KEYS = frozenset(monitor_verify.TARGET_KEYS)
+
+
+def canonical(value: dict) -> bytes:
+    return material_verify.canonical(value)
+
+
+def sha256(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def final_monitor_set() -> dict:
+    return rotation1_verify.monitor_set(FINAL_SET_SEQUENCE, FINAL_PINNED_MONITORS)
+
+
+def rotation_message(raw: bytes) -> bytes:
+    return ROTATION_DOMAIN + len(raw).to_bytes(8, "big") + raw
+
+
+def final_message(statement: dict) -> bytes:
+    raw = canonical(statement)
+    return FINAL_DOMAIN + len(raw).to_bytes(8, "big") + raw
+
+
+def validate_rotation(rotation: dict, target: dict, first_rotation_raw: bytes, first_auth_raw: bytes, first_successor_raw: bytes, source_sha: str) -> None:
+    if frozenset(rotation) != ROTATION_KEYS or rotation.get("schema") != ROTATION_SCHEMA:
+        raise AssertionError("invalid second monitor-set rotation fields")
+    if type(rotation.get("sequence")) is not int or rotation["sequence"] != FINAL_SET_SEQUENCE:
+        raise AssertionError("invalid second monitor-set rotation sequence")
+    if rotation.get("from_set_sha256") != sha256(canonical(rotation1_verify.new_monitor_set())):
+        raise AssertionError("second monitor-set predecessor mismatch")
+    if rotation.get("to_set") != final_monitor_set():
+        raise AssertionError("unexpected final monitor set")
+    if rotation.get("cumulative_revoked_monitor_ids") != CUMULATIVE_REVOKED_MONITOR_IDS:
+        raise AssertionError("cumulative monitor revocation continuity mismatch")
+    if rotation.get("predecessor_rotation_sha256") != sha256(first_rotation_raw):
+        raise AssertionError("predecessor monitor rotation digest mismatch")
+    if rotation.get("predecessor_rotation_auth_sha256") != sha256(first_auth_raw):
+        raise AssertionError("predecessor monitor rotation authorization digest mismatch")
+    if rotation.get("predecessor_successor_bundle_sha256") != sha256(first_successor_raw):
+        raise AssertionError("predecessor successor monitor bundle digest mismatch")
+    if rotation.get("checkpoint_sha256") != target["checkpoint_sha256"]:
+        raise AssertionError("second monitor rotation checkpoint binding mismatch")
+    if rotation.get("activation_source_commit") != source_sha:
+        raise AssertionError("second monitor rotation source mismatch")
+    if rotation.get("production") is not False:
+        raise AssertionError("production second monitor-set rotation forbidden in RUST-044")
+
+
+def validate_rotation_auth(auth: dict, rotation_raw: bytes) -> None:
+    if frozenset(auth) != AUTH_KEYS or auth.get("schema") != ROTATION_AUTH_SCHEMA:
+        raise AssertionError("invalid second monitor rotation authorization fields")
+    if auth.get("algorithm") != ALGORITHM or auth.get("payload_type") != ROTATION_PAYLOAD_TYPE:
+        raise AssertionError("invalid second monitor rotation authorization envelope")
+    if type(auth.get("threshold")) is not int or auth["threshold"] != THRESHOLD:
+        raise AssertionError("invalid second monitor rotation authorization threshold")
+    if auth.get("payload_sha256") != sha256(rotation_raw) or auth.get("production") is not False:
+        raise AssertionError("second monitor rotation authorization payload mismatch")
+    rows = auth.get("monitors")
+    if not isinstance(rows, list) or not (THRESHOLD <= len(rows) <= len(PREDECESSOR_PINNED_MONITORS)):
+        raise AssertionError("invalid second monitor rotation authorization size")
+    if not all(isinstance(row, dict) and frozenset(row) == AUTH_MONITOR_KEYS for row in rows):
+        raise AssertionError("invalid second monitor rotation authorization entry")
+    ids = [row["monitor_id"] for row in rows]
+    if ids != sorted(ids) or len(ids) != len(set(ids)):
+        raise AssertionError("second rotation monitor ids must be unique and sorted")
+    if any(monitor_id not in PREDECESSOR_PINNED_MONITORS for monitor_id in ids):
+        raise AssertionError("unknown second monitor rotation authorizer")
+    message = rotation_message(rotation_raw)
+    for row in rows:
+        material_verify.ed25519_verify(
+            PREDECESSOR_PINNED_MONITORS[row["monitor_id"]],
+            material_verify.decode_signature(row["signature"]),
+            message,
+        )
+
+
+def validate_final_report(report: dict, target: dict, set_sha: str) -> dict:
+    if not isinstance(report, dict) or frozenset(report) != FINAL_REPORT_KEYS:
+        raise AssertionError("invalid final monitor report fields")
+    if report.get("schema") != FINAL_REPORT_SCHEMA or report.get("algorithm") != ALGORITHM:
+        raise AssertionError("invalid final monitor report envelope")
+    statement = report.get("statement")
+    if not isinstance(statement, dict) or frozenset(statement) != FINAL_STATEMENT_KEYS:
+        raise AssertionError("invalid final monitor statement fields")
+    if statement.get("schema") != FINAL_STATEMENT_SCHEMA or statement.get("production") is not False:
+        raise AssertionError("invalid final monitor statement boundary")
+    monitor_id = statement.get("monitor_id")
+    if not isinstance(monitor_id, str) or monitor_id not in FINAL_PINNED_MONITORS:
+        raise AssertionError("unknown final checkpoint monitor")
+    if monitor_id in CUMULATIVE_REVOKED_MONITOR_IDS:
+        raise AssertionError("revoked checkpoint monitor resurrected in final monitor set")
+    if statement.get("monitor_set_sequence") != FINAL_SET_SEQUENCE or statement.get("monitor_set_sha256") != set_sha:
+        raise AssertionError("final monitor-set epoch mismatch")
+    material_verify.ed25519_verify(
+        FINAL_PINNED_MONITORS[monitor_id],
+        material_verify.decode_signature(report["signature"]),
+        final_message(statement),
+    )
+    return statement
+
+
+def statement_matches_target(statement: dict, target: dict) -> bool:
+    return all(statement.get(key) == target[key] for key in TARGET_KEYS)
+
+
+def validate_final_bundle(bundle: dict, target: dict) -> None:
+    set_sha = sha256(canonical(final_monitor_set()))
+    if frozenset(bundle) != FINAL_BUNDLE_KEYS or bundle.get("schema") != FINAL_BUNDLE_SCHEMA:
+        raise AssertionError("invalid final monitor bundle fields")
+    if bundle.get("monitor_set_sequence") != FINAL_SET_SEQUENCE or bundle.get("monitor_set_sha256") != set_sha:
+        raise AssertionError("final monitor bundle set mismatch")
+    if type(bundle.get("threshold")) is not int or bundle["threshold"] != THRESHOLD:
+        raise AssertionError("invalid final monitor threshold")
+    if bundle.get("production") is not False:
+        raise AssertionError("production final monitor bundle forbidden in RUST-044")
+    reports = bundle.get("reports")
+    if not isinstance(reports, list) or not (THRESHOLD <= len(reports) <= len(FINAL_PINNED_MONITORS)):
+        raise AssertionError("invalid final monitor report count")
+    statements = [validate_final_report(report, target, set_sha) for report in reports]
+    ids = [statement["monitor_id"] for statement in statements]
+    if ids != sorted(ids) or len(ids) != len(set(ids)):
+        raise AssertionError("final checkpoint monitor ids must be unique and sorted")
+    for statement in statements:
+        same_parent = (
+            statement["observer_set_sequence"] == target["observer_set_sequence"]
+            and statement["previous_checkpoint_sha256"] == target["previous_checkpoint_sha256"]
+        )
+        exact = statement_matches_target(statement, target)
+        if same_parent and not exact:
+            raise AssertionError("observed final monitor same-parent observer-journal fork")
+        if not exact:
+            raise AssertionError("final monitor report does not match canonical observer-journal checkpoint")
+
+
+def verify(
+    final_state_path: Path,
+    external_floor_path: Path,
+    first_witness_rotation_path: Path,
+    first_witness_auth_path: Path,
+    first_witness_quorum_path: Path,
+    second_witness_rotation_path: Path,
+    second_witness_auth_path: Path,
+    final_witness_quorum_path: Path,
+    prefix_witness_journal_path: Path,
+    prefix_witness_checkpoint_path: Path,
+    final_witness_journal_path: Path,
+    final_witness_checkpoint_path: Path,
+    old_observer_bundle_path: Path,
+    first_observer_rotation_path: Path,
+    first_observer_auth_path: Path,
+    first_observer_successor_path: Path,
+    second_observer_rotation_path: Path,
+    second_observer_auth_path: Path,
+    final_observer_bundle_path: Path,
+    prefix_observer_journal_path: Path,
+    prefix_observer_checkpoint_path: Path,
+    final_observer_journal_path: Path,
+    final_observer_checkpoint_path: Path,
+    old_monitor_bundle_path: Path,
+    first_monitor_rotation_path: Path,
+    first_monitor_auth_path: Path,
+    first_monitor_successor_path: Path,
+    second_monitor_rotation_path: Path,
+    second_monitor_auth_path: Path,
+    final_monitor_bundle_path: Path,
+    expected_source_sha: str,
+    required_floor_text: str,
+) -> None:
+    rotation1_verify.verify(
+        final_state_path, external_floor_path, first_witness_rotation_path, first_witness_auth_path,
+        first_witness_quorum_path, second_witness_rotation_path, second_witness_auth_path,
+        final_witness_quorum_path, prefix_witness_journal_path, prefix_witness_checkpoint_path,
+        final_witness_journal_path, final_witness_checkpoint_path, old_observer_bundle_path,
+        first_observer_rotation_path, first_observer_auth_path, first_observer_successor_path,
+        second_observer_rotation_path, second_observer_auth_path, final_observer_bundle_path,
+        prefix_observer_journal_path, prefix_observer_checkpoint_path, final_observer_journal_path,
+        final_observer_checkpoint_path, old_monitor_bundle_path, first_monitor_rotation_path,
+        first_monitor_auth_path, first_monitor_successor_path, expected_source_sha, required_floor_text,
+    )
+    final_checkpoint_raw, final_checkpoint = floor_verify.load_canonical(final_observer_checkpoint_path, "final observer checkpoint")
+    target = monitor_verify.checkpoint_target(final_checkpoint_raw, final_checkpoint["statement"])
+    first_rotation_raw, _ = floor_verify.load_canonical(first_monitor_rotation_path, "first monitor rotation")
+    first_auth_raw, _ = floor_verify.load_canonical(first_monitor_auth_path, "first monitor rotation authorization")
+    first_successor_raw, _ = floor_verify.load_canonical(first_monitor_successor_path, "first monitor successor bundle")
+    second_rotation_raw, second_rotation = floor_verify.load_canonical(second_monitor_rotation_path, "second monitor rotation")
+    _, second_auth = floor_verify.load_canonical(second_monitor_auth_path, "second monitor rotation authorization")
+    _, final_bundle = floor_verify.load_canonical(final_monitor_bundle_path, "final monitor bundle")
+    validate_rotation(second_rotation, target, first_rotation_raw, first_auth_raw, first_successor_raw, expected_source_sha)
+    validate_rotation_auth(second_auth, second_rotation_raw)
+    validate_final_bundle(final_bundle, target)
+    ids = ",".join(report["statement"]["monitor_id"] for report in final_bundle["reports"])
+    print(
+        "RUST-044 multi-step monitor-set rotation: GREEN "
+        f"source={expected_source_sha} sequence=2 revoked={','.join(CUMULATIVE_REVOKED_MONITOR_IDS)} final={ids}"
+    )
+
+
+def main() -> None:
+    if len(sys.argv) != 34 or sys.argv[1] != "verify":
+        raise SystemExit("usage: rust_044_multistep_monitor_rotation_verify.py verify ... FIRST_MON_ROT AUTH SUCCESSOR SECOND_ROT AUTH FINAL_BUNDLE SOURCE_SHA REQUIRED_FLOOR")
+    paths = [Path(value) for value in sys.argv[2:-2]]
+    verify(*paths, sys.argv[-2], sys.argv[-1])
+
+
+if __name__ == "__main__":
+    main()
