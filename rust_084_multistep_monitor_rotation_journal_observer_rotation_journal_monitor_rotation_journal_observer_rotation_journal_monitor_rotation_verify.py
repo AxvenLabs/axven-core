@@ -200,7 +200,7 @@ def verify(*args) -> None:
         expected_source_sha, required_floor_text,
     )
     final_checkpoint_raw, final_checkpoint = floor_verify.load_canonical(
-        base_paths[-1], "RUST-081 final observer rotation checkpoint"
+        base_paths[132], "RUST-081 final observer rotation checkpoint"
     )
     target = monitor_verify.checkpoint_target(final_checkpoint_raw, final_checkpoint["statement"])
     if target["activation_source_commit"] != expected_source_sha:
