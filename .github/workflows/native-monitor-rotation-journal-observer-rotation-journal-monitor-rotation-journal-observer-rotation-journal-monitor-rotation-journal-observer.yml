@@ -1,0 +1,147 @@
+name: Axven Native Monitor Rotation Journal Observer Rotation Journal Monitor Rotation Journal Observer Rotation Journal Monitor Rotation Journal Observer
+
+on:
+  push:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_0*.py"
+      - "RUST_0*.md"
+      - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal.yml"
+      - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer.yml"
+  pull_request:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_0*.py"
+      - "RUST_0*.md"
+      - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal.yml"
+      - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  rust086:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+      - name: Install hash-locked producer dependency
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+      - name: RUST-086 static journal checkpoint observer policy
+        run: |
+          python rust_085_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_policy_spec.py
+          python rust_086_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_policy_spec.py
+      - name: Generate reviewed continuity and journal checkpoint observer evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in $(seq -w 36 86); do
+            files=(rust_0${n}_*_fixture.py)
+            test "${#files[@]}" -eq 1
+            python "${files[0]}" "$AXVEN_SOURCE_SHA"
+          done
+      - name: Make continuity evidence read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in $(seq -w 36 86); do
+            files=(/tmp/axven-rust0${n}-*.json)
+            test -e "${files[0]}"
+            chmod 0444 "${files[@]}"
+          done
+          for f in /tmp/axven-rust086-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
+      - name: Stage detached RUST-086 consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          c=/tmp/axven-rust086-consumer
+          rm -rf "$c"
+          mkdir -p "$c"
+          for n in $(seq -w 30 86); do
+            files=(rust_0${n}_*_verify.py)
+            test "${#files[@]}" -eq 1
+            cp "${files[0]}" "$c/"
+          done
+          cp rust_086_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_selftest.py "$c/"
+          cp /tmp/axven-rust036-final-state.json "$c/final-state.json"
+          test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 59
+          test "$(find "$c" -type l | wc -l)" -eq 0
+          test ! -e "$c/.git"
+          test ! -e "$c/rust_086_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_fixture.py"
+      - name: Inherit fixed RUST-085 manifest and append RUST-086 path
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          rust082 = Path(
+              ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-"
+              "monitor-rotation-journal-observer-rotation-journal-monitor.yml"
+          ).read_text(encoding="utf-8")
+          start = "          cat > /tmp/axven-rust082-paths <<'EOF'\n"
+          if rust082.count(start) != 1:
+              raise SystemExit("unexpected RUST-082 manifest marker count")
+          tail = rust082.split(start, 1)[1]
+          end = "          EOF\n"
+          if end not in tail:
+              raise SystemExit("missing RUST-082 manifest terminator")
+          block = tail.split(end, 1)[0]
+          rows = []
+          for line in block.splitlines():
+              if not line.startswith("          "):
+                  raise SystemExit("unexpected RUST-082 manifest indentation")
+              rows.append(line[10:])
+          if len(rows) != 134:
+              raise SystemExit(f"expected 134 RUST-082 paths, got {len(rows)}")
+          rows.extend([
+              "/tmp/axven-rust083-monitor-set-rotation.json",
+              "/tmp/axven-rust083-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust083-successor-monitor-bundle.json",
+              "/tmp/axven-rust084-second-monitor-set-rotation.json",
+              "/tmp/axven-rust084-second-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust084-final-monitor-bundle.json",
+              "/tmp/axven-rust085-prefix-monitor-rotation-journal.json",
+              "/tmp/axven-rust085-prefix-monitor-rotation-checkpoint.json",
+              "/tmp/axven-rust085-final-monitor-rotation-journal.json",
+              "/tmp/axven-rust085-final-monitor-rotation-checkpoint.json",
+          ])
+          if len(rows) != 144:
+              raise SystemExit(f"expected 144 RUST-085 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust085-final-monitor-rotation-checkpoint.json":
+              raise SystemExit("unexpected RUST-085 manifest boundary")
+          rows.append("/tmp/axven-rust086-monitor-rotation-journal-observer-bundle.json")
+          if len(rows) != 145:
+              raise SystemExit(f"expected 145 RUST-086 paths, got {len(rows)}")
+          Path("/tmp/axven-rust086-paths").write_text("\n".join(rows) + "\n", encoding="utf-8")
+          PY
+          test "$(wc -l < /tmp/axven-rust086-paths)" -eq 145
+          chmod 0444 /tmp/axven-rust086-paths
+      - name: Verify detached RUST-086 observation and fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/axven-rust086-consumer
+          mapfile -t paths < /tmp/axven-rust086-paths
+          test "${#paths[@]}" -eq 145
+          py=(env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 /usr/bin/python3 -S)
+          "${py[@]}" rust_086_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_verify.py verify "${paths[@]}" "$AXVEN_SOURCE_SHA" 1
+          "${py[@]}" rust_086_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_selftest.py "${paths[@]}" /tmp/axven-rust086-observed-fork-observer-bundle.json "$AXVEN_SOURCE_SHA" 1
+          test "$(stat -c '%a' /tmp/axven-rust086-paths)" = "444"
+          for f in /tmp/axven-rust086-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
+          "${py[@]}" rust_086_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_verify.py verify "${paths[@]}" "$AXVEN_SOURCE_SHA" 1
