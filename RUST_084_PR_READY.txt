@@ -1,1 +1,0 @@
-RUST-084 branch checkpoint: six contract files complete; exact base adcdc145361a145c8a6a199155451c67bd6261e2.
