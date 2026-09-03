@@ -1,0 +1,193 @@
+name: Axven Native Monitor Rotation Journal Observer Rotation Journal
+
+on:
+  push:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_0*.py"
+      - "RUST_0*.md"
+      - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal.yml"
+  pull_request:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_0*.py"
+      - "RUST_0*.md"
+      - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  rust065:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+      - name: Install hash-locked producer dependency
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+      - name: RUST-065 static observer rotation journal policy
+        run: |
+          python rust_064_multistep_observer_rotation_journal_monitor_rotation_journal_observer_set_rotation_policy_spec.py
+          python rust_065_monitor_rotation_journal_observer_rotation_journal_policy_spec.py
+      - name: Generate reviewed continuity and observer rotation journal evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in $(seq -w 36 65); do
+            files=(rust_0${n}_*_fixture.py)
+            test "${#files[@]}" -eq 1
+            python "${files[0]}" "$AXVEN_SOURCE_SHA"
+          done
+      - name: Make continuity evidence read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in $(seq -w 36 65); do
+            files=(/tmp/axven-rust0${n}-*.json)
+            test -e "${files[0]}"
+            chmod 0444 "${files[@]}"
+          done
+          for f in /tmp/axven-rust065-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
+      - name: Stage detached RUST-065 consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          c=/tmp/axven-rust065-consumer
+          rm -rf "$c"
+          mkdir -p "$c"
+          for n in $(seq -w 30 65); do
+            files=(rust_0${n}_*_verify.py)
+            test "${#files[@]}" -eq 1
+            cp "${files[0]}" "$c/"
+          done
+          cp rust_065_monitor_rotation_journal_observer_rotation_journal_selftest.py "$c/"
+          cp /tmp/axven-rust036-final-state.json "$c/final-state.json"
+          test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 38
+          test "$(find "$c" -type l | wc -l)" -eq 0
+          test ! -e "$c/.git"
+          test ! -e "$c/rust_065_monitor_rotation_journal_observer_rotation_journal_fixture.py"
+      - name: Write detached evidence manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/axven-rust065-paths <<'EOF'
+          final-state.json
+          /tmp/axven-rust036-external-floor.json
+          /tmp/axven-rust036-first-rotation.json
+          /tmp/axven-rust036-first-auth.json
+          /tmp/axven-rust036-first-quorum.json
+          /tmp/axven-rust036-second-rotation.json
+          /tmp/axven-rust036-second-auth.json
+          /tmp/axven-rust036-final-quorum.json
+          /tmp/axven-rust037-prefix-journal.json
+          /tmp/axven-rust037-prefix-checkpoint.json
+          /tmp/axven-rust037-final-journal.json
+          /tmp/axven-rust037-final-checkpoint.json
+          /tmp/axven-rust038-observer-bundle.json
+          /tmp/axven-rust039-observer-set-rotation.json
+          /tmp/axven-rust039-observer-set-rotation-auth.json
+          /tmp/axven-rust039-successor-observer-bundle.json
+          /tmp/axven-rust040-second-observer-set-rotation.json
+          /tmp/axven-rust040-second-observer-set-rotation-auth.json
+          /tmp/axven-rust040-final-observer-bundle.json
+          /tmp/axven-rust041-prefix-observer-journal.json
+          /tmp/axven-rust041-prefix-observer-checkpoint.json
+          /tmp/axven-rust041-final-observer-journal.json
+          /tmp/axven-rust041-final-observer-checkpoint.json
+          /tmp/axven-rust042-monitor-bundle.json
+          /tmp/axven-rust043-monitor-set-rotation.json
+          /tmp/axven-rust043-monitor-set-rotation-auth.json
+          /tmp/axven-rust043-successor-monitor-bundle.json
+          /tmp/axven-rust044-second-monitor-set-rotation.json
+          /tmp/axven-rust044-second-monitor-set-rotation-auth.json
+          /tmp/axven-rust044-final-monitor-bundle.json
+          /tmp/axven-rust045-prefix-monitor-journal.json
+          /tmp/axven-rust045-prefix-monitor-checkpoint.json
+          /tmp/axven-rust045-final-monitor-journal.json
+          /tmp/axven-rust045-final-monitor-checkpoint.json
+          /tmp/axven-rust046-journal-observer-bundle.json
+          /tmp/axven-rust047-journal-observer-set-rotation.json
+          /tmp/axven-rust047-journal-observer-set-rotation-auth.json
+          /tmp/axven-rust047-successor-journal-observer-bundle.json
+          /tmp/axven-rust048-second-journal-observer-set-rotation.json
+          /tmp/axven-rust048-second-journal-observer-set-rotation-auth.json
+          /tmp/axven-rust048-final-journal-observer-bundle.json
+          /tmp/axven-rust049-prefix-journal-observer-journal.json
+          /tmp/axven-rust049-prefix-journal-observer-checkpoint.json
+          /tmp/axven-rust049-final-journal-observer-journal.json
+          /tmp/axven-rust049-final-journal-observer-checkpoint.json
+          /tmp/axven-rust050-monitor-bundle.json
+          /tmp/axven-rust051-journal-monitor-set-rotation.json
+          /tmp/axven-rust051-journal-monitor-set-rotation-auth.json
+          /tmp/axven-rust051-successor-journal-monitor-bundle.json
+          /tmp/axven-rust052-second-journal-monitor-set-rotation.json
+          /tmp/axven-rust052-second-journal-monitor-set-rotation-auth.json
+          /tmp/axven-rust052-final-journal-monitor-bundle.json
+          /tmp/axven-rust053-prefix-journal-monitor-journal.json
+          /tmp/axven-rust053-prefix-journal-monitor-checkpoint.json
+          /tmp/axven-rust053-final-journal-monitor-journal.json
+          /tmp/axven-rust053-final-journal-monitor-checkpoint.json
+          /tmp/axven-rust054-journal-monitor-journal-observer-bundle.json
+          /tmp/axven-rust055-journal-monitor-journal-observer-set-rotation.json
+          /tmp/axven-rust055-journal-monitor-journal-observer-set-rotation-auth.json
+          /tmp/axven-rust055-successor-observer-bundle.json
+          /tmp/axven-rust056-second-journal-monitor-journal-observer-set-rotation.json
+          /tmp/axven-rust056-second-journal-monitor-journal-observer-set-rotation-auth.json
+          /tmp/axven-rust056-final-observer-bundle.json
+          /tmp/axven-rust057-prefix-observer-rotation-journal.json
+          /tmp/axven-rust057-prefix-observer-rotation-checkpoint.json
+          /tmp/axven-rust057-final-observer-rotation-journal.json
+          /tmp/axven-rust057-final-observer-rotation-checkpoint.json
+          /tmp/axven-rust058-monitor-bundle.json
+          /tmp/axven-rust059-observer-rotation-journal-monitor-set-rotation.json
+          /tmp/axven-rust059-observer-rotation-journal-monitor-set-rotation-auth.json
+          /tmp/axven-rust059-successor-monitor-bundle.json
+          /tmp/axven-rust060-second-observer-rotation-journal-monitor-set-rotation.json
+          /tmp/axven-rust060-second-observer-rotation-journal-monitor-set-rotation-auth.json
+          /tmp/axven-rust060-final-monitor-bundle.json
+          /tmp/axven-rust061-prefix-monitor-rotation-journal.json
+          /tmp/axven-rust061-prefix-monitor-rotation-checkpoint.json
+          /tmp/axven-rust061-final-monitor-rotation-journal.json
+          /tmp/axven-rust061-final-monitor-rotation-checkpoint.json
+          /tmp/axven-rust062-monitor-rotation-journal-observer-bundle.json
+          /tmp/axven-rust063-monitor-rotation-journal-observer-set-rotation.json
+          /tmp/axven-rust063-monitor-rotation-journal-observer-set-rotation-auth.json
+          /tmp/axven-rust063-successor-observer-bundle.json
+          /tmp/axven-rust064-second-monitor-rotation-journal-observer-set-rotation.json
+          /tmp/axven-rust064-second-monitor-rotation-journal-observer-set-rotation-auth.json
+          /tmp/axven-rust064-final-observer-bundle.json
+          /tmp/axven-rust065-prefix-monitor-rotation-journal-observer-rotation-journal.json
+          /tmp/axven-rust065-prefix-monitor-rotation-journal-observer-rotation-checkpoint.json
+          /tmp/axven-rust065-final-monitor-rotation-journal-observer-rotation-journal.json
+          /tmp/axven-rust065-final-monitor-rotation-journal-observer-rotation-checkpoint.json
+          EOF
+          test "$(wc -l < /tmp/axven-rust065-paths)" -eq 89
+          chmod 0444 /tmp/axven-rust065-paths
+      - name: Verify detached RUST-065 journal and fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/axven-rust065-consumer
+          mapfile -t paths < /tmp/axven-rust065-paths
+          test "${#paths[@]}" -eq 89
+          py=(env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 /usr/bin/python3 -S)
+          "${py[@]}" rust_065_monitor_rotation_journal_observer_rotation_journal_verify.py verify "${paths[@]}" "$AXVEN_SOURCE_SHA" 1
+          "${py[@]}" rust_065_monitor_rotation_journal_observer_rotation_journal_selftest.py "${paths[@]}" /tmp/axven-rust065-observed-fork-monitor-rotation-journal-observer-rotation-checkpoint.json "$AXVEN_SOURCE_SHA" 1
+          test "$(stat -c '%a' /tmp/axven-rust065-paths)" = "444"
+          for f in /tmp/axven-rust065-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
+          "${py[@]}" rust_065_monitor_rotation_journal_observer_rotation_journal_verify.py verify "${paths[@]}" "$AXVEN_SOURCE_SHA" 1
