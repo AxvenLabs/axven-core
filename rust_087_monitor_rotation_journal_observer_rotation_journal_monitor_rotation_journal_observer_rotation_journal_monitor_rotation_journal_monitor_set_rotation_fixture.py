@@ -52,8 +52,8 @@ def successor_report(monitor_id: str, target: dict, set_sha: str) -> dict:
     statement = {
         "schema": rotation_verify.SUCCESSOR_STATEMENT_SCHEMA,
         "monitor_id": monitor_id,
-        "monitor_set_sequence": rotation_verify.NEW_SET_SEQUENCE,
-        "monitor_set_sha256": set_sha,
+        "successor_monitor_set_sequence": rotation_verify.NEW_SET_SEQUENCE,
+        "successor_monitor_set_sha256": set_sha,
         **target,
         "production": False,
     }
