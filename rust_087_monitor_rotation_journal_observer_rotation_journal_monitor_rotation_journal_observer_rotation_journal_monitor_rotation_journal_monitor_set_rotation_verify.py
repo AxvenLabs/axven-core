@@ -51,7 +51,7 @@ SUCCESSOR_BUNDLE_KEYS = frozenset({
 })
 SUCCESSOR_REPORT_KEYS = frozenset({"schema", "algorithm", "statement", "signature"})
 SUCCESSOR_STATEMENT_KEYS = frozenset({
-    "schema", "monitor_id", "monitor_set_sequence", "monitor_set_sha256",
+    "schema", "monitor_id", "successor_monitor_set_sequence", "successor_monitor_set_sha256",
     *monitor_verify.TARGET_KEYS, "production",
 })
 
@@ -170,8 +170,8 @@ def validate_successor_report(report: dict, set_sha: str) -> dict:
     if monitor_id == REVOKED_MONITOR_ID:
         raise AssertionError("revoked RUST-087 monitor resurrected")
     if (
-        statement.get("monitor_set_sequence") != NEW_SET_SEQUENCE
-        or statement.get("monitor_set_sha256") != set_sha
+        statement.get("successor_monitor_set_sequence") != NEW_SET_SEQUENCE
+        or statement.get("successor_monitor_set_sha256") != set_sha
     ):
         raise AssertionError("RUST-087 successor monitor-set epoch mismatch")
     material_verify.ed25519_verify(
