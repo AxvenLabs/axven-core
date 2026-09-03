@@ -5,7 +5,7 @@ RUST-097 composes the exact reviewed RUST-096 second monitor-set rotation and re
 ## Contract
 
 - Journal lineage is M1/M2/M3 -> M2/M3/M4 -> M3/M4/M5.
-- Cumulative revocation `[M1, M2]` is retained in the final journal entry.
+- The cumulative revocation `[M1, M2]` is retained in the final journal entry.
 - Every journal entry binds the exact monitor-set digest, rotation digest, rotation-authorization digest, monitor-bundle digest and predecessor-entry digest.
 - The journal is bound to the exact RUST-093 final checkpoint SHA-256, checkpoint-statement SHA-256, inherited 12-field observed target digest and activation source commit.
 - Prefix checkpoint at sequence 1 is authorized by the RUST-095 successor set; final checkpoint at sequence 2 is authorized by the RUST-096 final set.
