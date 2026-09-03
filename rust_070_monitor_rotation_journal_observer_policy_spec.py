@@ -102,7 +102,8 @@ def main() -> None:
         (
             "permissions:\n  contents: read", "persist-credentials: false",
             'python-version: "3.13.15"', "env -i HOME=/tmp PATH=/usr/bin:/bin",
-            "/usr/bin/python3 -S", "chmod 0444 /tmp/axven-rust070-*.json",
+            "/usr/bin/python3 -S", "for n in $(seq -w 36 70)",
+            'chmod 0444 "${files[@]}"', 'for f in /tmp/axven-rust070-*.json',
             'test ! -e "$c/rust_070_monitor_rotation_journal_observer_fixture.py"',
             'test "$(wc -l < /tmp/axven-rust070-paths)" -eq 101',
         ),
