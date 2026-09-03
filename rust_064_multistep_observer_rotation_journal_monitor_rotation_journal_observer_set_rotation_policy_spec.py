@@ -84,7 +84,7 @@ def main() -> None:
         'O5_PUBLIC_KEY = bytes.fromhex("e34d3a01b6112e1429ead61668405f4ef4be4f8853abee5079d28ac6c13ffdd0")',
         'raise AssertionError("predecessor monitor-rotation-journal observer rotation authorization digest mismatch")',
         'raise AssertionError("predecessor monitor-rotation-journal successor observer bundle digest mismatch")',
-        'raise AssertionError("observed final same-parent observer-rotation-journal monitor-rotation-journal checkpoint fork")',
+        "observed final same-parent observer-rotation-journal monitor-rotation-journal checkpoint fork",
     ):
         assert token in v, token
     checks += 1
