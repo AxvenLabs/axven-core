@@ -84,7 +84,7 @@ def main() -> None:
         OUT / "axven-rust111-monitor-set-rotation-auth.json", "RUST-113 first rotation authorization"
     )
     first_successor_raw, _ = floor_verify.load_canonical(
-        OUT / "axven-rust107-successor-monitor-bundle.json", "RUST-113 first successor monitor bundle"
+        OUT / "axven-rust111-successor-monitor-bundle.json", "RUST-113 first successor monitor bundle"
     )
     second_rotation_raw, _ = floor_verify.load_canonical(
         OUT / "axven-rust112-second-monitor-set-rotation.json", "RUST-113 second monitor rotation"
