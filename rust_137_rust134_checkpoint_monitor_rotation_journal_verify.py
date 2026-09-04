@@ -8,7 +8,7 @@ import sys
 
 import rust_030_stdlib_material_verify as material_verify
 import rust_032_external_monotonic_floor_verify as floor_verify
-import rust_134_rust137_checkpoint_monitor_verify as monitor_verify
+import rust_134_rust133_checkpoint_monitor_verify as monitor_verify
 import rust_135_rust134_checkpoint_monitor_rotation_verify as rotation1_verify
 import rust_136_multistep_rust134_checkpoint_monitor_rotation_verify as rotation2_verify
 

@@ -20,14 +20,14 @@ EXPECTED_RUST136_WORKFLOW_GIT_BLOB = "f22028ea3a0ff6ebd370cfe099c4dab8402b8b7a"
 ALLOWED_VERIFY_IMPORTS = {
     "__future__", "hashlib", "pathlib", "sys",
     "rust_030_stdlib_material_verify", "rust_032_external_monotonic_floor_verify",
-    "rust_134_rust137_checkpoint_monitor_verify",
+    "rust_134_rust133_checkpoint_monitor_verify",
     "rust_135_rust134_checkpoint_monitor_rotation_verify",
     "rust_136_multistep_rust134_checkpoint_monitor_rotation_verify",
 }
 ALLOWED_SELFTEST_IMPORTS = {
     "__future__", "base64", "copy", "itertools", "json", "pathlib", "sys", "tempfile",
     "rust_030_stdlib_material_verify", "rust_032_external_monotonic_floor_verify",
-    "rust_134_rust137_checkpoint_monitor_verify",
+    "rust_134_rust133_checkpoint_monitor_verify",
     "rust_137_rust134_checkpoint_monitor_rotation_journal_verify",
 }
 
@@ -67,7 +67,10 @@ def main() -> None:
     assert blob(PREDECESSOR_WORKFLOW.read_bytes()) == EXPECTED_RUST136_WORKFLOW_GIT_BLOB
     require(
         verify,
-        ("import rust_136_multistep_rust134_checkpoint_monitor_rotation_verify as rotation2_verify",),
+        (
+            "import rust_134_rust133_checkpoint_monitor_verify as monitor_verify",
+            "import rust_136_multistep_rust134_checkpoint_monitor_rotation_verify as rotation2_verify",
+        ),
         "RUST-137 verifier composition",
     )
     checks += 1
@@ -78,7 +81,7 @@ def main() -> None:
     for forbidden in (
         "cryptography", "Ed25519PrivateKey", "SEEDS =", ".sign(", "subprocess",
         "requests", "urllib", "socket", "import axven", "from axven",
-        "AXVEN_NATIVE_RUST133_",
+        "AXVEN_NATIVE_RUST133_", "rust_134_rust137_checkpoint_monitor_verify",
     ):
         assert forbidden not in verify and forbidden not in selftest, forbidden
     checks += 1
