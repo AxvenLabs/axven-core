@@ -86,6 +86,7 @@ def main() -> None:
         (
             "THRESHOLD = 2", "OLD_SET_SEQUENCE = 0", "NEW_SET_SEQUENCE = 1",
             "REVOKED_MONITOR_ID = monitor_verify.MONITOR_1_ID",
+            'M4_ID = "rust-123-test-only-monitor-rotation-journal-monitor-4-v1"',
             "predecessor_monitor_bundle_sha256", "successor_monitor_set_sequence",
             "successor_monitor_set_sha256", "observed RUST-123 successor same-parent checkpoint fork",
             "*monitor_verify.TARGET_KEYS", "base_paths[242]",
