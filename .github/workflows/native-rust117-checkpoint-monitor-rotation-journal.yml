@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for n in $(seq 36 113); do
+          for n in $(seq 36 117); do
             printf -v n3 "%03d" "$n"
             files=(rust_${n3}_*_fixture.py)
             test "${#files[@]}" -eq 1
@@ -61,7 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for n in $(seq 36 113); do
+          for n in $(seq 36 117); do
             printf -v n3 "%03d" "$n"
             files=(/tmp/axven-rust${n3}-*.json)
             test -e "${files[0]}"
@@ -75,7 +75,7 @@ jobs:
           c=/tmp/axven-rust117-consumer
           rm -rf "$c"
           mkdir -p "$c"
-          for n in $(seq 30 113); do
+          for n in $(seq 30 117); do
             printf -v n3 "%03d" "$n"
             files=(rust_${n3}_*_verify.py)
             test "${#files[@]}" -eq 1
