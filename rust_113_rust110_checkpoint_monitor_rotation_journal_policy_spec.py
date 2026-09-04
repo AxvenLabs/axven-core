@@ -7,13 +7,13 @@ import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-DOC = ROOT / "RUST_109.md"
+DOC = ROOT / "RUST_113.md"
 VERIFY = ROOT / "rust_113_rust110_checkpoint_monitor_rotation_journal_verify.py"
 FIXTURE = ROOT / "rust_113_rust110_checkpoint_monitor_rotation_journal_fixture.py"
 SELFTEST = ROOT / "rust_113_rust110_checkpoint_monitor_rotation_journal_selftest.py"
 WORKFLOW = ROOT / ".github/workflows/native-rust113-checkpoint-monitor-rotation-journal.yml"
 BASE = ROOT / "rust_112_multistep_rust110_checkpoint_monitor_rotation_verify.py"
-PREDECESSOR_WORKFLOW = ROOT / ".github/workflows/native-rust108-multistep-checkpoint-monitor-rotation.yml"
+PREDECESSOR_WORKFLOW = ROOT / ".github/workflows/native-rust112-multistep-checkpoint-monitor-rotation.yml"
 EXPECTED_RUST112_GIT_BLOB = "ba0f25dc5ab75dcb55d1150d1ebf2413e0cd333f"
 EXPECTED_RUST112_WORKFLOW_GIT_BLOB = "69f5f96b4713cbc4d83d4d54650fe2c43b8fb10e"
 
