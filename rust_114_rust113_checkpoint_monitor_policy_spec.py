@@ -12,7 +12,7 @@ VERIFY = ROOT / "rust_114_rust113_checkpoint_monitor_verify.py"
 FIXTURE = ROOT / "rust_114_rust113_checkpoint_monitor_fixture.py"
 SELFTEST = ROOT / "rust_114_rust113_checkpoint_monitor_selftest.py"
 WORKFLOW = ROOT / ".github/workflows/native-rust114-rust113-checkpoint-monitor.yml"
-BASE = ROOT / "rust_113_rust114_checkpoint_monitor_rotation_journal_verify.py"
+BASE = ROOT / "rust_113_rust110_checkpoint_monitor_rotation_journal_verify.py"
 PREDECESSOR_WORKFLOW = ROOT / ".github/workflows/native-rust113-checkpoint-monitor-rotation-journal.yml"
 EXPECTED_RUST113_GIT_BLOB = "b43655dd9ad8c76322a9a3d3d6df28a4dc4cdefb"
 EXPECTED_RUST113_WORKFLOW_GIT_BLOB = "24d551bb4541a379c067013f84548db042901162"
@@ -20,12 +20,12 @@ EXPECTED_RUST113_WORKFLOW_GIT_BLOB = "24d551bb4541a379c067013f84548db042901162"
 ALLOWED_VERIFY_IMPORTS = {
     "__future__", "hashlib", "pathlib", "sys",
     "rust_030_stdlib_material_verify", "rust_032_external_monotonic_floor_verify",
-    "rust_113_rust114_checkpoint_monitor_rotation_journal_verify",
+    "rust_113_rust110_checkpoint_monitor_rotation_journal_verify",
 }
 ALLOWED_SELFTEST_IMPORTS = {
     "__future__", "base64", "copy", "itertools", "json", "pathlib", "sys", "tempfile",
     "rust_030_stdlib_material_verify", "rust_032_external_monotonic_floor_verify",
-    "rust_113_rust114_checkpoint_monitor_rotation_journal_verify",
+    "rust_113_rust110_checkpoint_monitor_rotation_journal_verify",
     "rust_114_rust113_checkpoint_monitor_verify",
 }
 
@@ -65,7 +65,7 @@ def main() -> None:
     assert blob(PREDECESSOR_WORKFLOW.read_bytes()) == EXPECTED_RUST113_WORKFLOW_GIT_BLOB
     require(
         verify,
-        ("import rust_113_rust114_checkpoint_monitor_rotation_journal_verify as journal_verify",),
+        ("import rust_113_rust110_checkpoint_monitor_rotation_journal_verify as journal_verify",),
         "RUST-114 verifier composition",
     )
     checks += 1
