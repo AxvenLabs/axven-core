@@ -102,7 +102,7 @@ def main() -> None:
     require(
         fixture,
         (
-            '"9c" * 32', '"ac" * 32', '"bc" * 32', '"cc" * 32',
+            '"ec" * 32', '"fc" * 32', '"0d" * 32', '"1d" * 32',
             "Ed25519PrivateKey", "RUST-116 TEST-only monitor public-key pin mismatch",
         ),
         "RUST-116 producer fixture",
