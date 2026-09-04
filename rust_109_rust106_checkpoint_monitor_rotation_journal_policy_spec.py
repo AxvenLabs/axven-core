@@ -7,7 +7,7 @@ import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-DOC = ROOT / "RUST_105.md"
+DOC = ROOT / "RUST_109.md"
 VERIFY = ROOT / "rust_109_rust106_checkpoint_monitor_rotation_journal_verify.py"
 FIXTURE = ROOT / "rust_109_rust106_checkpoint_monitor_rotation_journal_fixture.py"
 SELFTEST = ROOT / "rust_109_rust106_checkpoint_monitor_rotation_journal_selftest.py"
@@ -20,14 +20,14 @@ EXPECTED_RUST108_WORKFLOW_GIT_BLOB = "94e060448db53686455dd12e30696a6253a29ad3"
 ALLOWED_VERIFY_IMPORTS = {
     "__future__", "hashlib", "pathlib", "sys",
     "rust_030_stdlib_material_verify", "rust_032_external_monotonic_floor_verify",
-    "rust_106_rust109_checkpoint_monitor_verify",
+    "rust_106_rust105_checkpoint_monitor_verify",
     "rust_107_rust106_checkpoint_monitor_rotation_verify",
     "rust_108_multistep_rust106_checkpoint_monitor_rotation_verify",
 }
 ALLOWED_SELFTEST_IMPORTS = {
     "__future__", "base64", "copy", "itertools", "json", "pathlib", "sys", "tempfile",
     "rust_030_stdlib_material_verify", "rust_032_external_monotonic_floor_verify",
-    "rust_106_rust109_checkpoint_monitor_verify",
+    "rust_106_rust105_checkpoint_monitor_verify",
     "rust_109_rust106_checkpoint_monitor_rotation_journal_verify",
 }
 

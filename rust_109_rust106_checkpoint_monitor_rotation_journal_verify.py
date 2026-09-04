@@ -8,7 +8,7 @@ import sys
 
 import rust_030_stdlib_material_verify as material_verify
 import rust_032_external_monotonic_floor_verify as floor_verify
-import rust_106_rust109_checkpoint_monitor_verify as monitor_verify
+import rust_106_rust105_checkpoint_monitor_verify as monitor_verify
 import rust_107_rust106_checkpoint_monitor_rotation_verify as rotation1_verify
 import rust_108_multistep_rust106_checkpoint_monitor_rotation_verify as rotation2_verify
 
@@ -16,7 +16,7 @@ JOURNAL_SCHEMA = "axven-native-rust109-monitor-rotation-journal-v1"
 ENTRY_SCHEMA = "axven-native-rust109-monitor-rotation-journal-entry-v1"
 CHECKPOINT_SCHEMA = "axven-native-rust109-monitor-rotation-journal-checkpoint-v1"
 STATEMENT_SCHEMA = "axven-native-rust109-monitor-rotation-journal-checkpoint-statement-v1"
-CHECKPOINT_DOMAIN = b"AXVEN_NATIVE_RUST105_MONITOR_ROTATION_JOURNAL_CHECKPOINT_V1\x00"
+CHECKPOINT_DOMAIN = b"AXVEN_NATIVE_RUST109_MONITOR_ROTATION_JOURNAL_CHECKPOINT_V1\x00"
 ALGORITHM = "ed25519"
 THRESHOLD = 2
 

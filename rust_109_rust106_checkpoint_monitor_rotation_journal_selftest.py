@@ -12,7 +12,7 @@ import tempfile
 
 import rust_030_stdlib_material_verify as material_verify
 import rust_032_external_monotonic_floor_verify as floor_verify
-import rust_106_rust109_checkpoint_monitor_verify as monitor_verify
+import rust_106_rust105_checkpoint_monitor_verify as monitor_verify
 import rust_109_rust106_checkpoint_monitor_rotation_journal_verify as journal_verify
 
 
