@@ -67,7 +67,7 @@ def main() -> None:
     source_sha = sys.argv[1]
 
     monitored_checkpoint_raw, monitored_checkpoint = floor_verify.load_canonical(
-        OUT / "axven-rust109-final-monitor-rotation-checkpoint.json",
+        OUT / "axven-rust105-final-monitor-rotation-checkpoint.json",
         "RUST-105 final monitor rotation checkpoint",
     )
     target = monitor_verify.checkpoint_target(monitored_checkpoint_raw, monitored_checkpoint["statement"])
