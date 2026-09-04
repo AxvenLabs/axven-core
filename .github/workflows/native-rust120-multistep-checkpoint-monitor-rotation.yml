@@ -1,0 +1,294 @@
+name: Axven Native RUST-120 Multi-step RUST-118 Checkpoint Monitor Rotation
+
+on:
+  push:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_*.py"
+      - "RUST_*.md"
+      - ".github/workflows/native-rust119-rust118-checkpoint-monitor-rotation.yml"
+      - ".github/workflows/native-rust120-multistep-checkpoint-monitor-rotation.yml"
+  pull_request:
+    paths:
+      - "requirements-ci-runtime-posix.lock"
+      - "rust_*.py"
+      - "RUST_*.md"
+      - ".github/workflows/native-rust119-rust118-checkpoint-monitor-rotation.yml"
+      - ".github/workflows/native-rust120-multistep-checkpoint-monitor-rotation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  rust120:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      AXVEN_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+      - name: Install hash-locked producer dependency
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+      - name: RUST-120 static second monitor-set rotation policy
+        run: |
+          python rust_119_rust118_checkpoint_monitor_rotation_policy_spec.py
+          python rust_120_multistep_rust118_checkpoint_monitor_rotation_policy_spec.py
+      - name: Generate reviewed continuity and second monitor-set rotation evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in $(seq 36 120); do
+            printf -v n3 "%03d" "$n"
+            files=(rust_${n3}_*_fixture.py)
+            test "${#files[@]}" -eq 1
+            test -e "${files[0]}"
+            python "${files[0]}" "$AXVEN_SOURCE_SHA"
+          done
+      - name: Make continuity evidence read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in $(seq 36 120); do
+            printf -v n3 "%03d" "$n"
+            files=(/tmp/axven-rust${n3}-*.json)
+            test -e "${files[0]}"
+            chmod 0444 "${files[@]}"
+          done
+          for f in /tmp/axven-rust120-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
+      - name: Stage detached RUST-120 consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          c=/tmp/axven-rust120-consumer
+          rm -rf "$c"
+          mkdir -p "$c"
+          for n in $(seq 30 120); do
+            printf -v n3 "%03d" "$n"
+            files=(rust_${n3}_*_verify.py)
+            test "${#files[@]}" -eq 1
+            test -e "${files[0]}"
+            cp "${files[0]}" "$c/"
+          done
+          cp rust_120_multistep_rust118_checkpoint_monitor_rotation_selftest.py "$c/"
+          cp /tmp/axven-rust036-final-state.json "$c/final-state.json"
+          test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 93
+          test "$(find "$c" -type l | wc -l)" -eq 0
+          test ! -e "$c/.git"
+          test ! -e "$c/rust_120_multistep_rust118_checkpoint_monitor_rotation_fixture.py"
+      - name: Inherit fixed predecessor manifest and append RUST-120 paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          rust082 = Path(
+              ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-"
+              "monitor-rotation-journal-observer-rotation-journal-monitor.yml"
+          ).read_text(encoding="utf-8")
+          start = "          cat > /tmp/axven-rust082-paths <<'EOF'\n"
+          if rust082.count(start) != 1:
+              raise SystemExit("unexpected RUST-082 manifest marker count")
+          tail = rust082.split(start, 1)[1]
+          end = "          EOF\n"
+          if end not in tail:
+              raise SystemExit("missing RUST-082 manifest terminator")
+          block = tail.split(end, 1)[0]
+          rows = []
+          for line in block.splitlines():
+              if not line.startswith("          "):
+                  raise SystemExit("unexpected RUST-082 manifest indentation")
+              rows.append(line[10:])
+          if len(rows) != 134:
+              raise SystemExit(f"expected 134 RUST-082 paths, got {len(rows)}")
+
+          predecessor = Path(
+              ".github/workflows/native-rust099-rust098-checkpoint-monitor-rotation.yml"
+          ).read_text(encoding="utf-8")
+          marker = "      - name: Inherit fixed predecessor manifest and append RUST-099 paths\n"
+          next_marker = "      - name: Verify detached RUST-099 rotation and fail-closed contract\n"
+          if predecessor.count(marker) != 1 or next_marker not in predecessor:
+              raise SystemExit("unexpected RUST-099 manifest markers")
+          segment = predecessor.split(marker, 1)[1].split(next_marker, 1)[0]
+          found = re.findall(r'"(/tmp/axven-rust\d{3}-[^"\n]+\.json)"', segment)
+          extras = []
+          seen = set()
+          for value in found:
+              if value not in seen:
+                  seen.add(value)
+                  extras.append(value)
+          rows.extend(extras)
+          if len(rows) != 181:
+              raise SystemExit(f"expected 181 RUST-099 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust099-successor-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-099 manifest boundary")
+
+          rows.extend([
+              "/tmp/axven-rust100-second-monitor-set-rotation.json",
+              "/tmp/axven-rust100-second-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust100-final-monitor-bundle.json",
+              "/tmp/axven-rust101-prefix-monitor-rotation-journal.json",
+              "/tmp/axven-rust101-prefix-monitor-rotation-checkpoint.json",
+              "/tmp/axven-rust101-final-monitor-rotation-journal.json",
+              "/tmp/axven-rust101-final-monitor-rotation-checkpoint.json",
+              "/tmp/axven-rust102-monitor-bundle.json",
+              "/tmp/axven-rust103-monitor-set-rotation.json",
+              "/tmp/axven-rust103-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust103-successor-monitor-bundle.json",
+              "/tmp/axven-rust104-second-monitor-set-rotation.json",
+              "/tmp/axven-rust104-second-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust104-final-monitor-bundle.json",
+              "/tmp/axven-rust105-prefix-monitor-rotation-journal.json",
+              "/tmp/axven-rust105-prefix-monitor-rotation-checkpoint.json",
+              "/tmp/axven-rust105-final-monitor-rotation-journal.json",
+              "/tmp/axven-rust105-final-monitor-rotation-checkpoint.json",
+              "/tmp/axven-rust106-monitor-bundle.json",
+              "/tmp/axven-rust107-monitor-set-rotation.json",
+              "/tmp/axven-rust107-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust107-successor-monitor-bundle.json",
+          ])
+          if len(rows) != 203:
+              raise SystemExit(f"expected 203 RUST-107 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust107-successor-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-107 manifest boundary")
+
+          rows.extend([
+              "/tmp/axven-rust108-second-monitor-set-rotation.json",
+              "/tmp/axven-rust108-second-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust108-final-monitor-bundle.json",
+          ])
+          if len(rows) != 206:
+              raise SystemExit(f"expected 206 RUST-108 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust108-final-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-108 manifest boundary")
+
+          rows.extend([
+              "/tmp/axven-rust109-prefix-monitor-rotation-journal.json",
+              "/tmp/axven-rust109-prefix-monitor-rotation-checkpoint.json",
+              "/tmp/axven-rust109-final-monitor-rotation-journal.json",
+              "/tmp/axven-rust109-final-monitor-rotation-checkpoint.json",
+          ])
+          if len(rows) != 210:
+              raise SystemExit(f"expected 210 RUST-109 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust109-final-monitor-rotation-checkpoint.json":
+              raise SystemExit("unexpected RUST-109 manifest boundary")
+
+          rows.append("/tmp/axven-rust110-monitor-bundle.json")
+          if len(rows) != 211:
+              raise SystemExit(f"expected 211 RUST-110 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust110-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-110 manifest boundary")
+          rows.extend([
+              "/tmp/axven-rust111-monitor-set-rotation.json",
+              "/tmp/axven-rust111-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust111-successor-monitor-bundle.json",
+          ])
+          if len(rows) != 214:
+              raise SystemExit(f"expected 214 RUST-111 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust111-successor-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-111 manifest boundary")
+
+          rows.extend([
+              "/tmp/axven-rust112-second-monitor-set-rotation.json",
+              "/tmp/axven-rust112-second-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust112-final-monitor-bundle.json",
+          ])
+          if len(rows) != 217:
+              raise SystemExit(f"expected 217 RUST-112 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust112-final-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-112 manifest boundary")
+          rows.extend([
+              "/tmp/axven-rust113-prefix-monitor-rotation-journal.json",
+              "/tmp/axven-rust113-prefix-monitor-rotation-checkpoint.json",
+              "/tmp/axven-rust113-final-monitor-rotation-journal.json",
+              "/tmp/axven-rust113-final-monitor-rotation-checkpoint.json",
+          ])
+          if len(rows) != 221:
+              raise SystemExit(f"expected 221 RUST-113 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust113-final-monitor-rotation-checkpoint.json":
+              raise SystemExit("unexpected RUST-113 manifest boundary")
+          rows.append("/tmp/axven-rust114-monitor-bundle.json")
+          if len(rows) != 222:
+              raise SystemExit(f"expected 222 RUST-114 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust114-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-114 manifest boundary")
+          rows.extend([
+              "/tmp/axven-rust115-monitor-set-rotation.json",
+              "/tmp/axven-rust115-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust115-successor-monitor-bundle.json",
+          ])
+          if len(rows) != 225:
+              raise SystemExit(f"expected 225 RUST-115 paths, got {len(rows)}")
+          rows.extend([
+              "/tmp/axven-rust116-second-monitor-set-rotation.json",
+              "/tmp/axven-rust116-second-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust116-final-monitor-bundle.json",
+          ])
+          if len(rows) != 228:
+              raise SystemExit(f"expected 228 RUST-116 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust116-final-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-116 manifest boundary")
+          rows.extend([
+              "/tmp/axven-rust117-prefix-monitor-rotation-journal.json",
+              "/tmp/axven-rust117-prefix-monitor-rotation-checkpoint.json",
+              "/tmp/axven-rust117-final-monitor-rotation-journal.json",
+              "/tmp/axven-rust117-final-monitor-rotation-checkpoint.json",
+          ])
+          if len(rows) != 232:
+              raise SystemExit(f"expected 232 RUST-117 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust117-final-monitor-rotation-checkpoint.json":
+              raise SystemExit("unexpected RUST-117 manifest boundary")
+          rows.append("/tmp/axven-rust118-monitor-bundle.json")
+          if len(rows) != 233:
+              raise SystemExit(f"expected 233 RUST-118 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust118-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-118 manifest boundary")
+          rows.extend([
+              "/tmp/axven-rust119-monitor-set-rotation.json",
+              "/tmp/axven-rust119-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust119-successor-monitor-bundle.json",
+          ])
+          if len(rows) != 236:
+              raise SystemExit(f"expected 236 RUST-119 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust119-successor-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-119 manifest boundary")
+          rows.extend([
+              "/tmp/axven-rust120-second-monitor-set-rotation.json",
+              "/tmp/axven-rust120-second-monitor-set-rotation-auth.json",
+              "/tmp/axven-rust120-final-monitor-bundle.json",
+          ])
+          if len(rows) != 239:
+              raise SystemExit(f"expected 239 RUST-120 paths, got {len(rows)}")
+          if rows[-1] != "/tmp/axven-rust120-final-monitor-bundle.json":
+              raise SystemExit("unexpected RUST-120 manifest boundary")
+          Path("/tmp/axven-rust120-paths").write_text("\n".join(rows) + "\n", encoding="utf-8")
+          PY
+          test "$(wc -l < /tmp/axven-rust120-paths)" -eq 239
+          chmod 0444 /tmp/axven-rust120-paths
+      - name: Verify detached RUST-120 rotation and fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/axven-rust120-consumer
+          mapfile -t paths < /tmp/axven-rust120-paths
+          test "${#paths[@]}" -eq 239
+          py=(env -i HOME=/tmp PATH=/usr/bin:/bin PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 /usr/bin/python3 -S)
+          "${py[@]}" rust_120_multistep_rust118_checkpoint_monitor_rotation_verify.py verify "${paths[@]}" "$AXVEN_SOURCE_SHA" 1
+          "${py[@]}" rust_120_multistep_rust118_checkpoint_monitor_rotation_selftest.py "${paths[@]}" /tmp/axven-rust120-final-fork-monitor-bundle.json "$AXVEN_SOURCE_SHA" 1
+          test "$(stat -c '%a' /tmp/axven-rust120-paths)" = "444"
+          for f in /tmp/axven-rust120-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
+          "${py[@]}" rust_120_multistep_rust118_checkpoint_monitor_rotation_verify.py verify "${paths[@]}" "$AXVEN_SOURCE_SHA" 1
