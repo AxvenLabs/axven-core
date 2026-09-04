@@ -95,7 +95,7 @@ def main() -> None:
             "final_monitor_set_sha256", "observed RUST-144 final same-parent checkpoint fork",
             "*monitor_verify.TARGET_KEYS",
             "base_paths[297]", "base_paths[299]", "base_paths[300]", "base_paths[301]",
-            "path_args[291:294]",
+            "path_args[302:305]",
         ),
         "RUST-144 verifier",
     )
