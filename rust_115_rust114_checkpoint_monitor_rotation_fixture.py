@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 import rust_030_stdlib_material_verify as material_verify
 import rust_032_external_monotonic_floor_verify as floor_verify
 import rust_114_rust113_checkpoint_monitor_verify as monitor_verify
-import rust_115_rust102_checkpoint_monitor_rotation_verify as rotation_verify
+import rust_115_rust114_checkpoint_monitor_rotation_verify as rotation_verify
 
 OUT = Path("/tmp")
 SEEDS = {
@@ -84,7 +84,7 @@ def main() -> None:
     if len(sys.argv) != 2 or len(sys.argv[1]) != 40 or any(
         c not in "0123456789abcdef" for c in sys.argv[1]
     ):
-        raise SystemExit("usage: rust_115_rust102_checkpoint_monitor_rotation_fixture.py SOURCE_SHA")
+        raise SystemExit("usage: rust_111_rust114_checkpoint_monitor_rotation_fixture.py SOURCE_SHA")
     source_sha = sys.argv[1]
 
     checkpoint_raw, checkpoint = floor_verify.load_canonical(
