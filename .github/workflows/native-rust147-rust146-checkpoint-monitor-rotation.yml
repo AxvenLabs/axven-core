@@ -25,7 +25,7 @@ env:
   PYTHONIOENCODING: utf-8
 
 jobs:
-  rust143:
+  rust147:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:

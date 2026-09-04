@@ -77,6 +77,7 @@ def main() -> None:
         "cryptography", "Ed25519PrivateKey", "SEEDS =", ".sign(", "subprocess",
         "requests", "urllib", "socket", "import axven", "from axven",
         "AXVEN_NATIVE_RUST103_", "AXVEN_NATIVE_RUST143_",
+        "axven-native-rust143", "application/vnd.axven.native-rust143",
     ):
         assert forbidden not in verify and forbidden not in selftest, forbidden
     checks += 1
@@ -88,6 +89,9 @@ def main() -> None:
             "THRESHOLD = 2", "OLD_SET_SEQUENCE = 0", "NEW_SET_SEQUENCE = 1",
             "AXVEN_NATIVE_RUST147_MONITOR_SET_ROTATION_V1",
             "AXVEN_NATIVE_RUST147_CHECKPOINT_MONITOR_V2",
+            "axven-native-rust147-monitor-set-v1",
+            "application/vnd.axven.native-rust147-monitor-set-rotation.v1+json",
+            "axven-native-rust147-checkpoint-monitor-bundle-v2",
             "REVOKED_MONITOR_ID = monitor_verify.MONITOR_1_ID",
             'M4_ID = "rust-147-test-only-monitor-rotation-journal-monitor-4-v1"',
             "predecessor_monitor_bundle_sha256", "successor_monitor_set_sequence",
@@ -112,7 +116,7 @@ def main() -> None:
         (
             "predecessor authorization availability: 3/3",
             "successor monitoring availability: 3/3",
-            "50/50 expected cases passed", "old-rust142-bundle-replay",
+            "50/50 expected cases passed", "old-rust146-bundle-replay",
             "run_with(310,", "run_with(311,", "run_with(312,",
             "observed-valid-successor-same-parent-fork",
             "RUST-145 final monitor rotation checkpoint",
@@ -132,6 +136,7 @@ def main() -> None:
             "env -i HOME=/tmp PATH=/usr/bin:/bin", "/usr/bin/python3 -S",
             '"rust_*.py"', '"RUST_*.md"', 'printf -v n3 "%03d" "$n"',
             'test ! -e "$c/rust_147_rust146_checkpoint_monitor_rotation_fixture.py"',
+            "jobs:\n  rust147:",
             'test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 120',
             "expected 310 RUST-146 paths", "expected 313 RUST-147 paths",
             "axven-rust147-successor-monitor-bundle.json",

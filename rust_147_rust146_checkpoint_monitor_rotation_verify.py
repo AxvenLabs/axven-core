@@ -10,13 +10,13 @@ import rust_030_stdlib_material_verify as material_verify
 import rust_032_external_monotonic_floor_verify as floor_verify
 import rust_146_rust145_checkpoint_monitor_verify as monitor_verify
 
-MONITOR_SET_SCHEMA = "axven-native-rust143-monitor-set-v1"
-ROTATION_SCHEMA = "axven-native-rust143-monitor-set-rotation-v1"
-ROTATION_AUTH_SCHEMA = "axven-native-rust143-monitor-set-rotation-quorum-v1"
-ROTATION_PAYLOAD_TYPE = "application/vnd.axven.native-rust143-monitor-set-rotation.v1+json"
-SUCCESSOR_BUNDLE_SCHEMA = "axven-native-rust143-checkpoint-monitor-bundle-v2"
-SUCCESSOR_REPORT_SCHEMA = "axven-native-rust143-checkpoint-monitor-report-v2"
-SUCCESSOR_STATEMENT_SCHEMA = "axven-native-rust143-checkpoint-monitor-statement-v2"
+MONITOR_SET_SCHEMA = "axven-native-rust147-monitor-set-v1"
+ROTATION_SCHEMA = "axven-native-rust147-monitor-set-rotation-v1"
+ROTATION_AUTH_SCHEMA = "axven-native-rust147-monitor-set-rotation-quorum-v1"
+ROTATION_PAYLOAD_TYPE = "application/vnd.axven.native-rust147-monitor-set-rotation.v1+json"
+SUCCESSOR_BUNDLE_SCHEMA = "axven-native-rust147-checkpoint-monitor-bundle-v2"
+SUCCESSOR_REPORT_SCHEMA = "axven-native-rust147-checkpoint-monitor-report-v2"
+SUCCESSOR_STATEMENT_SCHEMA = "axven-native-rust147-checkpoint-monitor-statement-v2"
 ROTATION_DOMAIN = b"AXVEN_NATIVE_RUST147_MONITOR_SET_ROTATION_V1\x00"
 SUCCESSOR_DOMAIN = b"AXVEN_NATIVE_RUST147_CHECKPOINT_MONITOR_V2\x00"
 ALGORITHM = "ed25519"

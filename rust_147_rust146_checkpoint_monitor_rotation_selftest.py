@@ -166,7 +166,7 @@ def main() -> None:
         noncanonical = root / "noncanonical.json"
         noncanonical.write_text(json.dumps(successor, indent=2) + "\n", encoding="utf-8")
         fail("noncanonical-successor", lambda: run_with(312, noncanonical)); cases += 1
-        fail("old-rust142-bundle-replay", lambda: run_with(312, base[309])); cases += 1
+        fail("old-rust146-bundle-replay", lambda: run_with(312, base[309])); cases += 1
         fail("observed-valid-successor-same-parent-fork", lambda: run_with(312, fork_path)); cases += 1
 
     if cases != 50:

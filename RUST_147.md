@@ -10,7 +10,7 @@ RUST-147 composes the exact reviewed RUST-146 detached checkpoint-monitor verifi
 - Revoked-monitor resurrection, threshold downgrade, duplicate or unsorted signers, payload tampering, signature mutation, target-field mutation, non-canonical successor evidence, old RUST-146 bundle replay, and a signed valid same-parent successor fork all fail closed.
 - The detached selftest fixes 50/50 expected rejection cases.
 - Producer private keys are deterministic TEST fixture material only. The verifier and selftest have no signing or network capability.
-- Rotation authorization and successor reports use RUST-147-specific Ed25519 domain separation; stale RUST-103 domain reuse is rejected by static policy.
+- Rotation authorization and successor reports use RUST-147-specific Ed25519 domain separation; stale RUST-103 domain reuse and stale RUST-143 schema/payload reuse are rejected by static policy.
 - CI keeps all evidence read-only with chmod 0444, reconstructs a fixed 313-path manifest, stages a 120-file verifier-only detached consumer, and runs under isolated `env -i` + `/usr/bin/python3 -S`.
 - 100+ checkpoint path handling remains explicit through `rust_*.py` / `RUST_*.md` triggers and zero-padded numeric loops.
 - No production monitor administration/signing, publication, key custody, HSM/TPM, OIDC, release/deployment authority, consensus change, or production Rust routing is introduced.
