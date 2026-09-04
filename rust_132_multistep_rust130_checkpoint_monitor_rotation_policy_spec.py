@@ -92,7 +92,7 @@ def main() -> None:
             "final_monitor_set_sha256", "observed RUST-132 final same-parent checkpoint fork",
             "*monitor_verify.TARGET_KEYS",
             "base_paths[264]", "base_paths[266]", "base_paths[267]", "base_paths[268]",
-            "path_args[258:261]",
+            "path_args[269:272]",
         ),
         "RUST-132 verifier",
     )
@@ -128,7 +128,7 @@ def main() -> None:
             "env -i HOME=/tmp PATH=/usr/bin:/bin", "/usr/bin/python3 -S",
             '"rust_*.py"', '"RUST_*.md"', 'printf -v n3 "%03d" "$n"',
             'test ! -e "$c/rust_132_multistep_rust130_checkpoint_monitor_rotation_fixture.py"',
-            'test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 101',
+            'test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 105',
             "expected 269 RUST-131 paths", "expected 272 RUST-132 paths",
             "axven-rust132-final-monitor-bundle.json",
         ),
