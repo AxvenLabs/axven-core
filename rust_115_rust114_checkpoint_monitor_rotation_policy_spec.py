@@ -108,8 +108,9 @@ def main() -> None:
         (
             "predecessor authorization availability: 3/3",
             "successor monitoring availability: 3/3",
-            "50/50 expected cases passed", "old-rust102-bundle-replay",
+            "50/50 expected cases passed", "old-rust114-bundle-replay",
             "observed-valid-successor-same-parent-fork",
+            "RUST-113 final monitor rotation checkpoint",
         ),
         "RUST-115 selftest",
     )
@@ -125,7 +126,7 @@ def main() -> None:
             '"rust_*.py"', '"RUST_*.md"', 'printf -v n3 "%03d" "$n"',
             'test ! -e "$c/rust_115_rust114_checkpoint_monitor_rotation_fixture.py"',
             'test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 88',
-            "expected 189 RUST-114 paths", "expected 192 RUST-115 paths",
+            "expected 222 RUST-114 paths", "expected 225 RUST-115 paths",
             "axven-rust115-successor-monitor-bundle.json",
         ),
         "RUST-115 workflow",
@@ -142,7 +143,7 @@ def main() -> None:
         doc,
         (
             "TEST-ONLY", "M1/M2/M3 to M2/M3/M4", "2-of-3", "3/3", "50/50",
-            "fixed 192-path manifest", "76-file verifier-only detached consumer",
+            "fixed 225-path manifest", "88-file verifier-only detached consumer",
             "Production consensus remains Python-authoritative.",
         ),
         "RUST-115 documentation",
