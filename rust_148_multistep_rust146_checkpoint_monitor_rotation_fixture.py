@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import sys
 from pathlib import Path
@@ -57,6 +58,17 @@ def final_report(monitor_id: str, target: dict, set_sha: str) -> dict:
     }
 
 
+def bundle(reports: list[dict], set_sha: str) -> dict:
+    return {
+        'schema': rotation2_verify.FINAL_BUNDLE_SCHEMA,
+        'final_monitor_set_sequence': rotation2_verify.FINAL_SET_SEQUENCE,
+        'final_monitor_set_sha256': set_sha,
+        'threshold': rotation2_verify.THRESHOLD,
+        'reports': sorted(reports, key=lambda report: report['statement']['monitor_id']),
+        'production': False,
+    }
+
+
 def main() -> None:
     if len(sys.argv) != 2 or len(sys.argv[1]) != 40:
         raise SystemExit('usage: rust_148_multistep_rust146_checkpoint_monitor_rotation_fixture.py SOURCE_SHA')
@@ -92,17 +104,13 @@ def main() -> None:
     }
     set_sha = rotation2_verify.sha256(material_verify.canonical(rotation2_verify.final_monitor_set()))
     reports = [final_report(mid, target, set_sha) for mid in sorted(rotation2_verify.FINAL_PINNED_MONITORS)]
-    bundle = {
-        'schema': rotation2_verify.FINAL_BUNDLE_SCHEMA,
-        'final_monitor_set_sequence': rotation2_verify.FINAL_SET_SEQUENCE,
-        'final_monitor_set_sha256': set_sha,
-        'threshold': rotation2_verify.THRESHOLD,
-        'reports': reports,
-        'production': False,
-    }
+    fork_target = copy.deepcopy(target)
+    fork_target['journal_sha256'] = '0' * 64 if target['journal_sha256'] != '0' * 64 else '1' * 64
+    fork_reports = [copy.deepcopy(reports[0]), copy.deepcopy(reports[1]), final_report(rotation2_verify.M5_ID, fork_target, set_sha)]
     (OUT / 'axven-rust148-second-monitor-set-rotation.json').write_bytes(rotation_raw)
     (OUT / 'axven-rust148-second-monitor-set-rotation-auth.json').write_bytes(material_verify.canonical(auth))
-    (OUT / 'axven-rust148-final-monitor-bundle.json').write_bytes(material_verify.canonical(bundle))
+    (OUT / 'axven-rust148-final-monitor-bundle.json').write_bytes(material_verify.canonical(bundle(reports, set_sha)))
+    (OUT / 'axven-rust148-final-fork-monitor-bundle.json').write_bytes(material_verify.canonical(bundle(fork_reports, set_sha)))
     print('RUST-148 TEST-only second monitor-set rotation fixture: GREEN')
 
 
