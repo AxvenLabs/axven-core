@@ -8,10 +8,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 DOC = ROOT / "RUST_115.md"
-VERIFY = ROOT / "rust_115_rust102_checkpoint_monitor_rotation_verify.py"
-FIXTURE = ROOT / "rust_115_rust102_checkpoint_monitor_rotation_fixture.py"
-SELFTEST = ROOT / "rust_115_rust102_checkpoint_monitor_rotation_selftest.py"
-WORKFLOW = ROOT / ".github/workflows/native-rust115-rust102-checkpoint-monitor-rotation.yml"
+VERIFY = ROOT / "rust_115_rust114_checkpoint_monitor_rotation_verify.py"
+FIXTURE = ROOT / "rust_115_rust114_checkpoint_monitor_rotation_fixture.py"
+SELFTEST = ROOT / "rust_115_rust114_checkpoint_monitor_rotation_selftest.py"
+WORKFLOW = ROOT / ".github/workflows/native-rust115-rust114-checkpoint-monitor-rotation.yml"
 BASE = ROOT / "rust_114_rust113_checkpoint_monitor_verify.py"
 PREDECESSOR_WORKFLOW = ROOT / ".github/workflows/native-rust114-rust113-checkpoint-monitor.yml"
 EXPECTED_RUST114_GIT_BLOB = "22b1bcad60b54ba2e4038ede6d4cb64a984dbfc7"
@@ -26,7 +26,7 @@ ALLOWED_SELFTEST_IMPORTS = {
     "__future__", "base64", "copy", "itertools", "json", "pathlib", "sys", "tempfile",
     "rust_030_stdlib_material_verify", "rust_032_external_monotonic_floor_verify",
     "rust_114_rust113_checkpoint_monitor_verify",
-    "rust_115_rust102_checkpoint_monitor_rotation_verify",
+    "rust_115_rust114_checkpoint_monitor_rotation_verify",
 }
 
 
@@ -123,7 +123,7 @@ def main() -> None:
             'python-version: "3.13.15"', "chmod 0444", "axven-rust115",
             "env -i HOME=/tmp PATH=/usr/bin:/bin", "/usr/bin/python3 -S",
             '"rust_*.py"', '"RUST_*.md"', 'printf -v n3 "%03d" "$n"',
-            'test ! -e "$c/rust_115_rust102_checkpoint_monitor_rotation_fixture.py"',
+            'test ! -e "$c/rust_115_rust114_checkpoint_monitor_rotation_fixture.py"',
             'test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 88',
             "expected 189 RUST-114 paths", "expected 192 RUST-115 paths",
             "axven-rust115-successor-monitor-bundle.json",
