@@ -128,7 +128,7 @@ def main() -> None:
             "env -i HOME=/tmp PATH=/usr/bin:/bin", "/usr/bin/python3 -S",
             '"rust_*.py"', '"RUST_*.md"', 'printf -v n3 "%03d" "$n"',
             'test ! -e "$c/rust_116_multistep_rust114_checkpoint_monitor_rotation_fixture.py"',
-            'test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 85',
+            'test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 89',
             "expected 225 RUST-115 paths", "expected 228 RUST-116 paths",
             "axven-rust116-final-monitor-bundle.json",
         ),
