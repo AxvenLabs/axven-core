@@ -24,7 +24,7 @@ THRESHOLD = 2
 OLD_SET_SEQUENCE = 0
 NEW_SET_SEQUENCE = 1
 
-M4_ID = "rust-119-test-only-monitor-rotation-journal-monitor-4-v1"
+M4_ID = "rust-123-test-only-monitor-rotation-journal-monitor-4-v1"
 M4_PUBLIC_KEY = bytes.fromhex("64a08e659c4e7500c83a60e453ee608de74d8cf4437e8a0779b7b1cf20532c8a")
 REVOKED_MONITOR_ID = monitor_verify.MONITOR_1_ID
 OLD_PINNED_MONITORS = dict(monitor_verify.PINNED_MONITORS)
