@@ -13,7 +13,7 @@ import tempfile
 import rust_030_stdlib_material_verify as material_verify
 import rust_032_external_monotonic_floor_verify as floor_verify
 import rust_114_rust113_checkpoint_monitor_verify as monitor_verify
-import rust_115_rust102_checkpoint_monitor_rotation_verify as rotation_verify
+import rust_115_rust114_checkpoint_monitor_rotation_verify as rotation_verify
 
 
 def fail(label: str, fn) -> None:
@@ -36,7 +36,7 @@ def replacement_for(field: str):
 def main() -> None:
     if len(sys.argv) != 229:
         raise SystemExit(
-            "usage: rust_115_rust102_checkpoint_monitor_rotation_selftest.py "
+            "usage: rust_111_rust114_checkpoint_monitor_rotation_selftest.py "
             "... OLD_BUNDLE ROTATION AUTH SUCCESSOR FORK_SUCCESSOR SOURCE_SHA REQUIRED_FLOOR"
         )
     base = [Path(value) for value in sys.argv[1:-3]]
