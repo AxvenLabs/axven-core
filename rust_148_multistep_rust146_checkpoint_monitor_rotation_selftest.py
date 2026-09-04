@@ -32,7 +32,7 @@ def replacement_for(field: str):
 
 
 def main() -> None:
-    if len(sys.argv) != 321:
+    if len(sys.argv) != 320:
         raise SystemExit('usage: rust_148_multistep_rust146_checkpoint_monitor_rotation_selftest.py ... FINAL_BUNDLE FORK_BUNDLE SOURCE_SHA REQUIRED_FLOOR')
     base = [Path(value) for value in sys.argv[1:-3]]
     fork_path = Path(sys.argv[-3])
