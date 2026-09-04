@@ -8,7 +8,7 @@ import sys
 
 import rust_030_stdlib_material_verify as material_verify
 import rust_032_external_monotonic_floor_verify as floor_verify
-import rust_113_rust114_checkpoint_monitor_rotation_journal_verify as journal_verify
+import rust_113_rust110_checkpoint_monitor_rotation_journal_verify as journal_verify
 
 BUNDLE_SCHEMA = "axven-native-rust114-monitor-rotation-journal-checkpoint-monitor-bundle-v1"
 REPORT_SCHEMA = "axven-native-rust114-monitor-rotation-journal-checkpoint-monitor-report-v1"

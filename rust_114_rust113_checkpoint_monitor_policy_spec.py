@@ -126,7 +126,7 @@ def main() -> None:
             'python-version: "3.13.15"', "chmod 0444", "axven-rust114",
             "env -i HOME=/tmp PATH=/usr/bin:/bin", "/usr/bin/python3 -S",
             '"rust_*.py"', '"RUST_*.md"', 'printf -v n3 "%03d" "$n"',
-            'test ! -e "$c/rust_110_rust113_checkpoint_monitor_fixture.py"',
+            'test ! -e "$c/rust_114_rust113_checkpoint_monitor_fixture.py"',
             'test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 87',
             "expected 221 RUST-113 paths", "expected 222 RUST-114 paths",
             "axven-rust114-monitor-bundle.json",
