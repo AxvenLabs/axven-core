@@ -7,13 +7,13 @@ import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-DOC = ROOT / "RUST_132.md"
+DOC = ROOT / "RUST_136.md"
 VERIFY = ROOT / "rust_136_multistep_rust134_checkpoint_monitor_rotation_verify.py"
 FIXTURE = ROOT / "rust_136_multistep_rust134_checkpoint_monitor_rotation_fixture.py"
 SELFTEST = ROOT / "rust_136_multistep_rust134_checkpoint_monitor_rotation_selftest.py"
 WORKFLOW = ROOT / ".github/workflows/native-rust136-multistep-checkpoint-monitor-rotation.yml"
 BASE = ROOT / "rust_135_rust134_checkpoint_monitor_rotation_verify.py"
-PREDECESSOR_WORKFLOW = ROOT / ".github/workflows/native-rust135-rust130-checkpoint-monitor-rotation.yml"
+PREDECESSOR_WORKFLOW = ROOT / ".github/workflows/native-rust135-rust134-checkpoint-monitor-rotation.yml"
 EXPECTED_RUST135_GIT_BLOB = "1cc3a641187617ce5838a3b099f3bbc297f0dcbd"
 EXPECTED_RUST135_WORKFLOW_GIT_BLOB = "b697a02f5b666ca15f9c30d05651adbcd5712eb0"
 
@@ -77,6 +77,7 @@ def main() -> None:
     for forbidden in (
         "cryptography", "Ed25519PrivateKey", "SEEDS =", ".sign(", "subprocess",
         "requests", "urllib", "socket", "import axven", "from axven",
+        "AXVEN_NATIVE_RUST132_",
     ):
         assert forbidden not in verify and forbidden not in selftest, forbidden
     checks += 1
@@ -86,6 +87,8 @@ def main() -> None:
         verify,
         (
             "THRESHOLD = 2", "PREDECESSOR_SET_SEQUENCE = 1", "FINAL_SET_SEQUENCE = 2",
+            "AXVEN_NATIVE_RUST136_MONITOR_SET_ROTATION_V2",
+            "AXVEN_NATIVE_RUST136_CHECKPOINT_MONITOR_V3",
             "CUMULATIVE_REVOKED_MONITOR_IDS", "monitor_verify.MONITOR_2_ID",
             "predecessor_rotation_sha256", "predecessor_rotation_auth_sha256",
             "predecessor_successor_bundle_sha256", "final_monitor_set_sequence",
