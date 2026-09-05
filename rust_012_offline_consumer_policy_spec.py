@@ -10,7 +10,7 @@ import axven
 ROOT = Path(__file__).resolve().parent
 VERIFIER = ROOT / "rust_012_offline_consumer_verify.py"
 WORKFLOW = ROOT / ".github/workflows/native-portable-attestation.yml"
-DOC = ROOT / "RUST_012.md"
+DOC = ROOT / "docs/history/rust/RUST_012.md"
 PRODUCTION = ("axven.py", "core.py", "p2p.py", "rpc.py", "wallet.py", "axven_core.py")
 
 
@@ -97,7 +97,7 @@ def main() -> None:
     checks += 1
     print("[GREEN] detached artifact/evidence mutation and path-confusion cases fail closed")
 
-    assert '"RUST_012.md"' in workflow
+    assert '"docs/history/rust/RUST_012.md"' in workflow
     assert '"rust_012_offline_consumer_verify.py"' in workflow
     assert '"rust_012_offline_consumer_policy_spec.py"' in workflow
     assert "python rust_012_offline_consumer_policy_spec.py" in workflow
