@@ -1,0 +1,48 @@
+name: Axven Native RUST-150 CI Fan-out Hardening
+
+on:
+  push:
+    paths:
+      - "requirements-*.lock"
+      - "rust_*.py"
+      - "RUST_*.md"
+      - "run_full_validation.py"
+      - "security_tail_runner.py"
+      - "fuzz_*.py"
+      - "fuzz_targets/**"
+      - "perf_*.py"
+      - ".github/workflows/*.yml"
+  pull_request:
+    paths:
+      - "requirements-*.lock"
+      - "rust_*.py"
+      - "RUST_*.md"
+      - "run_full_validation.py"
+      - "security_tail_runner.py"
+      - "fuzz_*.py"
+      - "fuzz_targets/**"
+      - "perf_*.py"
+      - ".github/workflows/*.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust150-ci-fanout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+      - name: Verify predecessor journal policy remains intact
+        run: python rust_149_rust146_checkpoint_monitor_rotation_journal_policy_spec.py
+      - name: Verify independent CI fan-out policy
+        run: python rust_150_ci_fanout_policy_spec.py
+      - name: Exercise fail-closed trigger mutations
+        run: python rust_150_ci_fanout_selftest.py

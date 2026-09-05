@@ -32,6 +32,6 @@ def main():
     require(workflow,('permissions:\n  contents: read','persist-credentials: false','python-version: "3.13.15"','chmod 0444','axven-rust149','env -i HOME=/tmp PATH=/usr/bin:/bin','/usr/bin/python3 -S','test "$(wc -l < /tmp/axven-rust149-paths)" -eq 320','test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 122','expected 316 RUST-148 paths','expected 320 RUST-149 paths'),'workflow')
     for f in ('contents: write','id-token: write','packages: write','pull-requests: write','actions/upload-artifact','attest','release','deploy'): assert f not in workflow.lower(),f
     checks+=1; print('[GREEN] workflow stays detached, read-only, and non-publishing')
-    require(doc,('M1/M2/M3 -> M2/M3/M4 -> M3/M4/M5','cumulative revocation `[M1, M2]`','2-of-3','3/3 valid two-monitor subsets','35/35 expected cases','same-parent final checkpoint','320-path','122-file','Production consensus remains Python-authoritative.'),'documentation'); checks+=1; print('[GREEN] documentation preserves TEST-only journal boundary')
+    require(doc,('M1/M2/M3 -> M2/M3/M4 -> M3/M4/M5','cumulative revocation `[M1, M2]`','2-of-3','3/3 valid two-monitor subsets','35/35 expected cases','Same-parent final checkpoint','320-path','122-file','Production consensus remains Python-authoritative.'),'documentation'); checks+=1; print('[GREEN] documentation preserves TEST-only journal boundary')
     assert checks==6; print('RUST-149 static policy: 6/6 checks passed')
 if __name__=='__main__': main()
