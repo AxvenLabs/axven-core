@@ -19,3 +19,11 @@ Archived here:
 These files are historical checkpoint records. Moving a checkpoint document into this directory does not promote Rust into the production consensus path, alter chain identity or activation rules, change cryptographic acceptance behavior, or grant release/publication privileges.
 
 Path-sensitive workflow and verifier references must be retargeted in the same atomic change whenever another checkpoint document is archived here.
+
+## Deferred path-sensitive candidates
+
+Some completed checkpoint documents intentionally remain at the repository root until every path-sensitive dependency can be reviewed and rewritten safely in one atomic change.
+
+- `RUST_021.md` is currently deferred because its dedicated verified-dependency-rebuild workflow is large and must not be rewritten from a truncated or partial view.
+
+A deferred entry is not approval to move the file later without a fresh dependency review. Production consensus remains Python-authoritative unless a separately reviewed and explicitly approved change says otherwise.
