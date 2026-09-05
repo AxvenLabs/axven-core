@@ -4,16 +4,16 @@ on:
   push:
     paths:
       - "native/**"
-      - "RUST_001.md"
-      - "RUST_002.md"
+      - "docs/history/rust/RUST_001.md"
+      - "docs/history/rust/RUST_002.md"
       - "rust_001_native_boundary_spec.py"
       - "rust_002_state_root_differential_spec.py"
       - ".github/workflows/native-smoke.yml"
   pull_request:
     paths:
       - "native/**"
-      - "RUST_001.md"
-      - "RUST_002.md"
+      - "docs/history/rust/RUST_001.md"
+      - "docs/history/rust/RUST_002.md"
       - "rust_001_native_boundary_spec.py"
       - "rust_002_state_root_differential_spec.py"
       - ".github/workflows/native-smoke.yml"
