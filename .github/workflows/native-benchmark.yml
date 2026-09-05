@@ -4,14 +4,14 @@ on:
   push:
     paths:
       - "native/**"
-      - "RUST_004.md"
+      - "docs/history/rust/RUST_004.md"
       - "rust_004_native_benchmark.py"
       - "rust_004_native_benchmark_spec.py"
       - ".github/workflows/native-benchmark.yml"
   pull_request:
     paths:
       - "native/**"
-      - "RUST_004.md"
+      - "docs/history/rust/RUST_004.md"
       - "rust_004_native_benchmark.py"
       - "rust_004_native_benchmark_spec.py"
       - ".github/workflows/native-benchmark.yml"
