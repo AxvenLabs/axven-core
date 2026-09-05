@@ -35,7 +35,7 @@ def main() -> None:
     checks = 0
     builder = text("rust_020_verified_vendor.py")
     workflow = text(WORKFLOW)
-    doc = text("RUST_020.md")
+    doc = text("docs/history/rust/RUST_020.md")
 
     assert vendor.CHECKSUM_FILENAME == ".cargo-checksum.json"
     assert vendor.VENDOR_CONTAINER_PATH == "/vendor"
@@ -68,7 +68,7 @@ def main() -> None:
     print("[GREEN] vendor verifier is process/network independent and rejects filesystem/checksum mutations fail closed")
 
     for marker in (
-        '"RUST_020.md"',
+        '"docs/history/rust/RUST_020.md"',
         '"rust_020_verified_vendor.py"',
         '"rust_020_verified_vendor_policy_spec.py"',
         '".github/workflows/native-verified-offline-vendor.yml"',
