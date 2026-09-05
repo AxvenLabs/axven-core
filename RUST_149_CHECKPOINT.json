@@ -1,0 +1,1 @@
+{"checkpoint":"RUST-149","scope":"test-only append-only RUST-146 checkpoint monitor rotation journal","production_consensus":"python-authoritative","predecessor_merge_sha":"004da341e97c9bd6e222537856084c6c375ab85b","predecessor_verifier_blob":"a120dcc830ed6cbe834f2bb6e57b7fee7549f743","predecessor_workflow_blob":"ab159930c52124fa68ce5a6d6d6703d24225874d"}
