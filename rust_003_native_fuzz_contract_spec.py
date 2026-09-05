@@ -20,7 +20,7 @@ def main() -> None:
     workflow = text(".github/workflows/native-fuzz.yml")
     source = text("native/axven_native/src/lib.rs")
     target = text("native/axven_native/fuzz/fuzz_targets/smt_mirror.rs")
-    doc = text("RUST_003.md")
+    doc = text("docs/history/rust/RUST_003.md")
 
     assert 'fuzzing = []' in cargo
     assert 'features = ["fuzzing"]' in fuzz_cargo

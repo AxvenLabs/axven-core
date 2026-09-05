@@ -4,13 +4,13 @@ on:
   push:
     paths:
       - "native/**"
-      - "RUST_003.md"
+      - "docs/history/rust/RUST_003.md"
       - "rust_003_native_fuzz_contract_spec.py"
       - ".github/workflows/native-fuzz.yml"
   pull_request:
     paths:
       - "native/**"
-      - "RUST_003.md"
+      - "docs/history/rust/RUST_003.md"
       - "rust_003_native_fuzz_contract_spec.py"
       - ".github/workflows/native-fuzz.yml"
   workflow_dispatch:

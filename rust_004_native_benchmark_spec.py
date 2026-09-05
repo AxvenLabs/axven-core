@@ -16,7 +16,7 @@ def main() -> None:
 
     bench = text("rust_004_native_benchmark.py")
     workflow = text(".github/workflows/native-benchmark.yml")
-    doc = text("RUST_004.md")
+    doc = text("docs/history/rust/RUST_004.md")
     cargo = text("native/axven_native/Cargo.toml")
 
     assert "SAMPLES = 5" in bench
