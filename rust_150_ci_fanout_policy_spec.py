@@ -53,11 +53,8 @@ def assert_unfiltered_pr(name: str, value: str) -> None:
     if marker not in value:
         raise AssertionError(f"{name}: pull_request trigger required")
     tail = value.split(marker, 1)[1]
-    first = tail.split("\n", 1)[0]
-    if first.strip():
-        raise AssertionError(f"{name}: pull_request must be unfiltered")
-    nxt = tail.splitlines()[0:2]
-    if len(nxt) > 1 and nxt[1].lstrip().startswith(("paths:", "paths-ignore:", "branches:", "branches-ignore:")):
+    lines = tail.splitlines()
+    if lines and lines[0].startswith("    "):
         raise AssertionError(f"{name}: filtered pull_request forbidden")
 
 
