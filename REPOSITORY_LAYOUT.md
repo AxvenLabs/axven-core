@@ -20,9 +20,16 @@ Validation:
 - `*_test.py` — executable contracts/regressions
 - `devnet_rehearsal.py` — two-node integration rehearsal
 
-Records:
+Active root records:
 - `CD-003_ACTIVATION.md`
 - `CANONICAL_OPERATION_RECORD.md`
-- `CONSENSUS_DECISIONS.md`
-- `WALLET_SPEC.md`
 - `REBUILD_STATUS.md`
+
+Archived / community documentation:
+- `docs/history/checkpoints/` — historical checkpoint records archived by repository-layout cleanup
+- `docs/history/rebuild/README_REBUILD.md` — historical rebuild checkpoint narrative
+- `docs/community/GIVETH.md` — Giveth ownership/provenance record
+
+Path-sensitive files:
+- RUST/SEC policy, verifier, fixture, manifest, release, and workflow-bound inputs remain at their established paths.
+- Repository-layout cleanup must not weaken validation, CI fan-out, fail-closed policy checks, or Python-authoritative production consensus.
