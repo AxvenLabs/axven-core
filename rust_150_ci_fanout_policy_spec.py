@@ -58,6 +58,22 @@ def assert_unfiltered_pr(name: str, value: str) -> None:
         raise AssertionError(f"{name}: filtered pull_request forbidden")
 
 
+def event_paths(value: str, event: str) -> str:
+    marker = f"  {event}:\n    paths:\n"
+    if value.count(marker) != 1:
+        raise AssertionError(f"RUST-149 active checkpoint: expected one {event}.paths block")
+    tail = value.split(marker, 1)[1]
+    lines = tail.splitlines()
+    block: list[str] = []
+    for line in lines:
+        if line.startswith("  ") and not line.startswith("    "):
+            break
+        block.append(line)
+    if not block:
+        raise AssertionError(f"RUST-149 active checkpoint: empty {event}.paths block")
+    return "\n".join(block) + "\n"
+
+
 def assert_perf(value: str) -> None:
     if "name: Axven Performance Baseline" not in value or "  pull_request:\n" not in value:
         raise AssertionError("Performance: independent pull_request workflow required")
@@ -66,19 +82,26 @@ def assert_perf(value: str) -> None:
 
 
 def assert_native(value: str) -> None:
-    required = (
+    required_global = (
         "name: Axven Native RUST-149 Checkpoint Monitor Rotation Journal",
-        "  pull_request:\n    paths:\n",
+        "python rust_149_rust146_checkpoint_monitor_rotation_journal_policy_spec.py",
+    )
+    for needle in required_global:
+        if needle not in value:
+            raise AssertionError(f"RUST-149 active checkpoint trigger/verification closure missing: {needle}")
+
+    required_paths = (
         '- "requirements-ci-runtime-posix.lock"',
         '- "rust_*.py"',
         '- "RUST_*.md"',
         '- ".github/workflows/native-rust148-multistep-rust146-checkpoint-monitor-rotation.yml"',
         '- ".github/workflows/native-rust149-checkpoint-monitor-rotation-journal.yml"',
-        "python rust_149_rust146_checkpoint_monitor_rotation_journal_policy_spec.py",
     )
-    for needle in required:
-        if needle not in value:
-            raise AssertionError(f"RUST-149 active checkpoint trigger/verification closure missing: {needle}")
+    for event in ("push", "pull_request"):
+        block = event_paths(value, event)
+        for needle in required_paths:
+            if needle not in block:
+                raise AssertionError(f"RUST-149 active checkpoint {event}.paths closure missing: {needle}")
 
 
 def check_texts(validation: str, fuzz: str, perf: str, native: str) -> None:
