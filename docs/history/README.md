@@ -9,6 +9,10 @@ This directory contains documentation and checkpoint material that has been arch
 - `rebuild/` — historical rebuild notes and reconstruction material.
 - `rust/` — archived Rust checkpoint documents. See `rust/README.md` for the Rust archive index and path-sensitive move policy.
 
+## Archive policy
+
+See `ARCHIVE_POLICY.md` for the repository-wide historical archive criteria, keep-out boundary for active operational material, and atomic-update requirement for path-sensitive references.
+
 ## Archive boundary
 
 Files under `docs/history/` are historical records, not a signal that the corresponding safety, validation, reproducibility, or security contracts are disabled. Active code, workflows, policy checks, release metadata, consensus/state-transition behavior, cryptographic rules, deployment behavior, and network behavior remain governed by their current repository locations.
