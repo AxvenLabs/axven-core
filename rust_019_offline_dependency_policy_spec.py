@@ -35,7 +35,7 @@ def main() -> None:
     checks = 0
     verifier = text("rust_019_offline_dependency_closure.py")
     workflow = text(WORKFLOW)
-    doc = text("RUST_019.md")
+    doc = text("docs/history/rust/RUST_019.md")
 
     assert closure.CRATES_IO_SOURCE == "registry+https://github.com/rust-lang/crates.io-index"
     assert closure.EXPECTED_REQUIREMENT == "maturin==1.15.0"
@@ -50,7 +50,7 @@ def main() -> None:
     for marker in FORBIDDEN_VERIFIER:
         assert marker not in verifier, marker
     for marker in (
-        "tarfile.open(path, mode=\"r:gz\")",
+        'tarfile.open(path, mode="r:gz")',
         "member.issym()",
         "member.islnk()",
         "member.ischr()",
@@ -65,7 +65,7 @@ def main() -> None:
     print("[GREEN] detached verifier has no process/network/GitHub trust and rejects unsafe archive structure")
 
     for marker in (
-        '"RUST_019.md"',
+        '"docs/history/rust/RUST_019.md"',
         '"rust_019_offline_dependency_closure.py"',
         '"rust_019_offline_dependency_policy_spec.py"',
     ):
