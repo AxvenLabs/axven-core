@@ -24,7 +24,7 @@ def main() -> None:
     checks = 0
     workflow = text(WORKFLOW)
     source = text("rust_013_reproducible_wheel_spec.py")
-    doc = text("RUST_013.md")
+    doc = text("docs/history/rust/RUST_013.md")
 
     assert "permissions:\n  contents: read" in workflow
     assert "persist-credentials: false" in workflow

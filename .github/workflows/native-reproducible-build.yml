@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "native/**"
-      - "RUST_013.md"
+      - "docs/history/rust/RUST_013.md"
       - "rust_013_reproducible_wheel_spec.py"
       - "rust_013_reproducible_build_policy_spec.py"
       - "RUST_014.md"
@@ -26,7 +26,7 @@ on:
   pull_request:
     paths:
       - "native/**"
-      - "RUST_013.md"
+      - "docs/history/rust/RUST_013.md"
       - "rust_013_reproducible_wheel_spec.py"
       - "rust_013_reproducible_build_policy_spec.py"
       - "RUST_014.md"
