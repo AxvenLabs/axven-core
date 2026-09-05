@@ -1,0 +1,7 @@
+RUST-150 CI FAN-OUT MANIFEST
+validation=.github/workflows/validation.yml@ed3e90bfc3d96bf3e62f8ce95b5514faf13062b4
+fuzz=.github/workflows/fuzz-smoke.yml@b58475d67e5b662d2971f26642760906b9ff6316
+performance=.github/workflows/perf-baseline.yml@91cc3feea0b32634c4df9e16f4a720842621a4e7
+active_checkpoint=.github/workflows/native-rust149-checkpoint-monitor-rotation-journal.yml@dfcaa986f53355ca130f86e463cd8ad608c69e61
+predecessor_merge=ad447c6cdcb0581c2706ca1e256d24fb79f363dd
+production_consensus=python-authoritative
