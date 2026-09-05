@@ -18,7 +18,7 @@ def text(path: str) -> str:
 def main() -> None:
     checks = 0
     workflow = text(".github/workflows/native-portable-attestation.yml")
-    doc = text("RUST_011.md")
+    doc = text("docs/history/rust/RUST_011.md")
     source = text("rust_011_portable_attestation.py")
     runtime_lock = text("requirements-ci-runtime-posix.lock")
 
