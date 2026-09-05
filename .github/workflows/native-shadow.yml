@@ -6,7 +6,7 @@ on:
       - "axven.py"
       - "core.py"
       - "native/**"
-      - "RUST_005.md"
+      - "docs/history/rust/RUST_005.md"
       - "rust_005_replay_shadow_spec.py"
       - ".github/workflows/native-shadow.yml"
   pull_request:
@@ -14,7 +14,7 @@ on:
       - "axven.py"
       - "core.py"
       - "native/**"
-      - "RUST_005.md"
+      - "docs/history/rust/RUST_005.md"
       - "rust_005_replay_shadow_spec.py"
       - ".github/workflows/native-shadow.yml"
   workflow_dispatch:

@@ -4,13 +4,13 @@ on:
   push:
     paths:
       - "native/**"
-      - "RUST_006.md"
+      - "docs/history/rust/RUST_006.md"
       - "rust_006_cross_platform_native_abi_spec.py"
       - ".github/workflows/native-cross-platform.yml"
   pull_request:
     paths:
       - "native/**"
-      - "RUST_006.md"
+      - "docs/history/rust/RUST_006.md"
       - "rust_006_cross_platform_native_abi_spec.py"
       - ".github/workflows/native-cross-platform.yml"
   workflow_dispatch:
