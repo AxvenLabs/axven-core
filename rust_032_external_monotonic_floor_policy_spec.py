@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 WORKFLOW = ROOT / ".github/workflows/native-external-monotonic-floor.yml"
 VERIFIER = ROOT / "rust_032_external_monotonic_floor_verify.py"
 BASE = ROOT / "rust_031_stdlib_trust_state_material_verify.py"
-DOC = ROOT / "RUST_032.md"
+DOC = ROOT / "docs/history/rust/RUST_032.md"
 EXPECTED_RUST031_GIT_BLOB = "984961a2c84967fc0ab0bfdc119971ba1fa3e003"
 ALLOWED_IMPORTS = {
     "__future__", "copy", "hashlib", "json", "pathlib", "sys", "tempfile",
