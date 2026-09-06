@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 WORKFLOW = ROOT / ".github/workflows/native-external-floor-witness-quorum.yml"
 VERIFIER = ROOT / "rust_034_external_floor_witness_quorum_verify.py"
 BASE = ROOT / "rust_033_external_floor_witness_verify.py"
-DOC = ROOT / "RUST_034.md"
+DOC = ROOT / "docs/history/rust/RUST_034.md"
 EXPECTED_RUST033_GIT_BLOB = "26d540d35be1beabab179906060c3a293ac53924"
 ALLOWED_IMPORTS = {
     "__future__", "base64", "copy", "hashlib", "json", "pathlib", "sys", "tempfile",
