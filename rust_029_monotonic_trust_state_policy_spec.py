@@ -9,7 +9,7 @@ import axven
 ROOT = Path(__file__).resolve().parent
 WORKFLOW = ROOT / ".github/workflows/native-monotonic-trust-state.yml"
 VERIFIER = ROOT / "rust_029_monotonic_trust_state.py"
-DOC = ROOT / "RUST_029.md"
+DOC = ROOT / "docs/history/rust/RUST_029.md"
 PRODUCTION = ("axven.py", "core.py", "p2p.py", "rpc.py", "wallet.py", "axven_core.py")
 OLD_KEY_ID = "rust-026-test-only-ed25519-v1"
 NEW_KEY_ID = "rust-028-test-only-ed25519-v2"
