@@ -10,7 +10,7 @@ import axven
 ROOT = Path(__file__).resolve().parent
 WORKFLOW = ROOT / ".github/workflows/native-stdlib-material-consumer.yml"
 VERIFIER = ROOT / "rust_030_stdlib_material_verify.py"
-DOC = ROOT / "RUST_030.md"
+DOC = ROOT / "docs/history/rust/RUST_030.md"
 EXPECTED_GIT_BLOB = "0688cac21315533a3ff0fd760d28a44a9c897a6f"
 PRODUCTION = ("axven.py", "core.py", "p2p.py", "rpc.py", "wallet.py", "axven_core.py")
 ALLOWED_IMPORTS = {"base64", "binascii", "hashlib", "json", "os", "pathlib", "shutil", "stat", "sys", "tempfile", "__future__"}
