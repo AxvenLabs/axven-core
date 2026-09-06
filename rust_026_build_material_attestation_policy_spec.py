@@ -22,7 +22,7 @@ def main() -> None:
     checks = 0
     workflow = text(WORKFLOW)
     verifier = text(VERIFIER)
-    doc = text("RUST_026.md")
+    doc = text("docs/history/rust/RUST_026.md")
 
     for marker in (
         "bash rust_025_upstream_authenticated_detached_build.sh",
