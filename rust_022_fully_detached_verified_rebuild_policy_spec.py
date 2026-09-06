@@ -26,7 +26,7 @@ def text(path: Path | str) -> str:
 def main() -> None:
     checks = 0
     workflow = text(WORKFLOW)
-    doc = text("RUST_022.md")
+    doc = text("docs/history/rust/RUST_022.md")
 
     for marker in (
         "python rust_018_detached_rebuild_verify.py sourcecheck",
