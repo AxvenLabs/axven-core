@@ -3,13 +3,13 @@ name: Axven Native Rust Toolchain Closure
 on:
   push:
     paths:
-      - "RUST_023.md"
+      - "docs/history/rust/RUST_023.md"
       - "rust_023_rust_toolchain_closure.py"
       - "rust_023_rust_toolchain_closure_policy_spec.py"
       - ".github/workflows/native-rust-toolchain-closure.yml"
   pull_request:
     paths:
-      - "RUST_023.md"
+      - "docs/history/rust/RUST_023.md"
       - "rust_023_rust_toolchain_closure.py"
       - "rust_023_rust_toolchain_closure_policy_spec.py"
       - ".github/workflows/native-rust-toolchain-closure.yml"
