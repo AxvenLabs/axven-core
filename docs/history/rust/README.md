@@ -19,6 +19,7 @@ Archived here:
 - `RUST_024.md`
 - `RUST_026.md`
 - `RUST_027.md`
+- `RUST_028.md`
 - `RUST_029.md`
 - `RUST_030.md`
 

@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - "requirements-ci-runtime-posix.lock"
-      - "RUST_028.md"
+      - "docs/history/rust/RUST_028.md"
       - "rust_028_trust_root_rotation_verify.py"
       - "rust_028_trust_root_rotation_policy_spec.py"
       - "docs/history/rust/RUST_029.md"
@@ -15,7 +15,7 @@ on:
   pull_request:
     paths:
       - "requirements-ci-runtime-posix.lock"
-      - "RUST_028.md"
+      - "docs/history/rust/RUST_028.md"
       - "rust_028_trust_root_rotation_verify.py"
       - "rust_028_trust_root_rotation_policy_spec.py"
       - "docs/history/rust/RUST_029.md"
