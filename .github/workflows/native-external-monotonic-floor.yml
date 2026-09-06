@@ -5,7 +5,7 @@ on:
     paths:
       - "rust_030_stdlib_material_verify.py"
       - "rust_031_stdlib_trust_state_material_verify.py"
-      - "RUST_032.md"
+      - "docs/history/rust/RUST_032.md"
       - "rust_032_external_monotonic_floor_verify.py"
       - "rust_032_external_monotonic_floor_policy_spec.py"
       - ".github/workflows/native-external-monotonic-floor.yml"
@@ -13,7 +13,7 @@ on:
     paths:
       - "rust_030_stdlib_material_verify.py"
       - "rust_031_stdlib_trust_state_material_verify.py"
-      - "RUST_032.md"
+      - "docs/history/rust/RUST_032.md"
       - "rust_032_external_monotonic_floor_verify.py"
       - "rust_032_external_monotonic_floor_policy_spec.py"
       - ".github/workflows/native-external-monotonic-floor.yml"
