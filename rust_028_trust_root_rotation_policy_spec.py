@@ -9,7 +9,7 @@ import axven
 ROOT = Path(__file__).resolve().parent
 WORKFLOW = ROOT / ".github/workflows/native-trust-root-rotation.yml"
 VERIFIER = ROOT / "rust_028_trust_root_rotation_verify.py"
-DOC = ROOT / "RUST_028.md"
+DOC = ROOT / "docs/history/rust/RUST_028.md"
 PRODUCTION = ("axven.py", "core.py", "p2p.py", "rpc.py", "wallet.py", "axven_core.py")
 OLD_KEY_ID = "rust-026-test-only-ed25519-v1"
 OLD_PUBLIC_KEY = "4dd000548d1ed66588e6c23531163bd12c9c5dbca5eb932d4c6a75cde6525064"
