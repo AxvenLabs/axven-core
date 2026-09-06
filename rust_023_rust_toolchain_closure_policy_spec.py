@@ -7,7 +7,7 @@ from pathlib import Path
 
 VERIFIER = Path("rust_023_rust_toolchain_closure.py")
 WORKFLOW = Path(".github/workflows/native-rust-toolchain-closure.yml")
-DOC = Path("RUST_023.md")
+DOC = Path("docs/history/rust/RUST_023.md")
 
 EXPECTED_IMAGE = (
     "quay.io/pypa/manylinux_2_28_x86_64@"
