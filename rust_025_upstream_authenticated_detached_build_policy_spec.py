@@ -24,7 +24,7 @@ def main() -> None:
     checks = 0
     workflow = text(WORKFLOW)
     script = text(SCRIPT)
-    doc = text("RUST_025.md")
+    doc = text("docs/history/rust/RUST_025.md")
 
     for marker in (RUST_URL, RUST_SHA256, MANYLINUX, "permissions:\n  contents: read", "persist-credentials: false"):
         assert marker in workflow, marker
