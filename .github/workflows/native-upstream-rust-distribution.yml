@@ -3,14 +3,14 @@ name: Axven Native Upstream Rust Distribution
 on:
   push:
     paths:
-      - "RUST_024.md"
+      - "docs/history/rust/RUST_024.md"
       - "rust_024_upstream_rust_distribution.py"
       - "rust_024_upstream_rust_distribution_policy_spec.py"
       - "rust_023_rust_toolchain_closure.py"
       - ".github/workflows/native-upstream-rust-distribution.yml"
   pull_request:
     paths:
-      - "RUST_024.md"
+      - "docs/history/rust/RUST_024.md"
       - "rust_024_upstream_rust_distribution.py"
       - "rust_024_upstream_rust_distribution_policy_spec.py"
       - "rust_023_rust_toolchain_closure.py"

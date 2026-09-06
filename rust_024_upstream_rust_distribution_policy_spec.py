@@ -7,7 +7,7 @@ from pathlib import Path
 
 VERIFIER = Path("rust_024_upstream_rust_distribution.py")
 WORKFLOW = Path(".github/workflows/native-upstream-rust-distribution.yml")
-DOC = Path("RUST_024.md")
+DOC = Path("docs/history/rust/RUST_024.md")
 
 URL = "https://static.rust-lang.org/dist/2026-08-20/rust-1.98.0-x86_64-unknown-linux-gnu.tar.xz"
 SHA256 = "ed8ee2df70909c88cbaf87a6cfa3920dac00b537de12a6abe6906641e0f5952f"
