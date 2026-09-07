@@ -12,7 +12,7 @@ VERIFIER = ROOT / "rust_043_monitor_set_rotation_verify.py"
 FIXTURE = ROOT / "rust_043_monitor_set_rotation_fixture.py"
 SELFTEST = ROOT / "rust_043_monitor_set_rotation_selftest.py"
 BASE = ROOT / "rust_042_observer_journal_monitor_verify.py"
-DOC = ROOT / "RUST_043.md"
+DOC = ROOT / "docs/history/rust/RUST_043.md"
 EXPECTED_RUST042_GIT_BLOB = "ce1aeb93bbb276faa3aac196c82615d93796374e"
 ALLOWED_VERIFIER_IMPORTS = {
     "__future__", "hashlib", "pathlib", "sys",
