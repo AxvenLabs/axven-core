@@ -12,7 +12,7 @@ VERIFIER = ROOT / "rust_038_checkpoint_gossip_verify.py"
 SELFTEST = ROOT / "rust_038_checkpoint_gossip_selftest.py"
 FIXTURE = ROOT / "rust_038_checkpoint_gossip_fixture.py"
 BASE = ROOT / "rust_037_rotation_journal_verify.py"
-DOC = ROOT / "RUST_038.md"
+DOC = ROOT / "docs/history/rust/RUST_038.md"
 EXPECTED_RUST037_GIT_BLOB = "81e0e0c8749df7bbebfea79faaaa48266b74bf1c"
 ALLOWED_VERIFIER_IMPORTS = {
     "__future__", "hashlib", "json", "pathlib", "sys",
