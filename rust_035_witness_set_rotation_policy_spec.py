@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent
 WORKFLOW = ROOT / ".github/workflows/native-witness-set-rotation.yml"
 VERIFIER = ROOT / "rust_035_witness_set_rotation_verify.py"
 BASE = ROOT / "rust_034_external_floor_witness_quorum_verify.py"
-DOC = ROOT / "RUST_035.md"
+DOC = ROOT / "docs/history/rust/RUST_035.md"
 EXPECTED_RUST034_GIT_BLOB = "11b8f9b8fca6a475e99eb44af6c616eb1ec9cc57"
 ALLOWED_IMPORTS = {
     "__future__", "base64", "copy", "hashlib", "json", "pathlib", "sys", "tempfile",
