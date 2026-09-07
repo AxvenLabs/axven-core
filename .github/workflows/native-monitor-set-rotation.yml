@@ -6,7 +6,7 @@ on:
       - "requirements-ci-runtime-posix.lock"
       - "rust_03*.py"
       - "rust_04*.py"
-      - "RUST_043.md"
+      - "docs/history/rust/RUST_043.md"
       - ".github/workflows/native-monitor-set-rotation.yml"
   workflow_dispatch:
 
