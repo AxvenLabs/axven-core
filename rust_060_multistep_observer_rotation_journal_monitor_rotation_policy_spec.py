@@ -12,7 +12,7 @@ VERIFIER = ROOT / "rust_060_multistep_observer_rotation_journal_monitor_rotation
 SELFTEST = ROOT / "rust_060_multistep_observer_rotation_journal_monitor_rotation_selftest.py"
 FIXTURE = ROOT / "rust_060_multistep_observer_rotation_journal_monitor_rotation_fixture.py"
 BASE = ROOT / "rust_059_observer_rotation_journal_monitor_set_rotation_verify.py"
-DOC = ROOT / "RUST_060.md"
+DOC = ROOT / "docs/history/rust/RUST_060.md"
 EXPECTED_RUST059_GIT_BLOB = "47c6f53e9993a6cb374dbeaebf941ad50c23a8c8"
 
 ALLOWED_VERIFIER_IMPORTS = {
