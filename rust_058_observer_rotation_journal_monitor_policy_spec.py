@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 
-DOC = ROOT / "RUST_058.md"
+DOC = ROOT / "docs/history/rust/RUST_058.md"
 VERIFY = ROOT / "rust_058_observer_rotation_journal_monitor_verify.py"
 FIXTURE = ROOT / "rust_058_observer_rotation_journal_monitor_fixture.py"
 SELFTEST = ROOT / "rust_058_observer_rotation_journal_monitor_selftest.py"
