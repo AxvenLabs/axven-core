@@ -41,6 +41,7 @@ Archived here:
 - `RUST_046.md`
 - `RUST_047.md`
 - `RUST_048.md`
+- `RUST_049.md`
 
 These files are historical checkpoint records. Moving a checkpoint document into this directory does not promote Rust into the production consensus path, alter chain identity or activation rules, change cryptographic acceptance behavior, or grant release/publication privileges.
 
