@@ -6,12 +6,14 @@ on:
       - "requirements-ci-runtime-posix.lock"
       - "rust_0*.py"
       - "RUST_0*.md"
+      - "docs/history/rust/RUST_067.md"
       - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-set-rotation.yml"
   pull_request:
     paths:
       - "requirements-ci-runtime-posix.lock"
       - "rust_0*.py"
       - "RUST_0*.md"
+      - "docs/history/rust/RUST_067.md"
       - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-set-rotation.yml"
   workflow_dispatch:
 
