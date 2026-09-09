@@ -70,6 +70,7 @@ Archived here:
 - `RUST_075.md`
 - `RUST_076.md`
 - `RUST_077.md`
+- `RUST_078.md`
 
 These files are historical checkpoint records. Moving a checkpoint document into this directory does not promote Rust into the production consensus path, alter chain identity or activation rules, change cryptographic acceptance behavior, or grant release/publication privileges.
 
