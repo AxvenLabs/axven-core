@@ -152,3 +152,33 @@ Recommended first pass:
 
 The first three establish the current tested Axven baseline. R1/R3 then expose exactly where the production offline-rejoin comparison becomes experimental.
 
+
+
+## ML-DSA diagnostic harness
+
+For the cryptographic side-by-side run, use:
+
+`external_comparison_mldsa44_bench.py`
+
+Example:
+
+```bash
+python external_comparison_mldsa44_bench.py --iterations 500 --samples 7
+```
+
+The script emits one JSON record containing:
+
+- frozen Axven baseline commit;
+- chain/PQ parameter set;
+- FIPS 204 / ML-DSA-44 verification path;
+- public-key and signature byte sizes;
+- valid-signature verification result;
+- same-length tampered-signature rejection result;
+- median valid-verify and invalid-reject timing;
+- SHA-256 of the message, public key and signatures for comparison bookkeeping.
+
+The signature hashes produced by this harness are explicitly **comparison instrumentation**. They must not be described as an Axven checkpoint protocol field unless a separate protocol contract establishes that binding.
+
+Timing is diagnostic and host-dependent. It is not a consensus rule, performance guarantee or SLA.
+
+For a fair external comparison, record the external system's exact parameter set (for example ML-DSA-87), runtime/backend, hardware/VM environment, iteration count and sample count alongside its timing results. Raw ML-DSA-44 and ML-DSA-87 sizes/timings are not security-level-equivalent and should not be ranked without that context.
