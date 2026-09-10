@@ -15,7 +15,7 @@ WORKFLOW = ROOT / ".github/workflows/native-multistep-monitor-rotation-journal-o
 BASE = ROOT / "rust_083_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_set_rotation_verify.py"
 PREDECESSOR_WORKFLOW = ROOT / ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-set-rotation.yml"
 EXPECTED_RUST083_GIT_BLOB = "574941250f3dcbf8e3d5a5c214c4c12cd5fd4fa2"
-EXPECTED_RUST083_WORKFLOW_GIT_BLOB = "db28787293e295dae1451154ae6b0ce2e791971f"
+EXPECTED_RUST083_WORKFLOW_GIT_BLOB = "eedd6e017ca25ed324bae502d788901a485d8cb9"
 
 ALLOWED_VERIFY_IMPORTS = {
     "__future__", "hashlib", "pathlib", "sys",
