@@ -82,6 +82,7 @@ Archived here:
 - `RUST_087.md`
 - `RUST_088.md`
 - `RUST_089.md`
+- `RUST_090.md`
 
 These files are historical checkpoint records. Moving a checkpoint document into this directory does not promote Rust into the production consensus path, alter chain identity or activation rules, change cryptographic acceptance behavior, or grant release/publication privileges.
 
