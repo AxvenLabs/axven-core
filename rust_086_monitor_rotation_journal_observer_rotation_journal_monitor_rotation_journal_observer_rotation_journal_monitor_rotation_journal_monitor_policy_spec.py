@@ -15,7 +15,7 @@ WORKFLOW = ROOT / ".github/workflows/native-monitor-rotation-journal-observer-ro
 BASE = ROOT / "rust_085_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_verify.py"
 PREDECESSOR_WORKFLOW = ROOT / ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal.yml"
 EXPECTED_RUST085_GIT_BLOB = "5fbbab28393a14582cb44d9db1290acf68eef6bd"
-EXPECTED_RUST085_WORKFLOW_GIT_BLOB = "65356cdf98e48e2a24ac634c284a2afd2cb8f073"
+EXPECTED_RUST085_WORKFLOW_GIT_BLOB = "28cacf12c5e801d14903845c1177d607ef17b445"
 
 ALLOWED_VERIFY_IMPORTS = {
     "__future__", "hashlib", "pathlib", "sys",
