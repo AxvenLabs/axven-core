@@ -6,6 +6,7 @@ on:
       - "requirements-ci-runtime-posix.lock"
       - "rust_0*.py"
       - "RUST_0*.md"
+      - "docs/history/rust/RUST_086.md"
       - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal.yml"
       - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-monitor.yml"
   pull_request:
@@ -13,6 +14,7 @@ on:
       - "requirements-ci-runtime-posix.lock"
       - "rust_0*.py"
       - "RUST_0*.md"
+      - "docs/history/rust/RUST_086.md"
       - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal.yml"
       - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-monitor.yml"
   workflow_dispatch:
@@ -144,4 +146,4 @@ jobs:
           "${py[@]}" rust_086_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_monitor_selftest.py "${paths[@]}" /tmp/axven-rust086-observed-fork-monitor-bundle.json "$AXVEN_SOURCE_SHA" 1
           test "$(stat -c '%a' /tmp/axven-rust086-paths)" = "444"
           for f in /tmp/axven-rust086-*.json; do test "$(stat -c '%a' "$f")" = "444"; done
-          "${py[@]}" rust_086_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_observer_rotation_journal_monitor_rotation_journal_monitor_verify.py verify "${paths[@]}" "$AXVEN_SOURCE_SHA" 1
+          "${py[@]}" rust_086_monitor_rotation_journal_observer_rotation_journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-monitor_verify.py verify "${paths[@]}" "$AXVEN_SOURCE_SHA" 1
