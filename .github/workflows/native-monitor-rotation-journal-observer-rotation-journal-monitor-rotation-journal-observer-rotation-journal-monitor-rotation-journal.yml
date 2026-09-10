@@ -6,6 +6,7 @@ on:
       - "requirements-ci-runtime-posix.lock"
       - "rust_0*.py"
       - "RUST_0*.md"
+      - "docs/history/rust/RUST_085.md"
       - ".github/workflows/native-multistep-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation.yml"
       - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal.yml"
   pull_request:
@@ -13,6 +14,7 @@ on:
       - "requirements-ci-runtime-posix.lock"
       - "rust_0*.py"
       - "RUST_0*.md"
+      - "docs/history/rust/RUST_085.md"
       - ".github/workflows/native-multistep-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation.yml"
       - ".github/workflows/native-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal-observer-rotation-journal-monitor-rotation-journal.yml"
   workflow_dispatch:
