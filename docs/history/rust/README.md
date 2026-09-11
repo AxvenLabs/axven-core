@@ -94,6 +94,7 @@ Archived here:
 - `RUST_099.md`
 - `RUST_100.md`
 - `RUST_101.md`
+- `RUST_102.md`
 
 These files are historical checkpoint records. Moving a checkpoint document into this directory does not promote Rust into the production consensus path, alter chain identity or activation rules, change cryptographic acceptance behavior, or grant release/publication privileges.
 
