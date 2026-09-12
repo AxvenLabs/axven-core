@@ -6,6 +6,7 @@ on:
       - "requirements-ci-runtime-posix.lock"
       - "rust_*.py"
       - "RUST_*.md"
+      - "docs/history/rust/RUST_116.md"
       - ".github/workflows/native-rust115-rust114-checkpoint-monitor-rotation.yml"
       - ".github/workflows/native-rust116-multistep-checkpoint-monitor-rotation.yml"
   pull_request:
@@ -13,6 +14,7 @@ on:
       - "requirements-ci-runtime-posix.lock"
       - "rust_*.py"
       - "RUST_*.md"
+      - "docs/history/rust/RUST_116.md"
       - ".github/workflows/native-rust115-rust114-checkpoint-monitor-rotation.yml"
       - ".github/workflows/native-rust116-multistep-checkpoint-monitor-rotation.yml"
   workflow_dispatch:
