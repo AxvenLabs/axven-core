@@ -1,0 +1,63 @@
+name: Axven External Comparison V1
+
+on:
+  push:
+    paths:
+      - "external_comparison_mldsa44_bench.py"
+      - "EXTERNAL_COMPARISON_V1.md"
+      - "axven.py"
+      - "security_sec185_mldsa_backend_interoperability_spec.py"
+      - "security_sec186_mldsa_production_verifier_spec.py"
+      - "requirements-ci-runtime-posix.lock"
+      - ".github/workflows/external-comparison-v1.yml"
+  pull_request:
+    paths:
+      - "external_comparison_mldsa44_bench.py"
+      - "EXTERNAL_COMPARISON_V1.md"
+      - "axven.py"
+      - "security_sec185_mldsa_backend_interoperability_spec.py"
+      - "security_sec186_mldsa_production_verifier_spec.py"
+      - "requirements-ci-runtime-posix.lock"
+      - ".github/workflows/external-comparison-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  compare-v1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.15"
+          check-latest: false
+      - name: Install hash-locked runtime dependencies
+        run: |
+          python -m pip install --no-deps --only-binary=:all: --require-hashes -r requirements-ci-runtime-posix.lock
+      - name: Verify ML-DSA interoperability baseline
+        run: |
+          python security_sec185_mldsa_backend_interoperability_spec.py
+          python security_sec186_mldsa_production_verifier_spec.py
+      - name: Run external comparison ML-DSA diagnostic
+        run: |
+          python external_comparison_mldsa44_bench.py --iterations 100 --samples 3 | tee /tmp/axven-external-mldsa44.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          row=json.loads(Path("/tmp/axven-external-mldsa44.json").read_text())
+          assert row["parameter_set"] == "ML-DSA-44"
+          assert row["public_key_bytes"] == 1312
+          assert row["signature_bytes"] == 2420
+          assert row["valid_verify"] is True
+          assert row["tampered_verify"] is False
+          print("[GREEN] external comparison ML-DSA JSON contract")
+          PY
