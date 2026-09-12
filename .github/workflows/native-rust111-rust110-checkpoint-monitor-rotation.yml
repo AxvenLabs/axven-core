@@ -85,7 +85,7 @@ jobs:
             cp "${files[0]}" "$c/"
           done
           cp rust_111_rust110_checkpoint_monitor_rotation_selftest.py "$c/"
-          cp /tmp/axven-rust036-final-state.json "$c/final-state.json
+          cp /tmp/axven-rust036-final-state.json "$c/final-state.json"
           test "$(find "$c" -maxdepth 1 -type f | wc -l)" -eq 84
           test "$(find "$c" -type l | wc -l)" -eq 0
           test ! -e "$c/.git"
