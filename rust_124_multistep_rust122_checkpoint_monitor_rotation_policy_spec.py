@@ -15,7 +15,7 @@ WORKFLOW = ROOT / ".github/workflows/native-rust124-multistep-checkpoint-monitor
 BASE = ROOT / "rust_123_rust122_checkpoint_monitor_rotation_verify.py"
 PREDECESSOR_WORKFLOW = ROOT / ".github/workflows/native-rust123-rust122-checkpoint-monitor-rotation.yml"
 EXPECTED_RUST123_GIT_BLOB = "0c7df643f7468ea88a165b2d990f835acd30c4b1"
-EXPECTED_RUST123_WORKFLOW_GIT_BLOB = "5cb13ff0203977ee751abf5b98f400097fd0c8a4"
+EXPECTED_RUST123_WORKFLOW_GIT_BLOB = "b8ee6f5c7d1a7ac047291fbd52e9b80b98dc17e7"
 
 ALLOWED_VERIFY_IMPORTS = {
     "__future__", "hashlib", "pathlib", "sys",
