@@ -7,7 +7,7 @@ import hashlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-DOC = ROOT / "RUST_126.md"
+DOC = ROOT / "docs/history/rust/RUST_126.md"
 VERIFY = ROOT / "rust_126_rust125_checkpoint_monitor_verify.py"
 FIXTURE = ROOT / "rust_126_rust125_checkpoint_monitor_fixture.py"
 SELFTEST = ROOT / "rust_126_rust125_checkpoint_monitor_selftest.py"
