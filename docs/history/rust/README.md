@@ -134,3 +134,4 @@ Some completed checkpoint documents intentionally remain at the repository root 
 - `RUST_021.md` is currently deferred because its dedicated verified-dependency-rebuild workflow is large and must not be rewritten from a truncated or partial view.
 
 A deferred entry is not approval to move the file later without a fresh dependency review. Production consensus remains Python-authoritative unless a separately reviewed and explicitly approved change says otherwise.
+- `RUST_130.md`
