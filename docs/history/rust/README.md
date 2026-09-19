@@ -136,3 +136,4 @@ Some completed checkpoint documents intentionally remain at the repository root 
 A deferred entry is not approval to move the file later without a fresh dependency review. Production consensus remains Python-authoritative unless a separately reviewed and explicitly approved change says otherwise.
 - `RUST_130.md`
 - `RUST_131.md`
+- `RUST_132.md`
