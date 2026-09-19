@@ -138,3 +138,4 @@ A deferred entry is not approval to move the file later without a fresh dependen
 - `RUST_131.md`
 - `RUST_132.md`
 - `RUST_133.md`
+- `RUST_134.md`
