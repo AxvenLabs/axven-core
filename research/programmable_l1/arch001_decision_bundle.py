@@ -17,7 +17,8 @@ import sys
 ROOT = Path(__file__).resolve().parent
 
 # Only deterministic fixtures belong in the canonical bundle. Authorization
-# timing sensitivity remains a separate diagnostic artifact.
+# timing sensitivity remains a separate diagnostic artifact; deterministic
+# classical/PQ/hybrid witness-size sensitivity is included.
 FIXTURES = (
     "arch001_invariants.py",
     "arch001_transfer_compare.py",
@@ -29,6 +30,7 @@ FIXTURES = (
     "arch001_state_growth_compare.py",
     "arch001_rollback_compare.py",
     "arch001_migration_reuse_compare.py",
+    "arch001_auth_size_evidence.py",
 )
 
 
