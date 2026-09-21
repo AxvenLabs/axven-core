@@ -31,6 +31,7 @@ FIXTURES = (
     "arch001_rollback_compare.py",
     "arch001_migration_reuse_compare.py",
     "arch001_auth_size_evidence.py",
+    "arch001_native_measurement_evidence.py",
 )
 
 
