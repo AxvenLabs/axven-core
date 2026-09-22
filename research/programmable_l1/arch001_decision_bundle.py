@@ -24,6 +24,7 @@ FIXTURES = (
     "arch001_transfer_compare.py",
     "arch001_token_compare.py",
     "arch001_token_program_compare.py",
+    "arch001_program_conflict_evidence.py",
     "arch001_contention_compare.py",
     "arch001_batch_order_compare.py",
     "arch001_access_compare.py",
