@@ -2,9 +2,10 @@
 """ARCH-001 research-only canonical decision-evidence bundle.
 
 Runs the deterministic, architecture-comparative fixtures from the current
-research tree and records their stdout digests in one canonical manifest.
-Diagnostic timing evidence is deliberately excluded because wall-clock timing
-is not byte-deterministic. No production consensus module imports this file.
+research tree and records both source and stdout digests in one canonical
+manifest. Diagnostic timing evidence is deliberately excluded because
+wall-clock timing is not byte-deterministic. No production consensus module
+imports this file.
 """
 from __future__ import annotations
 
@@ -47,6 +48,7 @@ def canonical_bytes(value) -> bytes:
 
 def run_fixture(name: str) -> dict[str, object]:
     path = ROOT / name
+    source = path.read_bytes()
     proc = subprocess.run(
         [sys.executable, str(path)],
         cwd=ROOT,
@@ -59,6 +61,8 @@ def run_fixture(name: str) -> dict[str, object]:
     stderr = proc.stderr
     return {
         "fixture": name,
+        "source_bytes": len(source),
+        "source_sha256": hashlib.sha256(source).hexdigest(),
         "exit_code": proc.returncode,
         "stdout_bytes": len(stdout),
         "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
@@ -71,11 +75,13 @@ def build_bundle() -> dict[str, object]:
     rows = [run_fixture(name) for name in FIXTURES]
     assert all(row["exit_code"] == 0 for row in rows)
     assert all(row["stderr_bytes"] == 0 for row in rows)
+    assert all(row["source_bytes"] > 0 for row in rows)
     return {
-        "schema": "axven-arch001-decision-evidence-v1",
+        "schema": "axven-arch001-decision-evidence-v2",
         "scope": "research-only; outside production consensus routing",
         "candidates": ["utxo", "account-state", "object-resource"],
         "fixtures": rows,
+        "fixture_source_provenance_included": True,
         "excluded_nondeterministic_diagnostics": ["arch001_auth_cost_compare.py:median_verify_ns"],
         "architecture_selected": False,
     }
@@ -88,10 +94,10 @@ def main() -> None:
     second_bytes = canonical_bytes(second)
     assert first_bytes == second_bytes
     digest = hashlib.sha256(first_bytes).hexdigest()
-    print("ARCH-001 canonical decision bundle: 4/4 GREEN")
+    print("ARCH-001 canonical decision bundle: 5/5 GREEN")
     print("bundle_sha256", digest)
     print(first_bytes.decode("ascii"))
-    print("NOTE PQ/hybrid timing remains diagnostic; no architecture selected")
+    print("NOTE fixture sources and outputs are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
 
 
 if __name__ == "__main__":
