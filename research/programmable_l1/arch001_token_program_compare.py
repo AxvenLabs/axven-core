@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ARCH-001 research-only token/program-state workload comparison.
 
-No production consensus module imports this file.  The point is to compare
+No production consensus module imports this file. The point is to compare
 state semantics, deterministic commitments, replay rejection and rollback
 requirements before selecting an Axven programmable-L1 architecture.
 """
@@ -60,6 +60,32 @@ def object_token_transfer(state, sender_id, recipient_id, amount, expected_versi
                                       recipient.authorization_policy)
 
 
+def utxo_program_increment(state, spent, outpoint, new_outpoint):
+    if outpoint in spent or outpoint not in state:
+        raise ValueError("spent-or-missing-program-outpoint")
+    current = state[outpoint]
+    del state[outpoint]
+    spent.add(outpoint)
+    state[new_outpoint] = {"owner": current["owner"], "asset": "STATE", "amount": current["amount"] + 1}
+
+
+def account_program_increment(state, program_id, sequence):
+    program = state[program_id]
+    if sequence != program["sequence"]:
+        raise ValueError("stale-program-sequence")
+    program["counter"] += 1
+    program["sequence"] += 1
+
+
+def object_program_increment(state, object_id, expected_version):
+    current = state[object_id]
+    if current.version != expected_version:
+        raise ValueError("stale-program-object-version")
+    state[object_id] = AxvenObject(current.object_id, current.owner_or_authority, current.object_type,
+                                   current.version + 1, {"value": current.data["value"] + 1},
+                                   current.authorization_policy)
+
+
 def expect_replay_rejected(fn):
     try:
         fn()
@@ -93,18 +119,34 @@ def main():
     expect_replay_rejected(lambda: object_token_transfer(o, "alice:TOK", "bob:TOK", 10, 0))
 
     # Equivalent program-state mutation: increment a counter from 7 to 8.
-    # UTXO must consume/recreate a state-bearing output; account/object mutate versioned state.
-    uprog = {"counter:0": {"owner": "program:counter", "asset": "STATE", "amount": 7}}
-    aprog = {"program:counter": {"counter": 7, "sequence": 0}}
-    oprog = {"counter": AxvenObject("counter", "program:counter", "counter", 0, {"value": 7}, "program-policy")}
-    del uprog["counter:0"]
-    uprog["counter:1"] = {"owner": "program:counter", "asset": "STATE", "amount": 8}
-    aprog["program:counter"]["counter"] += 1
-    aprog["program:counter"]["sequence"] += 1
-    old = oprog["counter"]
-    oprog["counter"] = AxvenObject(old.object_id, old.owner_or_authority, old.object_type,
-                                    old.version + 1, {"value": old.data["value"] + 1}, old.authorization_policy)
+    # All candidates now use their native stale-state guard so replay/conflict
+    # rejection is measured with the same fail-closed requirement.
+    up0 = {"counter:0": {"owner": "program:counter", "asset": "STATE", "amount": 7}}
+    ap0 = {"program:counter": {"counter": 7, "sequence": 0}}
+    op0 = {"counter": AxvenObject("counter", "program:counter", "counter", 0, {"value": 7}, "program-policy")}
+    uprog, aprog, oprog = deepcopy(up0), deepcopy(ap0), deepcopy(op0)
+    program_spent = set()
+    program_pre = (utxo_root(uprog), account_root(aprog), state_commitment(oprog))
+    utxo_program_increment(uprog, program_spent, "counter:0", "counter:1")
+    account_program_increment(aprog, "program:counter", 0)
+    object_program_increment(oprog, "counter", 0)
+    program_post = (utxo_root(uprog), account_root(aprog), state_commitment(oprog))
+    assert program_pre != program_post
     assert uprog["counter:1"]["amount"] == aprog["program:counter"]["counter"] == oprog["counter"].data["value"] == 8
+
+    # Replaying the accepted program transition must fail closed and leave the
+    # accepted post-state commitments byte-for-byte unchanged.
+    expect_replay_rejected(lambda: utxo_program_increment(uprog, program_spent, "counter:0", "counter:1"))
+    expect_replay_rejected(lambda: account_program_increment(aprog, "program:counter", 0))
+    expect_replay_rejected(lambda: object_program_increment(oprog, "counter", 0))
+    assert (utxo_root(uprog), account_root(aprog), state_commitment(oprog)) == program_post
+
+    # Re-execution from the same committed pre-state is deterministic.
+    up2, ap2, op2, program_spent2 = deepcopy(up0), deepcopy(ap0), deepcopy(op0), set()
+    utxo_program_increment(up2, program_spent2, "counter:0", "counter:1")
+    account_program_increment(ap2, "program:counter", 0)
+    object_program_increment(op2, "counter", 0)
+    assert (utxo_root(up2), account_root(ap2), state_commitment(op2)) == program_post
 
     # Object access declarations expose deterministic scheduling conflicts.
     t1 = ResearchTransaction("alice", 0, ("alice:TOK", "bob:TOK"), ("alice:TOK", "bob:TOK"),
@@ -116,16 +158,19 @@ def main():
     assert access_conflicts(t1, t2) is False
     assert access_conflicts(t1, t3) is True
 
-    # Replaying from identical pre-state must reproduce identical commitments.
+    # Replaying token transfer from identical pre-state reproduces commitments.
     u2, a2, o2, spent2 = deepcopy(u0), deepcopy(a0), deepcopy(o0), set()
     utxo_token_transfer(u2, spent2, "mint:0", 10)
     account_token_transfer(a2, "alice", "bob", 10, 0)
     object_token_transfer(o2, "alice:TOK", "bob:TOK", 10, 0)
     assert (utxo_root(u2), account_root(a2), state_commitment(o2)) == post
 
-    print("ARCH-001 token/program workloads: 12/12 GREEN")
+    print("ARCH-001 token/program workloads: 18/18 GREEN")
     print("pre_roots=", pre)
     print("post_roots=", post)
+    print("program_pre_roots=", program_pre)
+    print("program_post_roots=", program_post)
+    print("program_replay=fail-closed; rejected replay preserves accepted commitments")
     print("observation=UTXO consumes/recreates state; account uses sequence; object uses explicit versioned resources")
 
 
