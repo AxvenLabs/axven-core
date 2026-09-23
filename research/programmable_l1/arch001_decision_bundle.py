@@ -40,6 +40,7 @@ FIXTURES = (
     "arch001_native_sequence_evidence.py",
     "arch001_native_auth_surface_evidence.py",
     "arch001_native_reorg_sequence_evidence.py",
+    "arch001_evidence_coverage.py",
 )
 
 
@@ -83,6 +84,7 @@ def build_bundle() -> dict[str, object]:
         "candidates": ["utxo", "account-state", "object-resource"],
         "fixtures": rows,
         "fixture_source_provenance_included": True,
+        "required_evidence_coverage_bound": True,
         "excluded_nondeterministic_diagnostics": ["arch001_auth_cost_compare.py:median_verify_ns"],
         "architecture_selected": False,
     }
@@ -95,10 +97,10 @@ def main() -> None:
     second_bytes = canonical_bytes(second)
     assert first_bytes == second_bytes
     digest = hashlib.sha256(first_bytes).hexdigest()
-    print("ARCH-001 canonical decision bundle: 5/5 GREEN")
+    print("ARCH-001 canonical decision bundle: 6/6 GREEN")
     print("bundle_sha256", digest)
     print(first_bytes.decode("ascii"))
-    print("NOTE fixture sources and outputs are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
+    print("NOTE fixture sources, outputs, and required evidence coverage are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
 
 
 if __name__ == "__main__":
