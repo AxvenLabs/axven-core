@@ -26,6 +26,7 @@ FIXTURES = (
     "arch001_native_equivalence_evidence.py",
     "arch001_native_representation_delta_evidence.py",
     "arch001_native_sequence_representation_delta_evidence.py",
+    "arch001_native_sequence_summary_evidence.py",
     "arch001_token_compare.py",
     "arch001_token_program_compare.py",
     "arch001_program_conflict_evidence.py",
@@ -91,6 +92,7 @@ def build_bundle() -> dict[str, object]:
         "native_workload_equivalence_bound": True,
         "native_representation_deltas_bound": True,
         "native_sequence_representation_deltas_bound": True,
+        "native_sequence_summary_bound": True,
         "excluded_nondeterministic_diagnostics": ["arch001_auth_cost_compare.py:median_verify_ns"],
         "architecture_selected": False,
     }
@@ -103,10 +105,10 @@ def main() -> None:
     second_bytes = canonical_bytes(second)
     assert first_bytes == second_bytes
     digest = hashlib.sha256(first_bytes).hexdigest()
-    print("ARCH-001 canonical decision bundle: 9/9 GREEN")
+    print("ARCH-001 canonical decision bundle: 10/10 GREEN")
     print("bundle_sha256", digest)
     print(first_bytes.decode("ascii"))
-    print("NOTE fixture sources, outputs, required evidence coverage, native workload equivalence, and raw single/sequence representation deltas are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
+    print("NOTE fixture sources, outputs, required evidence coverage, native workload equivalence, raw representation deltas, and native sequence summary are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
 
 
 if __name__ == "__main__":
