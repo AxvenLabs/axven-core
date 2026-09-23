@@ -38,6 +38,7 @@ FIXTURES = (
     "arch001_auth_size_evidence.py",
     "arch001_native_measurement_evidence.py",
     "arch001_native_sequence_evidence.py",
+    "arch001_native_auth_surface_evidence.py",
     "arch001_native_reorg_sequence_evidence.py",
 )
 
