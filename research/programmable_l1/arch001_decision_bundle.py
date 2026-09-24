@@ -83,6 +83,7 @@ def run_fixture(name: str) -> dict[str, object]:
 
 def build_bundle() -> dict[str, object]:
     rows = [run_fixture(name) for name in FIXTURES]
+    assert len(rows) == len(FIXTURES)
     assert all(row["exit_code"] == 0 for row in rows)
     assert all(row["stderr_bytes"] == 0 for row in rows)
     assert all(row["source_bytes"] > 0 for row in rows)
@@ -90,6 +91,7 @@ def build_bundle() -> dict[str, object]:
         "schema": "axven-arch001-decision-evidence-v2",
         "scope": "research-only; outside production consensus routing",
         "candidates": ["utxo", "account-state", "object-resource"],
+        "fixture_count": len(rows),
         "fixtures": rows,
         "fixture_source_provenance_included": True,
         "required_evidence_coverage_bound": True,
@@ -112,8 +114,10 @@ def main() -> None:
     first_bytes = canonical_bytes(first)
     second_bytes = canonical_bytes(second)
     assert first_bytes == second_bytes
+    assert first["fixture_count"] == len(first["fixtures"]) == len(FIXTURES)
     digest = hashlib.sha256(first_bytes).hexdigest()
-    print("ARCH-001 canonical decision bundle: 13/13 GREEN")
+    fixture_count = first["fixture_count"]
+    print(f"ARCH-001 canonical decision bundle: {fixture_count}/{fixture_count} GREEN")
     print("bundle_sha256", digest)
     print(first_bytes.decode("ascii"))
     print("NOTE fixture sources, outputs, required evidence coverage, native workload equivalence, raw representation deltas, native sequence summary, marginal growth, migration/reuse summary, decision readiness, and unweighted tradeoff snapshot are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
