@@ -28,6 +28,7 @@ REQUIRED = {
     "deterministic_state_commitments": (
         "arch001_invariants.py",
         "arch001_native_measurement_evidence.py",
+        "arch001_rejection_integrity_evidence.py",
     ),
     "fail_closed_no_partial_mutation": (
         "arch001_transfer_compare.py",
