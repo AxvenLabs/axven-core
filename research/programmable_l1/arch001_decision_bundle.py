@@ -40,6 +40,7 @@ FIXTURES = (
     "arch001_state_growth_compare.py",
     "arch001_rollback_compare.py",
     "arch001_migration_reuse_compare.py",
+    "arch001_migration_reuse_summary_evidence.py",
     "arch001_auth_size_evidence.py",
     "arch001_native_measurement_evidence.py",
     "arch001_native_sequence_evidence.py",
@@ -95,6 +96,7 @@ def build_bundle() -> dict[str, object]:
         "native_sequence_representation_deltas_bound": True,
         "native_sequence_summary_bound": True,
         "native_marginal_growth_bound": True,
+        "migration_reuse_summary_bound": True,
         "excluded_nondeterministic_diagnostics": ["arch001_auth_cost_compare.py:median_verify_ns"],
         "architecture_selected": False,
     }
@@ -110,7 +112,7 @@ def main() -> None:
     print("ARCH-001 canonical decision bundle: 11/11 GREEN")
     print("bundle_sha256", digest)
     print(first_bytes.decode("ascii"))
-    print("NOTE fixture sources, outputs, required evidence coverage, native workload equivalence, raw representation deltas, native sequence summary, and marginal growth are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
+    print("NOTE fixture sources, outputs, required evidence coverage, native workload equivalence, raw representation deltas, native sequence summary, marginal growth, and migration/reuse summary are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
 
 
 if __name__ == "__main__":

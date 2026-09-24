@@ -52,6 +52,7 @@ REQUIRED = {
     ),
     "migration_reuse_impact": (
         "arch001_migration_reuse_compare.py",
+        "arch001_migration_reuse_summary_evidence.py",
     ),
 }
 
