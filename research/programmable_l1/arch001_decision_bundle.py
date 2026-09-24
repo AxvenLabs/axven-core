@@ -48,6 +48,7 @@ FIXTURES = (
     "arch001_native_reorg_sequence_evidence.py",
     "arch001_evidence_coverage.py",
     "arch001_decision_readiness_evidence.py",
+    "arch001_tradeoff_snapshot_evidence.py",
 )
 
 
@@ -99,6 +100,7 @@ def build_bundle() -> dict[str, object]:
         "native_marginal_growth_bound": True,
         "migration_reuse_summary_bound": True,
         "decision_readiness_bound": True,
+        "tradeoff_snapshot_bound": True,
         "excluded_nondeterministic_diagnostics": ["arch001_auth_cost_compare.py:median_verify_ns"],
         "architecture_selected": False,
     }
@@ -111,10 +113,10 @@ def main() -> None:
     second_bytes = canonical_bytes(second)
     assert first_bytes == second_bytes
     digest = hashlib.sha256(first_bytes).hexdigest()
-    print("ARCH-001 canonical decision bundle: 12/12 GREEN")
+    print("ARCH-001 canonical decision bundle: 13/13 GREEN")
     print("bundle_sha256", digest)
     print(first_bytes.decode("ascii"))
-    print("NOTE fixture sources, outputs, required evidence coverage, native workload equivalence, raw representation deltas, native sequence summary, marginal growth, migration/reuse summary, and decision readiness are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
+    print("NOTE fixture sources, outputs, required evidence coverage, native workload equivalence, raw representation deltas, native sequence summary, marginal growth, migration/reuse summary, decision readiness, and unweighted tradeoff snapshot are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
 
 
 if __name__ == "__main__":
