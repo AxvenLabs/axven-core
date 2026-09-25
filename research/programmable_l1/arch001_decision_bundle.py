@@ -49,6 +49,7 @@ FIXTURES = (
     "arch001_evidence_coverage.py",
     "arch001_decision_readiness_evidence.py",
     "arch001_tradeoff_snapshot_evidence.py",
+    "arch001_cross_workload_equivalence_evidence.py",
 )
 
 
@@ -103,6 +104,7 @@ def build_bundle() -> dict[str, object]:
         "migration_reuse_summary_bound": True,
         "decision_readiness_bound": True,
         "tradeoff_snapshot_bound": True,
+        "cross_workload_equivalence_bound": True,
         "excluded_nondeterministic_diagnostics": ["arch001_auth_cost_compare.py:median_verify_ns"],
         "architecture_selected": False,
     }
@@ -120,7 +122,7 @@ def main() -> None:
     print(f"ARCH-001 canonical decision bundle: {fixture_count}/{fixture_count} GREEN")
     print("bundle_sha256", digest)
     print(first_bytes.decode("ascii"))
-    print("NOTE fixture sources, outputs, required evidence coverage, native workload equivalence, raw representation deltas, native sequence summary, marginal growth, migration/reuse summary, decision readiness, and unweighted tradeoff snapshot are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
+    print("NOTE fixture sources, outputs, required evidence coverage, native workload equivalence, raw representation deltas, native sequence summary, marginal growth, migration/reuse summary, decision readiness, unweighted tradeoff snapshot, and cross-workload equivalence are digest-bound; PQ/hybrid timing remains diagnostic; no architecture selected")
 
 
 if __name__ == "__main__":
