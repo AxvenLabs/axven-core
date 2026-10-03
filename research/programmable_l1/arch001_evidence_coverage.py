@@ -24,10 +24,12 @@ REQUIRED = {
         "arch001_token_program_compare.py",
         "arch001_program_conflict_evidence.py",
         "arch001_program_sequence_evidence.py",
+        "arch001_program_isolation_evidence.py",
     ),
     "deterministic_state_commitments": (
         "arch001_invariants.py",
         "arch001_native_measurement_evidence.py",
+        "arch001_program_isolation_evidence.py",
     ),
     "fail_closed_no_partial_mutation": (
         "arch001_transfer_compare.py",
