@@ -81,7 +81,7 @@ def main() -> None:
     assert all(r["replay_rejected"] and r["rejected_state_unchanged"] for r in rows)
     assert sum(v["amount"] for v in u1.values()) == 125
     assert sum(v["balance"] for v in a1.values()) == 125
-    assert sum(v["payload"]["amount"] for v in o1p.values()) == 125
+    assert sum(v["data"]["amount"] for v in o1p.values()) == 125
 
     evidence = {
         "schema": "axven-arch001-native-measurement-v1",
