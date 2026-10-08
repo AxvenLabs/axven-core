@@ -5,6 +5,7 @@ import inspect
 import json
 import socket
 import struct
+import threading
 
 import axven
 import p2p
@@ -16,14 +17,34 @@ def framed(raw: bytes) -> bytes:
 
 def recv_raw(raw: bytes, *, budget=None):
     left, right = socket.socketpair()
+    # A large frame cannot fit in every platform's socket buffer. Send while
+    # the original receiver drains it, with bounded I/O and worker cleanup.
+    left.settimeout(10)
+    right.settimeout(10)
+    errors = []
+
+    def send():
+        try:
+            left.sendall(framed(raw))
+        except OSError as exc:
+            errors.append(exc)
+
+    sender = threading.Thread(target=send, daemon=True)
+    sender.start()
     try:
-        left.sendall(framed(raw))
         if budget is None:
-            return p2p.recv_message(right)
-        return p2p._recv_message_with_lease(right, frame_byte_budget=budget)
+            result = p2p.recv_message(right)
+        else:
+            result = p2p._recv_message_with_lease(right, frame_byte_budget=budget)
+        sender.join(10)
+        if errors:
+            raise errors[0]
+        return result
     finally:
         left.close()
         right.close()
+        sender.join(10)
+        assert not sender.is_alive(), "SEC-132 fixture sender did not terminate"
 
 
 def flat_array(count):

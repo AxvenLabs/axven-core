@@ -9,9 +9,11 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from arch001_model import AxvenObject, account_root, state_commitment, utxo_root
+from arch001_model import AxvenObject, state_commitment
 from arch001_token_program_compare import (
     account_program_increment,
+    account_root,
+    utxo_root,
     object_program_increment,
     utxo_program_increment,
 )

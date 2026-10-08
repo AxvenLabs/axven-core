@@ -23,7 +23,10 @@ def canonical_bytes(value) -> bytes:
 def median_ns(fn) -> int:
     rows=[]
     for _ in range(SAMPLES):
-        start=time.perf_counter_ns(); fn(); rows.append(time.perf_counter_ns()-start)
+        start=time.perf_counter_ns(); accepted=fn(); elapsed=time.perf_counter_ns()-start
+        if accepted is not True:
+            raise ValueError("timed verification rejected witness")
+        rows.append(elapsed)
     return int(statistics.median(rows))
 
 
@@ -43,7 +46,8 @@ def main() -> None:
 
     rows=[]
     for name,witness,utxo,height in fixtures:
-        assert axven.verify_input(witness,utxo,message,height)
+        if axven.verify_input(witness,utxo,message,height) is not True:
+            raise ValueError("initial verification rejected witness")
         size=len(canonical_bytes(witness))
         verify_ns=median_ns(lambda w=witness,u=utxo,h=height: axven.verify_input(w,u,message,h))
         rows.append((name,size,verify_ns))

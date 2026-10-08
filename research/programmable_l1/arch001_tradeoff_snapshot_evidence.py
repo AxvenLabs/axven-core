@@ -23,7 +23,11 @@ def build_evidence() -> dict[str, object]:
     readiness = build_readiness()
 
     native_by_name = {row["candidate"]: row for row in native["summary"]}
-    migration_by_name = {row["candidate"]: row for row in migration["summary"]}
+    # The migration producer uses "account" for the account-state candidate.
+    migration_by_name = {
+        ("account-state" if name == "account" else name): row["compatibility_class_counts"]
+        for name, row in migration["candidates"].items()
+    }
     assert set(native_by_name) == set(CANDIDATES)
     assert set(migration_by_name) == set(CANDIDATES)
     assert readiness["all_required_axes_have_deterministic_fixture_coverage"] is True

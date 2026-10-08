@@ -12,6 +12,7 @@ import time
 import urllib.request
 
 from datadir import DataDir
+from daemon_startup_test_support import release_initial_sync
 
 
 checks=[]
@@ -102,14 +103,16 @@ def wait_health_state(port,state,deadline=15):
     return wait_until(check,deadline=deadline)
 
 
-def start_daemon(datadir,rpc_port,p2p_port):
+def start_daemon(datadir,rpc_port,p2p_port,gate_initial_sync=False):
     _rpc_tokens[rpc_port]=DataDir(datadir).load_or_create_rpc_token()
     env=os.environ.copy()
 
+    entry = (["-c", "from daemon_startup_test_support import gated_main; gated_main()"]
+             if gate_initial_sync else ["axven_core.py"])
     return subprocess.Popen(
         [
             sys.executable,
-            "axven_core.py",
+            *entry,
             "--datadir",str(datadir),
             "run",
             "--rpc-port",str(rpc_port),
@@ -118,7 +121,8 @@ def start_daemon(datadir,rpc_port,p2p_port):
         ],
         cwd=os.path.dirname(__file__),
         env=env,
-        text=True,
+        stdin=subprocess.PIPE if gate_initial_sync else None,
+        text=False if gate_initial_sync else True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -127,6 +131,9 @@ def start_daemon(datadir,rpc_port,p2p_port):
 def stop_daemon(proc,rpc_port):
     if proc is None:
         return
+
+    if proc.stdin is not None and not proc.stdin.closed:
+        release_initial_sync(proc)
 
     try:
         rpc(rpc_port,"stop")
@@ -166,7 +173,8 @@ try:
         ("127.0.0.1",b_p2p),
     ])
 
-    a_proc=start_daemon(a_dir,a_rpc,a_p2p)
+    # Hold only the first sync until initial-state assertions finish.
+    a_proc=start_daemon(a_dir,a_rpc,a_p2p,gate_initial_sync=True)
     wait_rpc(a_rpc)
 
     initial=peer_state(a_rpc)
@@ -181,6 +189,7 @@ try:
         initial["health_transition_count"]==0,
     )
 
+    release_initial_sync(a_proc)
     offline=wait_health_state(a_rpc,"offline",deadline=8)
 
     ok(

@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parent
 SUITES=[
+ ("validation_fixture_regression_test.py","Daemon/security fixture synchronization"),
  ("pq_dependency_check.py","PQ dependency smoke"),
  ("pq_real_validation.py","PQ M/H end-to-end"),
  ("wallet_integration_spec_test.py","W-003 wallet integration"),
